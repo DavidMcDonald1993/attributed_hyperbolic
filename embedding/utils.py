@@ -1,0 +1,170 @@
+import os
+import numpy as np
+# import networkx as nx
+from node2vec_sampling import Graph 
+
+
+def convert_edgelist_to_dict(edgelist, undirected=True, self_edges=False):
+	if edgelist is None:
+		return None
+	sorts = [lambda x: sorted(x)]
+	if undirected:
+		sorts.append(lambda x: sorted(x, reverse=True))
+	edges = (sort(edge) for edge in edgelist for sort in sorts)
+	edge_dict = {}
+	for u, v in edges:
+		if self_edges:
+			default = [u]#set(u)
+		else:
+			default = []#set()
+		edge_dict.setdefault(u, default).append(v)
+	# for u, v in edgelist:
+	# 	assert v in edge_dict[u]
+	# 	if undirected:
+	# 		assert u in edge_dict[v]
+	return edge_dict
+
+def get_training_sample(batch_positive_samples, negative_samples, num_negative_samples, probs):
+
+	input_nodes = batch_positive_samples[:,0]
+
+	batch_negative_samples = np.array([
+		np.random.choice(negative_samples[u], 
+		replace=True, size=(num_negative_samples,), 
+		p=probs[u] if probs is not None else probs
+		)
+		for u in input_nodes
+	], dtype=np.int64)
+	batch_nodes = np.append(batch_positive_samples, batch_negative_samples, axis=1)
+	return batch_nodes
+
+	
+def make_validation_data(edges, non_edge_dict, probs, args):
+
+	edges = np.array(edges)
+	idx = np.random.choice(len(edges), size=args.batch_size, replace=False,)
+	positive_samples = edges[idx]#
+	# non_edge_dict = convert_edgelist_to_dict(non_edges)
+
+	x = get_training_sample(positive_samples, 
+		non_edge_dict, args.num_negative_samples, probs=None)
+	y = np.zeros(list(x.shape)+[1], dtype=np.int64)
+
+	return x, y
+
+
+def create_second_order_topology_graph(topology_graph, args):
+
+	adj = nx.adjacency_matrix(topology_graph).A
+	adj_sim = cosine_similarity(adj)
+	adj_sim -= np.identity(len(topology_graph))
+	adj_sim [adj_sim  < args.rho] = 0
+	second_order_topology_graph = nx.from_numpy_matrix(adj_sim)
+
+	print ("Created second order topology graph graph with {} edges".format(len(second_order_topology_graph.edges())))
+
+	return second_order_topology_graph
+
+
+def create_feature_graph(features, args):
+
+	features_sim = cosine_similarity(features)
+	features_sim -= np.identity(len(features))
+	features_sim [features_sim  < args.rho] = 0
+	feature_graph = nx.from_numpy_matrix(features_sim)
+
+	print ("Created feature correlation graph with {} edges".format(len(feature_graph.edges())))
+
+	return feature_graph
+
+def split_edges(edges, val_split=0.05, test_split=0.1):
+	num_val_edges = int(len(edges) * val_split)
+	num_test_edges = int(len(edges) * test_split)
+
+
+	random.shuffle(edges)
+
+	val_edges = edges[:num_val_edges]
+	test_edges = edges[num_val_edges:num_val_edges+num_test_edges]
+	train_edges = edges[num_val_edges+num_test_edges:]
+
+	return train_edges, val_edges, test_edges
+
+def determine_positive_and_negative_samples(nodes, walks, context_size):
+
+	print ("determining positive and negative samples")
+
+	if not isinstance(nodes, set):
+		nodes = set(nodes)
+	
+	all_positive_samples = {n: {n}for n in sorted(nodes)}
+	positive_samples = []
+
+	counts = {n: 0. for n in sorted(nodes)}
+
+	for num_walk, walk in enumerate(walks):
+		for i in range(len(walk)):
+			u = walk[i]
+			counts[u] += 1	
+			for j in range(i+1, min(len(walk), i+1+context_size)):
+
+				v = walk[j]
+				if u == v:
+					continue
+
+				positive_samples.append((u, v))
+				positive_samples.append((v, u))
+				
+				all_positive_samples[u].add(v)
+				all_positive_samples[v].add(u)
+
+ 
+		if num_walk % 1000 == 0:  
+			print ("processed walk {}/{}".format(num_walk, len(walks)))
+
+	negative_samples = {n: sorted(list(nodes.difference(all_positive_samples[n]))) for n in nodes}
+	for u in negative_samples:
+		assert u not in negative_samples[u], "u should not be in negative samples"
+		assert len(negative_samples[u]) > 0, "node {} does not have any negative samples".format(u)
+
+	counts = np.array(list(counts.values()))# ** 0.75
+	probs = counts / counts.sum()
+
+	prob_dict = {n: probs[n] * probs[negative_samples[n]] ** .75 for n in sorted(nodes)}
+	prob_dict = {n: probs / probs.sum() for n, probs in prob_dict.items()}
+	# probs = {n: counts[negative_samples[n]] / counts[negative_samples[n]].sum() for n in sorted(nodes)}
+
+	print ("DETERMINED POSITIVE AND NEGATIVE SAMPLES")
+	print ("found {} positive sample pairs".format(len(positive_samples)))
+
+	return positive_samples, negative_samples, prob_dict
+
+def load_walks(G, walk_file, feature_sim, args):
+
+	def save_walks_to_file(walks, walk_file):
+		with open(walk_file, "w") as f:
+			for walk in walks:
+				for n in walk:
+					f.write("{} ".format(n))
+
+	def load_walks_from_file(walk_file, walk_length):
+
+		with open(walk_file, "r") as f:
+			l = f.readline().rstrip()
+			l = [int(n) for n in l.split(" ")]
+			walks = [l[i:i+walk_length] for i in range(0, len(l), walk_length)]
+		return walks
+
+
+	if not os.path.exists(walk_file):
+		node2vec_graph = Graph(nx_G=G, is_directed=False, p=args.p, q=args.q,
+			jump_prob=args.jump_prob, feature_sim=feature_sim, seed=args.seed)
+		node2vec_graph.preprocess_transition_probs()
+		walks = node2vec_graph.simulate_walks(num_walks=args.num_walks, walk_length=args.walk_length)
+		save_walks_to_file(walks, walk_file)
+		print ("saved walks to {}".format(walk_file))
+
+	else:
+		print ("loading walks from {}".format(walk_file))
+		walks = load_walks_from_file(walk_file, args.walk_length)
+	return walks
