@@ -8,14 +8,18 @@ import json
 import random
 
 import numpy as np
+import networkx as nx
 from scipy.sparse import identity
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-
+from sklearn.metrics.pairwise import cosine_similarity
 
 from data_utils import load_karate, load_labelled_attributed_network, load_ppi
 from utils import load_walks, determine_positive_and_negative_samples, convert_edgelist_to_dict, split_edges, get_training_sample, make_validation_data
-from callbacks import PeriodicStdoutLogger
+from callbacks import PeriodicStdoutLogger, hyperboloid_to_klein, hyperboloid_to_poincare_ball, hyperbolic_distance_hyperboloid_pairwise
+from losses import hyperbolic_negative_sampling_loss, hyperbolic_sigmoid_loss, hyperbolic_softmax_loss
+from metrics import evaluate_rank_and_MAP, evaluate_classification
+from callbacks import plot_disk_embeddings, plot_roc, plot_classification, plot_precisions_recalls
 
 from keras.layers import Input, Layer, Dense
 from keras.models import Model
@@ -47,8 +51,6 @@ config.allow_soft_placement=True
 
 # Create a session with the above options specified.
 K.tensorflow_backend.set_session(tf.Session(config=config))
-
-
 
 def minkowski_dot(x, y):
 	assert len(x.shape) == 2
@@ -138,14 +140,6 @@ class ExponentialMappingOptimizer(optimizer.Optimizer):
 		exp_map = self.exponential_mapping(var, - lr_t * tangent_grad)
 		
 		return tf.assign(var, exp_map)
-
-	# def minkowski_dot(self, x, y):
-	# 	assert len(x.shape) == 2
-	# 	rank = x.shape[1] - 1
-	# 	if len(y.shape) == 2:
-	# 		return K.sum(x[:,:rank] * y[:,:rank], axis=-1, keepdims=True) - x[:,rank:] * y[:,rank:]
-	# 	else:
-	# 		return K.batch_dot( x[:,:rank], y[:,:,:rank], axes=[1,2]) - K.batch_dot(x[:,rank:], y[:,:,rank:], axes=[1, 2])
 		
 	def project_onto_tangent_space(self, hyperboloid_point, minkowski_tangent):
 		tang = minkowski_tangent + minkowski_dot(hyperboloid_point, minkowski_tangent) * hyperboloid_point
@@ -321,7 +315,7 @@ def parse_args():
 
 	
 	
-	parser.add_argument("--plot", dest="plot_path", default="../plots/", 
+	parser.add_argument("--plot", dest="plot_path", default="plots/", 
 		help="path to save plots (default is 'plots/)'.")
 	# parser.add_argument("--embeddings", dest="embedding_path", default="../embeddings/", 
 	# 	help="path to save embeddings (default is '../embeddings/)'.")
@@ -495,7 +489,7 @@ def main():
 		feature_sim = None
 
 	if args.evaluate_link_prediction:
-		train_edges, val_edges, test_edges = split_edges(reconstruction_edges)
+		train_edges, val_edges, test_edges = split_edges(reconstruction_edges, args)
 		topology_graph.remove_edges_from(val_edges + test_edges)
 
 	else:
@@ -510,7 +504,8 @@ def main():
 		g = nx.from_numpy_matrix(nx.adjacency_matrix(topology_graph).A + feature_sim)
 	elif args.multiply_attributes:
 		walk_file = os.path.join(args.walk_path, "multiply_attributes")
-		g = nx.from_numpy_matrix(nx.adjacency_matrix(topology_graph).A * feature_sim)
+		A = nx.adjacency_matrix(topology_graph).A
+		g = nx.from_numpy_matrix(A + A * feature_sim)
 	elif args.jump_prob > 0:
 		walk_file = os.path.join(args.walk_path, "jump_prob={}".format(args.jump_prob))
 		g = topology_graph
@@ -578,19 +573,13 @@ def main():
 		callbacks=[
 			TerminateOnNaN(), 
 			logger,
-			# PeriodicStdoutLogger(reconstruction_edges, labels, 
-			# 	n=args.plot_freq, epoch=initial_epoch, edge_dict=edge_dict, args=args), 
-			# TensorBoard(log_dir=args.board_path, histogram_freq=1, 
-			# 	batch_size=args.batch_size, write_graph=True, write_grads=True, write_images=True, 
-			# 	embeddings_freq=1, embeddings_layer_names="embedding_layer", 
-			# 	embeddings_metadata="/home/david/Documents/capsnet_embedding/data/karate/labels.tsv"
-			# 	),
 			ModelCheckpoint(os.path.join(args.model_path, 
 				"{epoch:05d}.h5"), save_weights_only=True),
 			CSVLogger(args.log_path, append=True), 
 			early_stopping
 		]
 		)
+
 
 	hyperboloid_embedding = model.layers[-1].get_weights()[0]
 	dists = hyperbolic_distance_hyperboloid_pairwise(hyperboloid_embedding, hyperboloid_embedding)
@@ -632,7 +621,7 @@ def main():
 		test_edges, non_edges, precision_recall_path)
 
 	if args.evaluate_class_prediction:
-		label_percentages, f1_micros, f1_macros = evaluate_classification(klein_embedding, labels)
+		label_percentages, f1_micros, f1_macros = evaluate_classification(klein_embedding, labels, args)
 
 		f1_path = os.path.join(args.plot_path, "epoch_{:05d}_class_prediction_f1_test.png".format(epoch))
 		plot_classification(label_percentages, f1_micros, f1_macros, f1_path)

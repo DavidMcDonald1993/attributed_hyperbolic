@@ -3,14 +3,20 @@ import numpy as np
 import tensorflow as tf 
 import keras.backend as K
 
-from tensorflow.contrib.distributions import Bernoulli
+
+# max_norm = np.nextafter(1, 0, dtype=K.floatx())
+# max_ = np.finfo(K.floatx()).max
+# min_norm = 1e-7
 
 
-max_norm = np.nextafter(1, 0, dtype=K.floatx())
-max_ = np.finfo(K.floatx()).max
-min_norm = 1e-7
+def minkowski_dot(x, y):
+    assert len(x.shape) == 2
+    rank = x.shape[1] - 1
+    if len(y.shape) == 2:
+        return K.sum(x[:,:rank] * y[:,:rank], axis=-1, keepdims=True) - x[:,rank:] * y[:,rank:]
+    else:
+        return K.batch_dot( x[:,:rank], y[:,:,:rank], axes=[1,2]) - K.batch_dot(x[:,rank:], y[:,:,rank:], axes=[1, 2])
 
-    
 def hyperbolic_negative_sampling_loss(r, t):
 
     def loss(y_true, y_pred, r=r, t=t):

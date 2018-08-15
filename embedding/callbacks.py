@@ -1,19 +1,15 @@
 import numpy as np
-import scipy as sp
-import pandas as pd
-import networkx as nx
 
-from scipy.stats import spearmanr
-
-import matplotlib
-matplotlib.use('agg')
-
+# import matplotlib
+# matplotlib.use('agg')
 import matplotlib.pyplot as plt
 
-from sklearn.metrics import average_precision_score, normalized_mutual_info_score, accuracy_score, f1_score
-from sklearn.metrics.pairwise import pairwise_distances
+from sklearn.metrics import roc_curve, roc_auc_score, precision_recall_curve
 
 from keras.callbacks import Callback
+from utils import convert_edgelist_to_dict
+
+from metrics import evaluate_rank_and_MAP, evaluate_classification
 
 
 def minkowski_dot_np(x, y):
@@ -262,7 +258,7 @@ class PeriodicStdoutLogger(Callback):
 		klein_embedding = hyperboloid_to_klein(hyperboloid_embedding)
 
 		if self.args.evaluate_class_prediction:
-			label_percentages, f1_micros, f1_macros = evaluate_classification(klein_embedding, self.labels)
+			label_percentages, f1_micros, f1_macros = evaluate_classification(klein_embedding, self.labels, self.args)
 
 			print (f1_micros)
 

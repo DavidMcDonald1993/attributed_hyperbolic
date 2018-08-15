@@ -2,6 +2,10 @@ import numpy as np
 import pandas as pd
 from scipy.stats import spearmanr
 
+from sklearn.metrics import average_precision_score, roc_auc_score, f1_score, roc_curve, precision_recall_curve
+from sklearn.linear_model import LogisticRegression
+from sklearn.multiclass import OneVsRestClassifier
+
 # def evaluate_rank_and_MAP(dists, edgelist, non_edgelist):
 # 	assert isinstance(edgelist, list)
 
@@ -68,7 +72,7 @@ def evaluate_rank_and_MAP(dists, edge_dict, non_edge_dict):
 		"MEAN ROC AUC=", np.mean(roc_auc_scores))
 	return np.mean(ranks), np.mean(ap_scores), np.mean(roc_auc_scores)
 
-def evaluate_classification(klein_embedding, labels, 
+def evaluate_classification(klein_embedding, labels, args,
 	label_percentages=np.arange(0.02, 0.11, 0.01),):
 
 	def idx_shuffle(labels):
@@ -80,6 +84,8 @@ def evaluate_classification(klein_embedding, labels,
 				if len(_class) == 0:
 					class_memberships.remove(_class)
 		return idx
+
+	np.random.seed(args.seed)
 
 	num_nodes, dim = klein_embedding.shape
 

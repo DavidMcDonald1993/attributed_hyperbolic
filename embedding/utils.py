@@ -1,8 +1,11 @@
 import os
 import numpy as np
-# import networkx as nx
+import networkx as nx
 from node2vec_sampling import Graph 
 
+import random
+
+from sklearn.metrics.pairwise import cosine_similarity
 
 def convert_edgelist_to_dict(edgelist, undirected=True, self_edges=False):
 	if edgelist is None:
@@ -38,7 +41,7 @@ def get_training_sample(batch_positive_samples, negative_samples, num_negative_s
 	batch_nodes = np.append(batch_positive_samples, batch_negative_samples, axis=1)
 	return batch_nodes
 
-	
+
 def make_validation_data(edges, non_edge_dict, probs, args):
 
 	edges = np.array(edges)
@@ -77,11 +80,11 @@ def create_feature_graph(features, args):
 
 	return feature_graph
 
-def split_edges(edges, val_split=0.05, test_split=0.1):
+def split_edges(edges, args, val_split=0.05, test_split=0.1):
 	num_val_edges = int(len(edges) * val_split)
 	num_test_edges = int(len(edges) * test_split)
 
-
+	random.seed(args.seed)
 	random.shuffle(edges)
 
 	val_edges = edges[:num_val_edges]
