@@ -7,6 +7,7 @@ import scipy as sp
 from scipy.sparse import csr_matrix
 import pandas as pd
 import networkx as nx
+from networkx.readwrite import json_graph
 
 import pickle as pkl
 

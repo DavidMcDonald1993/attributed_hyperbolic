@@ -56,7 +56,7 @@ class Graph():
 				# node2vec style random walk
 				cur_nbrs = sorted(G.neighbors(cur))
 				if len(cur_nbrs) > 0:
-					if len(walk) == 1:
+					if (self.p==1 and self.q==1) or len(walk) == 1:
 						walk.append(cur_nbrs[alias_draw(alias_nodes[cur][0], alias_nodes[cur][1])])
 						# probs = self.compute_node_probs(cur)
 						# walk.append(alias_draw(probs))
@@ -135,27 +135,32 @@ class Graph():
 
 		print ("completed node {}/{}".format(i, len(G)))
 
-		alias_edges = {}
 		# triads = {}
-
 		print ("DONE nodes")
-
-		if is_directed:
-			for edge in G.edges():
-				alias_edges[edge] = self.get_alias_edge(edge[0], edge[1])
-		else:
-			i = 0
-			for edge in G.edges():
-				if i % 1000 == 0:
-					print ("completed edge {}/{}".format(i, 2*len(G.edges())))
-				alias_edges[edge] = self.get_alias_edge(edge[0], edge[1])
-				i += 1
-				alias_edges[(edge[1], edge[0])] = self.get_alias_edge(edge[1], edge[0])
-				i += 1
-			print ("completed edge {}/{}".format(i, 2*len(G.edges())))
-
 		self.alias_nodes = alias_nodes
-		self.alias_edges = alias_edges
+		
+
+		alias_edges = {}
+		self.alias_edges = {}
+
+		if self.p != 1 and self.q != 1: 
+			if is_directed:
+				for edge in G.edges():
+					alias_edges[edge] = self.get_alias_edge(edge[0], edge[1])
+			else:
+				i = 0
+				for edge in G.edges():
+					if i % 1000 == 0:
+						print ("completed edge {}/{}".format(i, 2*len(G.edges())))
+					alias_edges[edge] = self.get_alias_edge(edge[0], edge[1])
+					i += 1
+					alias_edges[(edge[1], edge[0])] = self.get_alias_edge(edge[1], edge[0])
+					i += 1
+				print ("completed edge {}/{}".format(i, 2*len(G.edges())))
+
+			self.alias_edges = alias_edges
+		else:
+			print ("p and q are 1, skipping preprocssing edges")
 
 		print ("DONE edges")
 

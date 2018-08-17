@@ -1,3 +1,4 @@
+import os
 import numpy as np
 
 # import matplotlib
@@ -217,6 +218,7 @@ class PeriodicStdoutLogger(Callback):
 
 		hyperboloid_embedding = self.model.layers[-1].get_weights()[0]
 		# print (hyperboloid_embedding)
+		# print (minkowski_dot_np(hyperboloid_embedding, hyperboloid_embedding))
 
 		dists = hyperbolic_distance_hyperboloid_pairwise(hyperboloid_embedding, hyperboloid_embedding)
 

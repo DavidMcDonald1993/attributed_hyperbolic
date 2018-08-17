@@ -63,7 +63,7 @@ def hyperbolic_sigmoid_loss(y_true, y_pred,):
     pos_p_uv = K.clip(pos_p_uv, min_value=K.epsilon(), max_value=1-K.epsilon())
     neg_p_uv = K.clip(neg_p_uv, min_value=K.epsilon(), max_value=1-K.epsilon())
 
-    return - K.mean( K.log( pos_p_uv ) + K.sum( K.log(neg_p_uv), axis=-1) )
+    return - K.mean( K.log( pos_p_uv ) + K.sum( K.log( neg_p_uv ), axis=-1) )
 
 def hyperbolic_softmax_loss(y_true, y_pred,):
 

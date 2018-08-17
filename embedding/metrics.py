@@ -92,8 +92,12 @@ def evaluate_classification(klein_embedding, labels, args,
 	f1_micros = []
 	f1_macros = []
 
-	classes = sorted(set(labels))
-	idx = idx_shuffle(labels)
+	if labels.shape > 1:
+		classes = np.arange(labels.shape[1])
+		idx = np.random.permutation(num_nodes)
+	else:
+		classes = sorted(set(labels))
+		idx = idx_shuffle(labels)
 
 	
 	for label_percentage in label_percentages:

@@ -7,6 +7,50 @@ import random
 
 from sklearn.metrics.pairwise import cosine_similarity
 
+def alias_setup(probs):
+	'''
+	Compute utility lists for non-uniform sampling from discrete distributions.
+	Refer to https://hips.seas.harvard.edu/blog/2013/03/03/the-alias-method-efficient-sampling-with-many-discrete-outcomes/
+	for details
+	'''
+	K = len(probs)
+	q = np.zeros(K)
+	J = np.zeros(K, dtype=np.int)
+
+	smaller = []
+	larger = []
+	for kk, prob in enumerate(probs):
+	    q[kk] = K*prob
+	    if q[kk] < 1.0:
+	        smaller.append(kk)
+	    else:
+	        larger.append(kk)
+
+	while len(smaller) > 0 and len(larger) > 0:
+	    small = smaller.pop()
+	    large = larger.pop()
+
+	    J[small] = large
+	    q[large] = q[large] + q[small] - 1.0
+	    if q[large] < 1.0:
+	        smaller.append(large)
+	    else:
+	        larger.append(large)
+
+	return J, q
+
+def alias_draw((J, q), size=1):
+    '''
+    Draw sample from a non-uniform discrete distribution using alias sampling.
+    '''
+    K = len(J)
+
+    kk = np.floor(np.random.uniform(high=K, size=size)).astype(np.int)
+    r = np.random.uniform(size=size)
+    idx = r >= q[kk]
+    kk[idx] = J[kk[idx]]
+    return kk
+
 def convert_edgelist_to_dict(edgelist, undirected=True, self_edges=False):
 	if edgelist is None:
 		return None
@@ -27,30 +71,36 @@ def convert_edgelist_to_dict(edgelist, undirected=True, self_edges=False):
 	# 		assert u in edge_dict[v]
 	return edge_dict
 
-def get_training_sample(batch_positive_samples, negative_samples, num_negative_samples, probs):
+def get_training_sample(batch_positive_samples, negative_samples, num_negative_samples, alias_dict):
 
 	input_nodes = batch_positive_samples[:,0]
 
 	batch_negative_samples = np.array([
-		np.random.choice(negative_samples[u], 
-		replace=True, size=(num_negative_samples,), 
-		p=probs[u] if probs is not None else probs
-		)
+		# np.random.choice(negative_samples[u], 
+		# replace=True, size=(num_negative_samples,), 
+		# p=probs[u] if probs is not None else probs
+		# )
+		negative_samples[u][alias_draw(alias_dict[u], num_negative_samples)]
 		for u in input_nodes
 	], dtype=np.int64)
+
 	batch_nodes = np.append(batch_positive_samples, batch_negative_samples, axis=1)
 	return batch_nodes
 
 
-def make_validation_data(edges, non_edge_dict, probs, args):
+def make_validation_data(edges, non_edge_dict, args):
 
 	edges = np.array(edges)
 	idx = np.random.choice(len(edges), size=args.batch_size, replace=False,)
 	positive_samples = edges[idx]#
 	# non_edge_dict = convert_edgelist_to_dict(non_edges)
-
-	x = get_training_sample(positive_samples, 
-		non_edge_dict, args.num_negative_samples, probs=None)
+	negative_samples = np.array([
+		np.random.choice(non_edge_dict[u], size=args.num_negative_samples, replace=True,)
+		for u in positive_samples[:,0]
+	])
+	x = np.append(positive_samples, negative_samples, axis=-1)
+	# x = get_training_sample(positive_samples, 
+	# 	non_edge_dict, args.num_negative_samples, probs=None)
 	y = np.zeros(list(x.shape)+[1], dtype=np.int64)
 
 	return x, y
@@ -109,14 +159,16 @@ def determine_positive_and_negative_samples(nodes, walks, context_size):
 		for i in range(len(walk)):
 			u = walk[i]
 			counts[u] += 1	
-			for j in range(i+1, min(len(walk), i+1+context_size)):
-
-				v = walk[j]
+			for j in range(context_size):
+			# for j in range(i+1, min(len(walk), i+1+context_size)):
+				if i+j+1 >= len(walk):
+					continue
+				v = walk[i+j+1]
 				if u == v:
 					continue
 
-				positive_samples.append((u, v))
-				positive_samples.append((v, u))
+				positive_samples.extend([(u, v)] * (context_size - j))
+				positive_samples.extend([(v, u)] * (context_size - j))
 				
 				all_positive_samples[u].add(v)
 				all_positive_samples[v].add(u)
@@ -125,10 +177,13 @@ def determine_positive_and_negative_samples(nodes, walks, context_size):
 		if num_walk % 1000 == 0:  
 			print ("processed walk {}/{}".format(num_walk, len(walks)))
 
-	negative_samples = {n: sorted(list(nodes.difference(all_positive_samples[n]))) for n in nodes}
+	negative_samples = {n: np.array(sorted(nodes.difference(all_positive_samples[n]))) for n in nodes}
 	for u in negative_samples:
 		assert u not in negative_samples[u], "u should not be in negative samples"
 		assert len(negative_samples[u]) > 0, "node {} does not have any negative samples".format(u)
+
+	print ("DETERMINED POSITIVE AND NEGATIVE SAMPLES")
+	print ("found {} positive sample pairs".format(len(positive_samples)))
 
 	counts = np.array(list(counts.values()))# ** 0.75
 	probs = counts / counts.sum()
@@ -136,11 +191,11 @@ def determine_positive_and_negative_samples(nodes, walks, context_size):
 	prob_dict = {n: probs[n] * probs[negative_samples[n]] ** .75 for n in sorted(nodes)}
 	prob_dict = {n: probs / probs.sum() for n, probs in prob_dict.items()}
 	# probs = {n: counts[negative_samples[n]] / counts[negative_samples[n]].sum() for n in sorted(nodes)}
+	alias_dict = {u: alias_setup(probs) for u, probs in prob_dict.items()}
 
-	print ("DETERMINED POSITIVE AND NEGATIVE SAMPLES")
-	print ("found {} positive sample pairs".format(len(positive_samples)))
+	print ("PREPROCESSED NEGATIVE SAMPLE PROBS")
 
-	return positive_samples, negative_samples, prob_dict
+	return positive_samples, negative_samples, alias_dict
 
 def load_walks(G, walk_file, feature_sim, args):
 

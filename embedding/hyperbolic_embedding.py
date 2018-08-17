@@ -20,6 +20,7 @@ from callbacks import PeriodicStdoutLogger, hyperboloid_to_klein, hyperboloid_to
 from losses import hyperbolic_negative_sampling_loss, hyperbolic_sigmoid_loss, hyperbolic_softmax_loss
 from metrics import evaluate_rank_and_MAP, evaluate_classification
 from callbacks import plot_disk_embeddings, plot_roc, plot_classification, plot_precisions_recalls
+from generators import training_generator, TrainingSequence
 
 from keras.layers import Input, Layer, Dense
 from keras.models import Model
@@ -117,11 +118,6 @@ class ExponentialMappingOptimizer(optimizer.Optimizer):
 	def __init__(self, learning_rate=0.001, use_locking=False, name="ExponentialMappingOptimizer"):
 		super(ExponentialMappingOptimizer, self).__init__(use_locking, name)
 		self._lr = learning_rate
-		# print type(self._lr)
-		# raise SystemExit
-		
-		# Tensor versions of the constructor arguments, created in _prepare().
-		# self._lr_t = None
 
 	def _prepare(self):
 		self._lr_t = ops.convert_to_tensor(self._lr, name="learning_rate", dtype=K.floatx())
@@ -171,7 +167,7 @@ class ExponentialMappingOptimizer(optimizer.Optimizer):
 		###################################################
 		y = p
 		# z = x / norm_x
-		z = x / tf.clip_by_value(norm_x, clip_value_min=K.epsilon(), clip_value_max=np.inf)
+		z = x / K.maximum(norm_x, K.epsilon())#tf.clip_by_value(norm_x, clip_value_min=K.epsilon(), clip_value_max=np.inf)
 
 		exp_map = tf.cosh(norm_x) * y + tf.sinh(norm_x) * z
 		#####################################################
@@ -256,20 +252,20 @@ def parse_args():
 		help="Steepness of logistic function (defaut is 1).")
 
 
-	parser.add_argument("--lr", dest="lr", type=float, default=1e-2,
-		help="Learning rate (default is 1e-2).")
+	parser.add_argument("--lr", dest="lr", type=float, default=5e-2,
+		help="Learning rate (default is 5e-2).")
 
 	parser.add_argument("--rho", dest="rho", type=float, default=0,
 		help="Minimum feature correlation (default is 0).")
 
 	parser.add_argument("-e", "--num_epochs", dest="num_epochs", type=int, default=50000,
 		help="The number of epochs to train for (default is 50000).")
-	parser.add_argument("-b", "--batch_size", dest="batch_size", type=int, default=32, 
-		help="Batch size for training (default is 32).")
+	parser.add_argument("-b", "--batch_size", dest="batch_size", type=int, default=512, 
+		help="Batch size for training (default is 512).")
 	parser.add_argument("--nneg", dest="num_negative_samples", type=int, default=10, 
 		help="Number of negative samples for training (default is 10).")
-	parser.add_argument("--context-size", dest="context_size", type=int, default=1,
-		help="Context size for generating positive samples (default is 1).")
+	parser.add_argument("--context-size", dest="context_size", type=int, default=3,
+		help="Context size for generating positive samples (default is 3).")
 	parser.add_argument("--patience", dest="patience", type=int, default=25,
 		help="The number of epochs of no improvement in validation loss before training is stopped. (Default is 25)")
 
@@ -288,16 +284,16 @@ def parse_args():
 	parser.add_argument('--walk-length', dest="walk_length", type=int, default=15, 
 		help="Length of random walk from source (default is 15).")
 
-	# parser.add_argument("--alpha", dest="alpha", type=float, default=.5,
-	# 	help="weighting of attributes (default is 0.5).")
+	parser.add_argument("--alpha", dest="alpha", type=float, default=0,
+		help="weighting of attributes (default is 0).")
 
 
 	# parser.add_argument("--second-order", action="store_true", 
 	# 	help="Use this flag to use second order topological similarity information.")
 	parser.add_argument("--no-attributes", action="store_true", 
 		help="Use this flag to not use attributes.")
-	parser.add_argument("--add-attributes", action="store_true", 
-		help="Use this flag to add attribute sim to adj.")
+	# parser.add_argument("--add-attributes", action="store_true", 
+	# 	help="Use this flag to add attribute sim to adj.")
 	parser.add_argument("--multiply-attributes", action="store_true", 
 		help="Use this flag to multiply attribute sim to adj.")
 	parser.add_argument("--jump-prob", dest="jump_prob", type=float, default=0, 
@@ -305,6 +301,8 @@ def parse_args():
 
 	parser.add_argument("-v", "--verbose", dest="verbose", action="store_true", 
 		help="Use this flag to set verbosity of training.")
+	parser.add_argument('--workers', dest="workers", type=int, default=1, 
+		help="Number of worker threads to generate training patterns (default is 1).")
 
 	# parser.add_argument("--distance", dest="distance", action="store_true", 
 	# 	help="Use this flag to use hyperbolic distance loss.")
@@ -338,6 +336,8 @@ def parse_args():
 	parser.add_argument('--just-walks', action="store_true", help='flag to generate walks with given parameters')
 
 	parser.add_argument('--no-load', action="store_true", help='flag to termiante program if trained model exists')
+
+
 
 
 	args = parser.parse_args()
@@ -375,8 +375,8 @@ def configure_paths(args):
 	
 	if args.multiply_attributes:
 		directory += "multiply_attributes/"
-	elif args.add_attributes:
-		directory += "add_attributes/"
+	elif args.alpha>0:
+		directory += "add_attributes_alpha={}/".format(args.alpha, )
 	elif args.jump_prob > 0:
 		directory += "jump_prob={}/".format(args.jump_prob)
 	else:
@@ -441,6 +441,7 @@ def configure_paths(args):
 		os.makedirs(args.model_path)
 
 
+
 def main():
 
 	args = parse_args()
@@ -449,7 +450,7 @@ def main():
 	if not args.evaluate_link_prediction:
 		args.evaluate_class_prediction = True
 
-	assert not sum([args.multiply_attributes, args.add_attributes, args.jump_prob>0]) > 1
+	assert not sum([args.multiply_attributes, args.alpha>0, args.jump_prob>0]) > 1
 
 	random.seed(args.seed)
 	np.random.seed(args.seed)
@@ -499,9 +500,9 @@ def main():
 
 
 
-	if args.add_attributes:
-		walk_file = os.path.join(args.walk_path, "add_attributes")
-		g = nx.from_numpy_matrix(nx.adjacency_matrix(topology_graph).A + feature_sim)
+	if args.alpha>0:
+		walk_file = os.path.join(args.walk_path, "add_attributes_alpha={}".format(args.alpha))
+		g = nx.from_numpy_matrix((1 - args.alpha) * nx.adjacency_matrix(topology_graph).A + args.alpha * feature_sim)
 	elif args.multiply_attributes:
 		walk_file = os.path.join(args.walk_path, "multiply_attributes")
 		A = nx.adjacency_matrix(topology_graph).A
@@ -521,16 +522,12 @@ def main():
 		return
 	
 
-	positive_samples, negative_samples, probs =\
+	positive_samples, negative_samples, alias_dict =\
 		determine_positive_and_negative_samples(nodes=topology_graph.nodes(), 
 		walks=walks, context_size=args.context_size)
 
 	num_nodes = len(topology_graph)
 	num_steps = int((len(positive_samples) + args.batch_size - 1) / args.batch_size)
-
-	# training_gen = training_generator(positive_samples, negative_samples, probs,
-	# 								  num_negative_samples=args.num_negative_samples, 
-	# 								  batch_size=args.batch_size)
 
 	model, initial_epoch = build_model(num_nodes, args)
 	optimizer = ExponentialMappingOptimizer(learning_rate=args.lr)
@@ -549,7 +546,7 @@ def main():
 	non_edge_dict = convert_edgelist_to_dict(non_edges)
 	if args.verbose:
 		print ("determined true non edges")
-	val_in, val_target = make_validation_data(reconstruction_edges, non_edge_dict, probs, args)
+	val_in, val_target = make_validation_data(reconstruction_edges, non_edge_dict, args)
 	if args.verbose:
 		print ("determined validation data")
 
@@ -559,16 +556,18 @@ def main():
 	if args.verbose:
 		print ("created logger")
 
-	x = get_training_sample(np.array(positive_samples), negative_samples, args.num_negative_samples, probs)
-	y = np.zeros(list(x.shape) + [1])
+	training_gen = TrainingSequence(positive_samples, negative_samples, alias_dict, args)
+		
+	# x = get_training_sample(np.array(positive_samples), negative_samples, args.num_negative_samples, alias_dict)
+	# y = np.zeros(list(x.shape) + [1])
 
 	if args.verbose:
 		print ("determined training samples")
-	# model.fit_generator(training_gen, epochs=args.num_epochs, 
-	# 	workers=1, max_queue_size=100, use_multiprocessing=True,
-	# 	steps_per_epoch=num_steps, verbose=args.verbose, initial_epoch=initial_epoch,
-	model.fit(x, y, batch_size=args.batch_size, epochs=args.num_epochs, 
-		initial_epoch=initial_epoch, verbose=args.verbose,
+
+	model.fit_generator(training_gen, 
+		workers=args.workers, max_queue_size=10, use_multiprocessing=args.workers>0, steps_per_epoch=num_steps, 
+	# model.fit(x, y, batch_size=args.batch_size, epochs=args.num_epochs, 
+		epochs=args.num_epochs, initial_epoch=initial_epoch, verbose=args.verbose,
 		validation_data=[val_in, val_target],
 		callbacks=[
 			TerminateOnNaN(), 
