@@ -92,7 +92,7 @@ def evaluate_classification(klein_embedding, labels, args,
 	f1_micros = []
 	f1_macros = []
 
-	if labels.shape > 1:
+	if len(labels.shape) > 1:
 		classes = np.arange(labels.shape[1])
 		idx = np.random.permutation(num_nodes)
 	else:

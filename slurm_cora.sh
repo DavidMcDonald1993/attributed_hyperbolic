@@ -3,7 +3,7 @@
 #SBATCH --job-name=coraJob
 #SBATCH --output=coraJob_%A_%a.out
 #SBATCH --error=coraJob_%A_%a.err
-#SBATCH --array=1-16
+#SBATCH --array=1-3
 #SBATCH --time=24:00:00
 #SBATCH --ntasks=4
 #SBATCH --mem-per-cpu=16gb
@@ -17,3 +17,5 @@ module load TensorFlow/1.8.0-foss-2018a-Python-3.6.3
 module load apps/keras/2.0.8-python-3.5.2
 module load matplotlib/2.1.1-iomkl-2018a-Python-3.6.3
 
+python embedding/hyperbolic_embedding.py  --dataset cora --dim 32 \
+	--evaluate-link-prediction --no-load --sigmoid

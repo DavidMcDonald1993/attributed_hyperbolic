@@ -269,8 +269,8 @@ def parse_args():
 	parser.add_argument("--patience", dest="patience", type=int, default=25,
 		help="The number of epochs of no improvement in validation loss before training is stopped. (Default is 25)")
 
-	parser.add_argument("--plot-freq", dest="plot_freq", type=int, default=1000, 
-		help="Frequency for plotting (default is 1000).")
+	parser.add_argument("--plot-freq", dest="plot_freq", type=int, default=100, 
+		help="Frequency for plotting (default is 100).")
 
 	parser.add_argument("-d", "--dim", dest="embedding_dim", type=int,
 		help="Dimension of embeddings for each layer (default is 2).", default=2)
@@ -301,8 +301,8 @@ def parse_args():
 
 	parser.add_argument("-v", "--verbose", dest="verbose", action="store_true", 
 		help="Use this flag to set verbosity of training.")
-	parser.add_argument('--workers', dest="workers", type=int, default=1, 
-		help="Number of worker threads to generate training patterns (default is 1).")
+	parser.add_argument('--workers', dest="workers", type=int, default=2, 
+		help="Number of worker threads to generate training patterns (default is 2).")
 
 	# parser.add_argument("--distance", dest="distance", action="store_true", 
 	# 	help="Use this flag to use hyperbolic distance loss.")
