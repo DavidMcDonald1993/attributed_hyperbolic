@@ -4,8 +4,8 @@
 #SBATCH --output=coraJob_%A_%a.out
 #SBATCH --error=coraJob_%A_%a.err
 #SBATCH --array=0-2
-#SBATCH --time=10-00:00:00
-#SBATCH --ntasks=4
+#SBATCH --time=01:00:00
+#SBATCH --ntasks=1
 #SBATCH --mem-per-cpu=16gb
 
 arr=(--no-attributes --multiply-attributes --jump-prob=0.05)
