@@ -13,11 +13,13 @@ import pickle as pkl
 
 from sklearn.preprocessing import StandardScaler
 
-def load_karate():
+def load_karate(args):
 
-	topology_graph = nx.read_edgelist("/data/karate/karate.edg")
+	_dir = os.path.join(args.data_directory, "karate")
 
-	label_df = pd.read_csv("/data/karate/mod-based-clusters.txt", sep=" ", index_col=0, header=None,)
+	topology_graph = nx.read_edgelist(os.path.join(_dir, "karate.edg"))
+
+	label_df = pd.read_csv(os.path.join(_dir, "mod-based-clusters.txt"), sep=" ", index_col=0, header=None,)
 	label_df.index = [str(idx) for idx in label_df.index]
 	label_df = label_df.reindex(topology_graph.nodes())
 
@@ -26,7 +28,7 @@ def load_karate():
 	topology_graph = nx.convert_node_labels_to_integers(topology_graph, label_attribute="original_name")
 	nx.set_edge_attributes(G=topology_graph, name="weight", values=1.)
 
-	features = np.genfromtxt("/data/karate/feats.csv", delimiter=",")
+	features = np.genfromtxt(os.path.join(_dir, "/data/karate/feats.csv"), delimiter=",")
 
 	return topology_graph, features, labels
 
@@ -46,17 +48,19 @@ def load_labelled_attributed_network(dataset_str, args, scale=False):
 		mask[idx] = 1
 		return np.array(mask, dtype=np.bool)
 
+	_dir = os.path.join(args.data_directory, "labelled_attributed_networks")
+
 	names = ['x', 'y', 'tx', 'ty', 'allx', 'ally', 'graph']
 	objects = []
 	for i in range(len(names)):
-		with open("/data/labelled_attributed_networks/ind.{}.{}".format(dataset_str, names[i]), 'rb') as f:
+		with open(os.path.join(_dir, "ind.{}.{}".format(dataset_str, names[i])), 'rb') as f:
 			if sys.version_info > (3, 0):
 				objects.append(pkl.load(f, encoding='latin1'))
 			else:
 				objects.append(pkl.load(f))
 
 	x, y, tx, ty, allx, ally, graph = tuple(objects)
-	test_idx_reorder = parse_index_file("/data/labelled_attributed_networks/ind.{}.test.index".format(dataset_str))
+	test_idx_reorder = parse_index_file(os.path.join(_dir, "ind.{}.test.index".format(dataset_str)))
 	test_idx_range = np.sort(test_idx_reorder)
 
 	if dataset_str == 'citeseer':
@@ -109,7 +113,7 @@ def load_labelled_attributed_network(dataset_str, args, scale=False):
 	return topology_graph, features, labels
 
 def load_ppi(args, normalize=True,):
-    prefix = "/data/ppi/ppi"
+    prefix = os.path.join(args.data_directory, "/data/ppi/ppi")
     G_data = json.load(open(prefix + "-G.json"))
     topology_graph = json_graph.node_link_graph(G_data)
     if isinstance(topology_graph.nodes()[0], int):

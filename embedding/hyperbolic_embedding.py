@@ -239,6 +239,9 @@ def parse_args():
 	'''
 	parser = argparse.ArgumentParser(description="Hyperbolic Skipgram for feature learning on complex networks")
 
+	parser.add_argument("--data-directory", dest="data_directory", type=str, default="/data/",
+		help="The directory containing data files (default is '\\data\\').")
+
 	parser.add_argument("--dataset", dest="dataset", type=str, default="karate",
 		help="The dataset to load. Must be one of [wordnet, cora, citeseer, pubmed,\
 		AstroPh, CondMat, GrQc, HepPh, karate]. (Default is karate)")
@@ -467,7 +470,7 @@ def main():
 
 	dataset = args.dataset
 	if dataset == "karate":
-		topology_graph, features, labels = load_karate()
+		topology_graph, features, labels = load_karate(args)
 	elif dataset in ["cora", "pubmed", "citeseer"]:
 		topology_graph, features, labels = load_labelled_attributed_network(dataset, args)
 	elif dataset == "ppi":
@@ -565,7 +568,7 @@ def main():
 		print ("determined training samples")
 
 	model.fit_generator(training_gen, 
-		workers=args.workers, max_queue_size=10, use_multiprocessing=args.workers>0, steps_per_epoch=num_steps, 
+		workers=args.workers, max_queue_size=25, use_multiprocessing=args.workers>0, steps_per_epoch=num_steps, 
 	# model.fit(x, y, batch_size=args.batch_size, epochs=args.num_epochs, 
 		epochs=args.num_epochs, initial_epoch=initial_epoch, verbose=args.verbose,
 		validation_data=[val_in, val_target],
