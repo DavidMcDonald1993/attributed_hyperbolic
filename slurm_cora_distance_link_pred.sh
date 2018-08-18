@@ -3,7 +3,7 @@
 #SBATCH --job-name=coraDistanceLinkPred
 #SBATCH --output=coraDistanceLinkPred_%A_%a.out
 #SBATCH --error=coraDistanceLinkPred_%A_%a.err
-#SBATCH --array=0-27
+#SBATCH --array=0-26
 #SBATCH --time=3-00:00:00
 #SBATCH --ntasks=3
 #SBATCH --mem-per-cpu=16gb
