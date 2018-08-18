@@ -25,5 +25,5 @@ module load apps/cudnn/6.0
 -I${CUDNN_ROOT}/include/cudnn.h -L${CUDNN_ROOT}/lib64/libcudnn.so
 
 # echo done
-python embedding/hyperbolic_embedding.py  --dataset cora --dim 32 \
-	--evaluate-link-prediction --no-load --sigmoid ${arr[${SLURM_ARRAY_TASK_ID}]}
+python embedding/hyperbolic_embedding.py  --dataset cora --dim 32 --data-directory /rds/homes/d/dxm237/data \
+--evaluate-link-prediction --no-load --sigmoid ${arr[${SLURM_ARRAY_TASK_ID}]}
