@@ -1,17 +1,15 @@
 #!/bin/bash
 
-arr=({--no-attributes,--multiply-attributes,--jump-prob=0.05}" "-r{1,3,5}" "-t{1,3,5})
-
 #SBATCH --job-name=coraDistanceLinkPred
 #SBATCH --output=coraDistanceLinkPred_%A_%a.out
 #SBATCH --error=coraDistanceLinkPred_%A_%a.err
-#SBATCH --array=0-${#arr[*]}
+#SBATCH --array=0-27
 #SBATCH --time=3-00:00:00
 #SBATCH --ntasks=3
 #SBATCH --mem-per-cpu=16gb
 
 
-echo ${SLURM_ARRAY_TASK_MAX}
+arr=({--no-attributes,--multiply-attributes,--jump-prob=0.05}" "-r{1,3,5}" "-t{1,3,5})
 
 
 module purge; module load bluebear
