@@ -7,7 +7,7 @@
 #SBATCH --error=coraDistanceLinkPred_%A_%a.err
 #SBATCH --array=0-26
 #SBATCH --time=1-00:00:00
-#SBATCH --ntasks=3
+#SBATCH --ntasks=8
 #SBATCH --mem=8gb
 
 
@@ -33,4 +33,4 @@ module load apps/keras/2.0.8-python-3.5.2-cuda-8.0.44
 
 echo starting, ${arr[${SLURM_ARRAY_TASK_ID}]}
 python embedding/hyperbolic_embedding.py  --dataset cora --dim 128 --data-directory /rds/homes/d/dxm237/data \
---no-load ${arr[${SLURM_ARRAY_TASK_ID}]} --evaluate-link-prediction --verbose
+--no-load ${arr[${SLURM_ARRAY_TASK_ID}]} --evaluate-link-prediction --verbose --workers 7
