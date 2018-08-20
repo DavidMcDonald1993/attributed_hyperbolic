@@ -23,7 +23,6 @@ module purge; module load bluebear
 # module load Python/3.6.3-iomkl-2018a
 # module load apps/python2/2.7.11
 module load apps/python3/3.5.2
-pip install --user psutil
 # module load apps/scikit-learn/0.19.0-python-3.5.2
 # module load apps/h5py/2.7.0-python-3.5.2
 # module load TensorFlow/1.8.0-foss-2018a-Python-3.6.3

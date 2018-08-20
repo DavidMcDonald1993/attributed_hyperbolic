@@ -1,6 +1,7 @@
 import os
 # os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
-import psutil
+# import psutil
+import multiprocessing 
 import re
 import argparse
 import json
@@ -451,8 +452,9 @@ def main():
 	args = parse_args()
 	args.num_positive_samples = 1
 
-	print ("There are {} available threads".format(psutil.cpu_count()))
+	print ("There are {} available threads".format(multiprocessing.cpu_count()))
 	print ("Training with {} worker threads".format(args.workers))
+	raise SystemExit
 
 	# args.only_lcc = True
 	if not args.evaluate_link_prediction:
@@ -575,7 +577,7 @@ def main():
 
 	# model.fit_generator(training_gen, 
 	# 	workers=args.workers, max_queue_size=25, use_multiprocessing=args.workers>0, steps_per_epoch=num_steps, 
-	model.fit(x, y, batch_size=args.batch_size, epochs=args.num_epochs, 
+	model.fit(x, y, batch_size=args.batch_size, 
 		epochs=args.num_epochs, initial_epoch=initial_epoch, verbose=args.verbose,
 		validation_data=[val_in, val_target],
 		callbacks=[
