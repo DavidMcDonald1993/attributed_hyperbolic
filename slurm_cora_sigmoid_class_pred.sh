@@ -6,7 +6,7 @@
 #SBATCH --array=0-2
 #SBATCH --time=3-00:00:00
 #SBATCH --ntasks=3
-#SBATCH --mem-per-cpu=16gb
+#SBATCH --mem=4gb
 
 arr=(--no-attributes --multiply-attributes --jump-prob=0.05)
 
