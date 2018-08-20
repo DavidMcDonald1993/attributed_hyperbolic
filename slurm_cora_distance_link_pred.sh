@@ -5,7 +5,7 @@
 #SBATCH --job-name=coraDistanceLinkPred
 #SBATCH --output=coraDistanceLinkPred_%A_%a.out
 #SBATCH --error=coraDistanceLinkPred_%A_%a.err
-#SBATCH --array=0-26
+#SBATCH --array=0-0
 #SBATCH --time=1-00:00:00
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task 5
@@ -22,7 +22,7 @@ module purge; module load bluebear
 # module load bear-apps/2018a
 # module load Python/3.6.3-iomkl-2018a
 # module load apps/python2/2.7.11
-# module load apps/python3/3.5.2
+module load apps/python3/3.5.2
 # module load apps/scikit-learn/0.19.0-python-3.5.2
 # module load apps/h5py/2.7.0-python-3.5.2
 # module load TensorFlow/1.8.0-foss-2018a-Python-3.6.3
