@@ -4,7 +4,7 @@
 #SBATCH --output=coraSigmoidClassPred_%A_%a.out
 #SBATCH --error=coraSigmoidClassPred_%A_%a.err
 #SBATCH --array=0-2
-#SBATCH --time=3-00:00:00
+#SBATCH --time=10-00:00:00
 #SBATCH --ntasks=3
 #SBATCH --mem=4gb
 

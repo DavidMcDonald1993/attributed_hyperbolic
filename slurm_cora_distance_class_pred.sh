@@ -4,7 +4,7 @@
 #SBATCH --output=coraDistanceClassPred_%A_%a.out
 #SBATCH --error=coraDistanceClassPred_%A_%a.err
 #SBATCH --array=0-26
-#SBATCH --time=3-00:00:00
+#SBATCH --time=10-00:00:00
 #SBATCH --ntasks=3
 #SBATCH --mem=4gb
 
