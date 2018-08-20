@@ -19,7 +19,7 @@ class TrainingSequence(Sequence):
 		self.num_negative_samples = args.num_negative_samples
 		# self.binarizer = np.identity(len(alias_dict))
 
-	def alias_draw(self, (J, q), size=1):
+	def alias_draw(self, J, q, size=1):
 	    '''
 	    Draw sample from a non-uniform discrete distribution using alias sampling.
 	    '''
@@ -44,7 +44,7 @@ class TrainingSequence(Sequence):
 			# replace=True, size=(num_negative_samples,), 
 			# p=probs[u] if probs is not None else probs
 			# )
-			negative_samples[u][self.alias_draw(alias_dict[u], size=num_negative_samples)]
+			negative_samples[u][self.alias_draw(alias_dict[u][0], alias_dict[u][1], size=num_negative_samples)]
 			for u in input_nodes
 		], dtype=np.int64)
 
