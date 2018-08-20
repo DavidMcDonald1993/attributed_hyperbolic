@@ -2,11 +2,11 @@
 
 #SBATCH --qos bbgpu
 #SBATCH --gres gpu:p100:1
-#SBATCH --job-name=coraDistanceLinkPred
-#SBATCH --output=coraDistanceLinkPred_%A_%a.out
-#SBATCH --error=coraDistanceLinkPred_%A_%a.err
-#SBATCH --array=0-26
-#SBATCH --time=10-00:00:00
+#SBATCH --job-name=gpuTest
+#SBATCH --output=gpuTest_%A_%a.out
+#SBATCH --error=gpuTest_%A_%a.err
+#SBATCH --array=0-2
+#SBATCH --time=1:00:00
 #SBATCH --ntasks=3
 #SBATCH --mem=8gb
 
