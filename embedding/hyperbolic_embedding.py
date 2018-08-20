@@ -562,17 +562,17 @@ def main():
 	if args.verbose:
 		print ("created logger")
 
-	training_gen = TrainingSequence(positive_samples, negative_samples, alias_dict, args)
+	# training_gen = TrainingSequence(positive_samples, negative_samples, alias_dict, args)
 		
-	# x = get_training_sample(np.array(positive_samples), negative_samples, args.num_negative_samples, alias_dict)
-	# y = np.zeros(list(x.shape) + [1])
+	x = get_training_sample(np.array(positive_samples), negative_samples, args.num_negative_samples, alias_dict)
+	y = np.zeros(list(x.shape) + [1])
 
 	if args.verbose:
 		print ("determined training samples")
 
-	model.fit_generator(training_gen, 
-		workers=args.workers, max_queue_size=25, use_multiprocessing=args.workers>0, steps_per_epoch=num_steps, 
-	# model.fit(x, y, batch_size=args.batch_size, epochs=args.num_epochs, 
+	# model.fit_generator(training_gen, 
+	# 	workers=args.workers, max_queue_size=25, use_multiprocessing=args.workers>0, steps_per_epoch=num_steps, 
+	model.fit(x, y, batch_size=args.batch_size, epochs=args.num_epochs, 
 		epochs=args.num_epochs, initial_epoch=initial_epoch, verbose=args.verbose,
 		validation_data=[val_in, val_target],
 		callbacks=[
