@@ -27,4 +27,4 @@ module load apps/cudnn/6.0
 
 # echo done
 python embedding/hyperbolic_embedding.py  --dataset citeseer --dim 128 --data-directory /rds/homes/d/dxm237/data \
---no-load ${arr[${SLURM_ARRAY_TASK_ID}]}
+--no-load ${arr[${SLURM_ARRAY_TASK_ID}]} --evaluate-link-prediction
