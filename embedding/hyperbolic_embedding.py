@@ -4,6 +4,7 @@ import psutil
 import re
 import argparse
 import json
+import sys
 
 import random
 
@@ -569,6 +570,8 @@ def main():
 
 	if args.verbose:
 		print ("determined training samples")
+
+	sys.stdout.flush()
 
 	# model.fit_generator(training_gen, 
 	# 	workers=args.workers, max_queue_size=25, use_multiprocessing=args.workers>0, steps_per_epoch=num_steps, 
