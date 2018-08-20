@@ -6,6 +6,8 @@ from utils import get_training_sample
 
 from keras.utils import Sequence
 
+# from sklearn.preprocessing import LabelBinarizer
+
 class TrainingSequence(Sequence):
 
 	def __init__(self, positive_samples, negative_samples, alias_dict, args):
@@ -15,6 +17,7 @@ class TrainingSequence(Sequence):
 		self.alias_dict = alias_dict
 		self.batch_size = args.batch_size
 		self.num_negative_samples = args.num_negative_samples
+		# self.binarizer = np.identity(len(alias_dict))
 
 	def alias_draw(self, (J, q), size=1):
 	    '''
@@ -58,7 +61,8 @@ class TrainingSequence(Sequence):
 		batch_positive_samples = np.array(
 			positive_samples[batch_idx * batch_size : (batch_idx + 1) * batch_size]).astype(np.int64)
 		training_sample = self.get_training_sample(batch_positive_samples, )
-
+		# training_sample = self.binarizer[training_sample]
+		# print training_sample.shape
 		return training_sample, np.zeros(list(training_sample.shape)+[1], dtype=np.int64)
 
 	def on_epoch_end(self):

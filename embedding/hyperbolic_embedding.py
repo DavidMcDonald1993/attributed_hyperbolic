@@ -54,7 +54,7 @@ config.allow_soft_placement=True
 K.tensorflow_backend.set_session(tf.Session(config=config))
 
 def minkowski_dot(x, y):
-	assert len(x.shape) == 2
+	# assert len(x.shape) == 2
 	rank = x.shape[1] - 1
 	if len(y.shape) == 2:
 		return K.sum(x[:,:rank] * y[:,:rank], axis=-1, keepdims=True) - x[:,rank:] * y[:,rank:]
@@ -123,7 +123,7 @@ class ExponentialMappingOptimizer(optimizer.Optimizer):
 		self._lr_t = ops.convert_to_tensor(self._lr, name="learning_rate", dtype=K.floatx())
 
 	def _apply_dense(self, grad, var):
-#         print "dense"
+        # print "dense"
 		assert False
 		lr_t = math_ops.cast(self._lr_t, var.dtype.base_dtype)
 			# K.floatx())
@@ -240,7 +240,7 @@ def parse_args():
 	parser = argparse.ArgumentParser(description="Hyperbolic Skipgram for feature learning on complex networks")
 
 	parser.add_argument("--data-directory", dest="data_directory", type=str, default="/data/",
-		help="The directory containing data files (default is '\\data\\').")
+		help="The directory containing data files (default is '/data/').")
 
 	parser.add_argument("--dataset", dest="dataset", type=str, default="karate",
 		help="The dataset to load. Must be one of [wordnet, cora, citeseer, pubmed,\
@@ -541,6 +541,7 @@ def main():
 		if args.sigmoid 
 		else hyperbolic_negative_sampling_loss(r=args.r, t=args.t)
 	)
+	# optimizer=tf.train.GradientDescentOptimizer(0.05)
 	model.compile(optimizer=optimizer, loss=loss)
 	model.summary()
 

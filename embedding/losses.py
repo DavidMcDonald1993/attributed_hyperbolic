@@ -10,7 +10,7 @@ import keras.backend as K
 
 
 def minkowski_dot(x, y):
-    assert len(x.shape) == 2
+    # assert len(x.shape) == 2
     rank = x.shape[1] - 1
     if len(y.shape) == 2:
         return K.sum(x[:,:rank] * y[:,:rank], axis=-1, keepdims=True) - x[:,rank:] * y[:,rank:]

@@ -41,18 +41,21 @@ def plot_disk_embeddings(epoch, edges, poincare_embedding, klein_embedding, labe
 	mean_rank_reconstruction, map_reconstruction, mean_roc_reconstruction,
 	mean_rank_lp, map_lp, mean_roc_lp, path):
 
-	def bit_shift(bitlist):
-	    out = 0
-	    for bit in bitlist:
-	        out = (out << 1) | bit
-	    return out
+	# def bit_shift(bitlist):
+	#     out = 0
+	#     for bit in bitlist:
+	#         out = (out << 1) | bit
+	#     return out
 
 
 	if len(labels.shape) > 1:
-		labels = np.array([bit_shift(label) for label in labels])
+		unique_labels = np.unique(labels, axis=0)
+		labels = np.array([np.where((unique_labels == label).all(axis=-1))[0][0] for label in labels])
 
 	if not isinstance(edges, np.ndarray):
 		edges = np.array(edges)
+
+	c = np.random.rand(len(set(labels)), 3)
 
 	print ("saving plot to {}".format(path))
 
@@ -74,7 +77,7 @@ def plot_disk_embeddings(epoch, edges, poincare_embedding, klein_embedding, labe
 	# 	v_emb = poincare_embedding[v]
 	# 	plt.plot([u_emb[0], v_emb[0]], [u_emb[1], v_emb[1]], c="k", linewidth=0.05, zorder=0)
 	plt.plot([u_emb[:,0], v_emb[:,0]], [u_emb[:,1], v_emb[:,1]], c="k", linewidth=0.05, zorder=0)
-	plt.scatter(poincare_embedding[:,0], poincare_embedding[:,1], s=10, c=labels, zorder=1)
+	plt.scatter(poincare_embedding[:,0], poincare_embedding[:,1], s=10, c=c[labels], zorder=1)
 	plt.xlim([-1,1])
 	plt.ylim([-1,1])
 
@@ -88,7 +91,7 @@ def plot_disk_embeddings(epoch, edges, poincare_embedding, klein_embedding, labe
 	# 	v_emb = klein_embedding[v]
 	# 	plt.plot([u_emb[0], v_emb[0]], [u_emb[1], v_emb[1]], c="k", linewidth=0.05, zorder=0)
 	plt.plot([u_emb[:,0], v_emb[:,0]], [u_emb[:,1], v_emb[:,1]], c="k", linewidth=0.05, zorder=0)
-	plt.scatter(klein_embedding[:,0], klein_embedding[:,1], s=10, c=labels, zorder=1)
+	plt.scatter(klein_embedding[:,0], klein_embedding[:,1], s=10, c=c[labels], zorder=1)
 	plt.xlim([-1,1])
 	plt.ylim([-1,1])
 
