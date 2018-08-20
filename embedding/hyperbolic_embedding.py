@@ -454,7 +454,7 @@ def main():
 
 	print ("There are {} available threads".format(multiprocessing.cpu_count()))
 	print ("Training with {} worker threads".format(args.workers))
-	raise SystemExit
+	# raise SystemExit
 
 	# args.only_lcc = True
 	if not args.evaluate_link_prediction:
