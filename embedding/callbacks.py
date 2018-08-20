@@ -41,8 +41,18 @@ def plot_disk_embeddings(epoch, edges, poincare_embedding, klein_embedding, labe
 	mean_rank_reconstruction, map_reconstruction, mean_roc_reconstruction,
 	mean_rank_lp, map_lp, mean_roc_lp, path):
 
-	if len(labels.shape ) > 1:
-		labels = labels[:,0]
+	def bit_shift(bitlist):
+	    out = 0
+	    for bit in bitlist:
+	        out = (out << 1) | bit
+	    return out
+
+
+	if len(labels.shape) > 1:
+		labels = np.array([bit_shift(label) for label in labels])
+
+	if not isinstance(edges, np.ndarray):
+		edges = np.array(edges)
 
 	print ("saving plot to {}".format(path))
 
@@ -57,10 +67,13 @@ def plot_disk_embeddings(epoch, edges, poincare_embedding, klein_embedding, labe
 	ax = fig.add_subplot(121)
 	plt.title("Poincare")
 	ax.add_artist(plt.Circle([0,0], 1, fill=False))
-	for u, v in edges:
-		u_emb = poincare_embedding[u]
-		v_emb = poincare_embedding[v]
-		plt.plot([u_emb[0], v_emb[0]], [u_emb[1], v_emb[1]], c="k", linewidth=0.05, zorder=0)
+	u_emb = poincare_embedding[edges[:,0]]
+	v_emb = poincare_embedding[edges[:,1]]
+	# for u, v in edges:
+	# 	u_emb = poincare_embedding[u]
+	# 	v_emb = poincare_embedding[v]
+	# 	plt.plot([u_emb[0], v_emb[0]], [u_emb[1], v_emb[1]], c="k", linewidth=0.05, zorder=0)
+	plt.plot([u_emb[:,0], v_emb[:,0]], [u_emb[:,1], v_emb[:,1]], c="k", linewidth=0.05, zorder=0)
 	plt.scatter(poincare_embedding[:,0], poincare_embedding[:,1], s=10, c=labels, zorder=1)
 	plt.xlim([-1,1])
 	plt.ylim([-1,1])
@@ -68,10 +81,13 @@ def plot_disk_embeddings(epoch, edges, poincare_embedding, klein_embedding, labe
 	ax = fig.add_subplot(122)
 	plt.title("Klein")
 	ax.add_artist(plt.Circle([0,0], 1, fill=False))
-	for u, v in edges:
-		u_emb = klein_embedding[u]
-		v_emb = klein_embedding[v]
-		plt.plot([u_emb[0], v_emb[0]], [u_emb[1], v_emb[1]], c="k", linewidth=0.05, zorder=0)
+	u_emb = klein_embedding[edges[:,0]]
+	v_emb = klein_embedding[edges[:,1]]
+	# for u, v in edges:
+	# 	u_emb = klein_embedding[u]
+	# 	v_emb = klein_embedding[v]
+	# 	plt.plot([u_emb[0], v_emb[0]], [u_emb[1], v_emb[1]], c="k", linewidth=0.05, zorder=0)
+	plt.plot([u_emb[:,0], v_emb[:,0]], [u_emb[:,1], v_emb[:,1]], c="k", linewidth=0.05, zorder=0)
 	plt.scatter(klein_embedding[:,0], klein_embedding[:,1], s=10, c=labels, zorder=1)
 	plt.xlim([-1,1])
 	plt.ylim([-1,1])
