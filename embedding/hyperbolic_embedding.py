@@ -486,8 +486,6 @@ def main():
 	reconstruction_edges = topology_graph.edges()
 	if args.verbose:
 		print ("determined reconstruction edges")
-	
-
 
 	if features is not None:
 		feature_sim = cosine_similarity(features)
