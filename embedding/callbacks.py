@@ -1,3 +1,4 @@
+import sys
 import os
 import numpy as np
 
@@ -309,3 +310,5 @@ class PeriodicStdoutLogger(Callback):
 			if self.args.evaluate_class_prediction:
 				f1_path = os.path.join(self.args.plot_path, "epoch_{:05d}_class_prediction_f1.png".format(self.epoch))
 				plot_classification(label_percentages, f1_micros, f1_macros, f1_path)
+
+		sys.stdout.flush()

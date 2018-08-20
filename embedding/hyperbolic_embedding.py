@@ -1,6 +1,6 @@
 import os
 # os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
-
+import psutil
 import re
 import argparse
 import json
@@ -449,6 +449,10 @@ def main():
 
 	args = parse_args()
 	args.num_positive_samples = 1
+
+	print ("There are {} available threads".format(psutil.cpu_count()))
+	print ("Training with {} worker threads".format(args.workers))
+
 	# args.only_lcc = True
 	if not args.evaluate_link_prediction:
 		args.evaluate_class_prediction = True
