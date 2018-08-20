@@ -31,4 +31,5 @@ module load apps/tensorflow/1.3.1-python-3.5.2-cuda-8.0.44
 # module load apps/keras/2.0.8-python-2.7.11
 module load apps/keras/2.0.8-python-3.5.2-cuda-8.0.44
 # module load matplotlib/2.1.1-iomkl-2018a-Python-3.6.3
-echo done,${arr[${SLURM_ARRAY_TASK_ID}]}
+# echo done,${arr[${SLURM_ARRAY_TASK_ID}]}
+python tensorflow_gpu_test.py
