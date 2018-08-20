@@ -6,7 +6,7 @@
 #SBATCH --array=0-26
 #SBATCH --time=10-00:00:00
 #SBATCH --ntasks=3
-#SBATCH --mem=4gb
+#SBATCH --mem=8gb
 
 
 arr=({--no-attributes,--multiply-attributes,--jump-prob=0.05}" "-r{1,3,5}" "-t{1,3,5})
