@@ -39,7 +39,7 @@ def alias_setup(probs):
 
 	return J, q
 
-def alias_draw((J, q), size=1):
+def alias_draw(J, q, size=1):
     '''
     Draw sample from a non-uniform discrete distribution using alias sampling.
     '''
@@ -80,7 +80,7 @@ def get_training_sample(batch_positive_samples, negative_samples, num_negative_s
 		# replace=True, size=(num_negative_samples,), 
 		# p=probs[u] if probs is not None else probs
 		# )
-		negative_samples[u][alias_draw(alias_dict[u], num_negative_samples)]
+		negative_samples[u][alias_draw(alias_dict[u][0], alias_dict[u][1], num_negative_samples)]
 		for u in input_nodes
 	], dtype=np.int64)
 
