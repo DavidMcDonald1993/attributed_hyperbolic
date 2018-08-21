@@ -6,6 +6,8 @@ from utils import get_training_sample
 
 from keras.utils import Sequence
 
+# import threading
+
 # from sklearn.preprocessing import LabelBinarizer
 
 class TrainingSequence(Sequence):
@@ -56,7 +58,7 @@ class TrainingSequence(Sequence):
 		return int(np.ceil(len(self.positive_samples) / float(self.batch_size)))
 
 	def __getitem__(self, batch_idx):
-		# print ("get batch {}".format(batch_idx))
+		# print ("get batch {}, thread: {}".format(batch_idx, threading.current_thread()))
 		batch_size = self.batch_size
 		positive_samples = self.positive_samples
 		batch_positive_samples = np.array(
