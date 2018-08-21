@@ -56,6 +56,7 @@ class TrainingSequence(Sequence):
 		return int(np.ceil(len(self.positive_samples) / float(self.batch_size)))
 
 	def __getitem__(self, batch_idx):
+		# print ("get batch {}".format(batch_idx))
 		batch_size = self.batch_size
 		positive_samples = self.positive_samples
 		batch_positive_samples = np.array(
@@ -67,6 +68,7 @@ class TrainingSequence(Sequence):
 
 	def on_epoch_end(self):
 		random.shuffle(self.positive_samples)
+		# print ("end of epoch: shuffling")
 
 # import threading
 

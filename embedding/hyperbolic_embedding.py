@@ -12,6 +12,8 @@ import random
 import numpy as np
 import networkx as nx
 from scipy.sparse import identity
+import matplotlib
+matplotlib.use('agg')
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from sklearn.metrics.pairwise import cosine_similarity
@@ -340,9 +342,10 @@ def parse_args():
 
 	parser.add_argument('--just-walks', action="store_true", help='flag to generate walks with given parameters')
 
-	parser.add_argument('--no-load', action="store_true", help='flag to termiante program if trained model exists')
+	parser.add_argument('--no-load', action="store_true", help='flag to terminate program if trained model exists')
 
 
+	parser.add_argument('--use-generator', action="store_true", help='flag train using a generator')
 
 
 	args = parser.parse_args()
@@ -565,19 +568,35 @@ def main():
 	if args.verbose:
 		print ("created logger")
 
-	# training_gen = TrainingSequence(positive_samples, negative_samples, alias_dict, args)
-		
-	x = get_training_sample(np.array(positive_samples), negative_samples, args.num_negative_samples, alias_dict)
-	y = np.zeros(list(x.shape) + [1])
+	if args.use_generator:
+		print ("Training with data generator")
+		training_gen = TrainingSequence(positive_samples, negative_samples, alias_dict, args)
 
-	if args.verbose:
+		sys.stdout.flush()
+
+		model.fit_generator(training_gen, 
+			workers=args.workers, max_queue_size=25, use_multiprocessing=args.workers>0, steps_per_epoch=num_steps, 
+			epochs=args.num_epochs, initial_epoch=initial_epoch, verbose=args.verbose,
+			validation_data=[val_in, val_target],
+			callbacks=[
+				TerminateOnNaN(), 
+				logger,
+				ModelCheckpoint(os.path.join(args.model_path, 
+					"{epoch:05d}.h5"), save_weights_only=True),
+				CSVLogger(args.log_path, append=True), 
+				early_stopping
+			]
+			)
+
+	else:
+		x = get_training_sample(np.array(positive_samples), negative_samples, args.num_negative_samples, alias_dict)
+		y = np.zeros(list(x.shape) + [1])
 		print ("determined training samples")
 
-	sys.stdout.flush()
+		sys.stdout.flush()
 
-	# model.fit_generator(training_gen, 
-	# 	workers=args.workers, max_queue_size=25, use_multiprocessing=args.workers>0, steps_per_epoch=num_steps, 
-	model.fit(x, y, batch_size=args.batch_size, 
+
+		model.fit(x, y, batch_size=args.batch_size, 
 		epochs=args.num_epochs, initial_epoch=initial_epoch, verbose=args.verbose,
 		validation_data=[val_in, val_target],
 		callbacks=[
