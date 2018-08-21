@@ -2,8 +2,8 @@ import sys
 import os
 import numpy as np
 
-# import matplotlib
-# matplotlib.use('agg')
+import matplotlib
+matplotlib.use('agg')
 import matplotlib.pyplot as plt
 
 from sklearn.metrics import roc_curve, roc_auc_score, precision_recall_curve
