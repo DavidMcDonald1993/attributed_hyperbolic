@@ -11,11 +11,14 @@ import keras.backend as K
 
 def minkowski_dot(x, y):
     # assert len(x.shape) == 2
-    rank = x.shape[1] - 1
-    if len(y.shape) == 2:
-        return K.sum(x[:,:rank] * y[:,:rank], axis=-1, keepdims=True) - x[:,rank:] * y[:,rank:]
-    else:
-        return K.batch_dot( x[:,:rank], y[:,:,:rank], axes=[1,2]) - K.batch_dot(x[:,rank:], y[:,:,rank:], axes=[1, 2])
+    axes = len(x.shape) - 1, len(y.shape) -1
+    return K.batch_dot( x[...,:-1], y[...,:-1], axes=axes) - K.batch_dot(x[...,-1:], y[...,-1:], axes=axes)
+    # rank = x.shape[1] - 1
+    # if len(y.shape) == 2:
+    #     return K.sum(x[:,:rank] * y[:,:rank], axis=-1, keepdims=True) - x[:,rank:] * y[:,rank:]
+    # else:
+    #     return K.batch_dot( x[:,:rank], y[:,:,:rank], axes=[1,2]) - K.batch_dot(x[:,rank:], y[:,:,rank:], axes=[1, 2])
+
 
 def hyperbolic_negative_sampling_loss(r, t):
 
@@ -64,6 +67,25 @@ def hyperbolic_sigmoid_loss(y_true, y_pred,):
     neg_p_uv = K.clip(neg_p_uv, min_value=K.epsilon(), max_value=1-K.epsilon())
 
     return - K.mean( K.log( pos_p_uv ) + K.sum( K.log( neg_p_uv ), axis=-1) )
+
+def euclidean_negative_sampling_loss(y_true, y_pred):
+
+    u_emb = y_pred[:,0]
+    samples_emb = y_pred[:,1:]
+    
+    inner_uv = K.batch_dot(u_emb, samples_emb, axes=[1,2])
+
+    pos_inner_uv = inner_uv[:,0]
+    neg_inner_uv = inner_uv[:,1:]
+    
+    pos_p_uv = tf.nn.sigmoid(pos_inner_uv)
+    neg_p_uv = 1. - tf.nn.sigmoid(neg_inner_uv)
+
+    pos_p_uv = K.clip(pos_p_uv, min_value=K.epsilon(), max_value=1-K.epsilon())
+    neg_p_uv = K.clip(neg_p_uv, min_value=K.epsilon(), max_value=1-K.epsilon())
+
+    return - K.mean( K.log( pos_p_uv ) + K.sum( K.log( neg_p_uv ), axis=-1) )
+
 
 def hyperbolic_softmax_loss(y_true, y_pred,):
 

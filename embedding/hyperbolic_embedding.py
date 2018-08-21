@@ -19,17 +19,17 @@ import matplotlib
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.metrics.pairwise import cosine_similarity, euclidean_distances
 
 from data_utils import load_karate, load_labelled_attributed_network, load_ppi
 from utils import load_walks, determine_positive_and_negative_samples, convert_edgelist_to_dict, split_edges, get_training_sample, make_validation_data
 from callbacks import PeriodicStdoutLogger, hyperboloid_to_klein, hyperboloid_to_poincare_ball, hyperbolic_distance_hyperboloid_pairwise
-from losses import hyperbolic_negative_sampling_loss, hyperbolic_sigmoid_loss, hyperbolic_softmax_loss
+from losses import hyperbolic_negative_sampling_loss, hyperbolic_sigmoid_loss, hyperbolic_softmax_loss, euclidean_negative_sampling_loss
 from metrics import evaluate_rank_and_MAP, evaluate_classification
-from callbacks import plot_disk_embeddings, plot_roc, plot_classification, plot_precisions_recalls
+from callbacks import plot_disk_embeddings, plot_euclidean_embedding, plot_roc, plot_classification, plot_precisions_recalls
 from generators import training_generator, TrainingSequence
 
-from keras.layers import Input, Layer, Dense
+from keras.layers import Input, Layer, Dense, Embedding
 from keras.models import Model
 from keras import backend as K
 from keras.callbacks import Callback, TerminateOnNaN, TensorBoard, ModelCheckpoint, CSVLogger, EarlyStopping
@@ -60,13 +60,17 @@ config.allow_soft_placement=True
 # Create a session with the above options specified.
 K.tensorflow_backend.set_session(tf.Session(config=config))
 
+
 def minkowski_dot(x, y):
-	# assert len(x.shape) == 2
-	rank = x.shape[1] - 1
-	if len(y.shape) == 2:
-		return K.sum(x[:,:rank] * y[:,:rank], axis=-1, keepdims=True) - x[:,rank:] * y[:,rank:]
-	else:
-		return K.batch_dot( x[:,:rank], y[:,:,:rank], axes=[1,2]) - K.batch_dot(x[:,rank:], y[:,:,rank:], axes=[1, 2])
+    # assert len(x.shape) == 2
+    axes = len(x.shape) - 1, len(y.shape) -1
+    return K.batch_dot( x[...,:-1], y[...,:-1], axes=axes) - K.batch_dot(x[...,-1:], y[...,-1:], axes=axes)
+    # rank = x.shape[1] - 1
+    # if len(y.shape) == 2:
+    #     return K.sum(x[:,:rank] * y[:,:rank], axis=-1, keepdims=True) - x[:,rank:] * y[:,rank:]
+    # else:
+    #     return K.batch_dot( x[:,:rank], y[:,:,:rank], axes=[1,2]) - K.batch_dot(x[:,rank:], y[:,:,rank:], axes=[1, 2])
+
 
 def hyperboloid_initializer(shape, r_max=1e-3):
 
@@ -216,7 +220,11 @@ class ExponentialMappingOptimizer(optimizer.Optimizer):
 def build_model(num_nodes, args):
 
 	x = Input(shape=(1+args.num_positive_samples+args.num_negative_samples,), name="model_input")
-	y = EmbeddingLayer(num_nodes, args.embedding_dim, name="embedding_layer")(x)
+	if args.euclidean:
+		y = Embedding(num_nodes, args.embedding_dim, input_length=1+args.num_positive_samples+args.num_negative_samples,
+			embeddings_regularizer=None, name="embedding_layer")(x)
+	else:
+		y = EmbeddingLayer(num_nodes, args.embedding_dim, name="embedding_layer")(x)
 	# y = Dense(args.embedding_dim, use_bias=False, activation=None, 
 	# 	kernel_initializer=hyperboloid_initializer, name="embedding_layer")(x)
 
@@ -279,8 +287,8 @@ def parse_args():
 	parser.add_argument("--patience", dest="patience", type=int, default=25,
 		help="The number of epochs of no improvement in validation loss before training is stopped. (Default is 25)")
 
-	parser.add_argument("--plot-freq", dest="plot_freq", type=int, default=100, 
-		help="Frequency for plotting (default is 100).")
+	parser.add_argument("--plot-freq", dest="plot_freq", type=int, default=1000, 
+		help="Frequency for plotting (default is 1000).")
 
 	parser.add_argument("-d", "--dim", dest="embedding_dim", type=int,
 		help="Dimension of embeddings for each layer (default is 2).", default=2)
@@ -320,6 +328,8 @@ def parse_args():
 		help="Use this flag to use sigmoid loss.")
 	parser.add_argument("--softmax", dest="softmax", action="store_true", 
 		help="Use this flag to use softmax loss.")
+	parser.add_argument("--euclidean", dest="euclidean", action="store_true", 
+		help="Use this flag to use euclidean negative sampling loss.")
 
 	
 	
@@ -379,6 +389,8 @@ def configure_paths(args):
 		directory += "softmax_loss/"
 	elif args.sigmoid:
 		directory += "sigmoid_loss/"
+	elif args.euclidean:
+		directory += "euclidean_loss/"
 	else:
 		directory += "hyperbolic_distance_loss/r={}_t={}/".format(args.r, args.t)
 
@@ -544,12 +556,16 @@ def main():
 	num_steps = int((len(positive_samples) + args.batch_size - 1) / args.batch_size)
 
 	model, initial_epoch = build_model(num_nodes, args)
-	optimizer = ExponentialMappingOptimizer(learning_rate=args.lr)
+	optimizer = ("adam" if args.euclidean else
+		ExponentialMappingOptimizer(learning_rate=args.lr)
+	)
 	loss = (
 		hyperbolic_softmax_loss 
 		if args.softmax 
 		else hyperbolic_sigmoid_loss 
 		if args.sigmoid 
+		else euclidean_negative_sampling_loss
+		if args.euclidean
 		else hyperbolic_negative_sampling_loss(r=args.r, t=args.t)
 	)
 	# optimizer=tf.train.GradientDescentOptimizer(0.05)
@@ -614,7 +630,10 @@ def main():
 
 
 	hyperboloid_embedding = model.layers[-1].get_weights()[0]
-	dists = hyperbolic_distance_hyperboloid_pairwise(hyperboloid_embedding, hyperboloid_embedding)
+	if args.euclidean:
+		dists = euclidean_distances(hyperboloid_embedding)
+	else:
+		dists = hyperbolic_distance_hyperboloid_pairwise(hyperboloid_embedding, hyperboloid_embedding)
 	print (hyperboloid_embedding)
 	# print minkowski_dot_np(hyperboloid_embedding, hyperboloid_embedding)
 
@@ -631,18 +650,30 @@ def main():
 	else:
 		mean_rank_lp, map_lp, mean_roc_lp = None, None, None 
 
-	poincare_embedding = hyperboloid_to_poincare_ball(hyperboloid_embedding)
-	klein_embedding = hyperboloid_to_klein(hyperboloid_embedding)
+	if args.euclidean:
+		poincare_embedding = hyperboloid_embedding
+		klein_embedding = hyperboloid_embedding
+	else:
+		poincare_embedding = hyperboloid_to_poincare_ball(hyperboloid_embedding)
+		klein_embedding = hyperboloid_to_klein(hyperboloid_embedding)
 
 	epoch = logger.epoch
 
 	plot_path = os.path.join(args.plot_path, "epoch_{:05d}_plot_test.png".format(epoch) )
-	plot_disk_embeddings(epoch, reconstruction_edges, 
-		poincare_embedding, klein_embedding,
-		labels, 
-		mean_rank_reconstruction, map_reconstruction, mean_roc_reconstruction,
-		mean_rank_lp, map_lp, mean_roc_lp,
-		plot_path)
+	if args.euclidean:
+		plot_euclidean_embedding(epoch, reconstruction_edges, 
+					poincare_embedding,
+					labels, 
+					mean_rank_reconstruction, map_reconstruction, mean_roc_reconstruction,
+					mean_rank_lp, map_lp, mean_roc_lp,
+					plot_path)
+	else:
+		plot_disk_embeddings(epoch, reconstruction_edges, 
+			poincare_embedding, klein_embedding,
+			labels, 
+			mean_rank_reconstruction, map_reconstruction, mean_roc_reconstruction,
+			mean_rank_lp, map_lp, mean_roc_lp,
+			plot_path)
 
 	roc_path = os.path.join(args.plot_path, "epoch_{:05d}_roc_curve_test.png".format(epoch) )
 	plot_roc(dists, reconstruction_edges, test_edges, non_edges, roc_path)

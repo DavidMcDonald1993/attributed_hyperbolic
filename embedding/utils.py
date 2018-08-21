@@ -83,7 +83,6 @@ def get_training_sample(batch_positive_samples, negative_samples, num_negative_s
 		negative_samples[u][alias_draw(alias_dict[u][0], alias_dict[u][1], num_negative_samples)]
 		for u in input_nodes
 	], dtype=np.int64)
-
 	batch_nodes = np.append(batch_positive_samples, batch_negative_samples, axis=1)
 	return batch_nodes
 
@@ -91,7 +90,7 @@ def get_training_sample(batch_positive_samples, negative_samples, num_negative_s
 def make_validation_data(edges, non_edge_dict, args):
 
 	edges = np.array(edges)
-	idx = np.random.choice(len(edges), size=args.batch_size, replace=False,)
+	idx = np.random.choice(len(edges), size=min(len(edges), args.batch_size), replace=False,)
 	positive_samples = edges[idx]#
 	# non_edge_dict = convert_edgelist_to_dict(non_edges)
 	negative_samples = np.array([
@@ -131,6 +130,7 @@ def create_feature_graph(features, args):
 	return feature_graph
 
 def split_edges(edges, args, val_split=0.05, test_split=0.1):
+	
 	num_val_edges = int(len(edges) * val_split)
 	num_test_edges = int(len(edges) * test_split)
 
@@ -190,8 +190,9 @@ def determine_positive_and_negative_samples(nodes, walks, context_size):
 
 	prob_dict = {n: probs[n] * probs[negative_samples[n]] ** .75 for n in sorted(nodes)}
 	prob_dict = {n: probs / probs.sum() for n, probs in prob_dict.items()}
+	prob_dict = {n: np.ones_like(negative_samples[n], dtype=np.float) / len(negative_samples[n]) for n in prob_dict.keys()}
 	# probs = {n: counts[negative_samples[n]] / counts[negative_samples[n]].sum() for n in sorted(nodes)}
-	alias_dict = {u: alias_setup(probs) for u, probs in prob_dict.items()}
+	alias_dict = {n: alias_setup(probs) for n, probs in prob_dict.items()}
 
 	print ("PREPROCESSED NEGATIVE SAMPLE PROBS")
 
