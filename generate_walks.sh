@@ -3,15 +3,15 @@
 #SBATCH --job-name=generateWalks
 #SBATCH --output=generateWalks_%A_%a.out
 #SBATCH --error=generateWalks_%A_%a.err
-#SBATCH --array=0-17
+#SBATCH --array=0-395
 #SBATCH --time=1-00:00:00
 #SBATCH --ntasks=1
 #SBATCH --mem=64gb
 
 
-arr=(--dataset={cora,citeseer,pubmed}" "{--no-non-edges,--add-non-edges}" "{--no-attributes,--multiply-attributes,--jump-prob=0.05})
+arr=(--seed={0..10}" "--dataset={ppi,cora,citeseer,pubmed}" "{--evaluate-class-prediction,--evaluate-link-prediction" "{--no-non-edges,--add-non-edges}}" "{--no-attributes,--multiply-attributes,--jump-prob=0.05})
 
-# echo ${#arr[*]}
+echo ${#arr[*]}
 
 module purge; module load bluebear
 module load apps/cuda/8.0.44
