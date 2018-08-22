@@ -6,7 +6,7 @@
 #SBATCH --array=0-17
 #SBATCH --time=1-00:00:00
 #SBATCH --ntasks=1
-#SBATCH --mem=32gb
+#SBATCH --mem=64gb
 
 
 arr=(--dataset={cora,citeseer,pubmed}" "{--no-non-edges,--add-non-edges}" "{--no-attributes,--multiply-attributes,--jump-prob=0.05})
