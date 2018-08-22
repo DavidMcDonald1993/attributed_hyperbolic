@@ -58,15 +58,12 @@ class TrainingSequence(Sequence):
 		return int(np.ceil(len(self.positive_samples) / float(self.batch_size)))
 
 	def __getitem__(self, batch_idx):
-		print ("get batch {}, thread: {}".format(batch_idx, threading.current_thread()))
+		# print ("get batch {}, thread: {}".format(batch_idx, threading.current_thread()))
 		batch_size = self.batch_size
 		positive_samples = self.positive_samples
 		batch_positive_samples = np.array(
 			positive_samples[batch_idx * batch_size : (batch_idx + 1) * batch_size], dtype=np.int64)
-		print "batch_positive_samples"
-		print batch_positive_samples
 		training_sample = self.get_training_sample(batch_positive_samples, )
-		print training_sample
 		# training_sample = self.binarizer[training_sample]
 		# print training_sample.shape
 		return training_sample, np.zeros(list(training_sample.shape)+[1], dtype=np.int64)

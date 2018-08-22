@@ -178,7 +178,7 @@ class ExponentialMappingOptimizer(optimizer.Optimizer):
 		###################################################
 		y = p
 		# z = x / norm_x
-		z = x / K.maximum(norm_x, K.epsilon())#tf.clip_by_value(norm_x, clip_value_min=K.epsilon(), clip_value_max=np.inf)
+		z = x / K.maximum(norm_x, K.epsilon())
 
 		exp_map = tf.cosh(norm_x) * y + tf.sinh(norm_x) * z
 		#####################################################

@@ -45,7 +45,6 @@ def hyperbolic_negative_sampling_loss(r, t):
         pos_p_uv = K.clip(pos_p_uv, min_value=K.epsilon(), max_value=1-K.epsilon())
         neg_p_uv = K.clip(neg_p_uv, min_value=K.epsilon(), max_value=1-K.epsilon())
 
-        
         return -K.mean(K.log(pos_p_uv) + K.sum(K.log(neg_p_uv), axis=-1))
 
     return loss
