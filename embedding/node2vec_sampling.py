@@ -12,7 +12,7 @@ class Graph():
 		self.jump_prob = jump_prob
 		self.feature_sim = feature_sim 
 		if self.feature_sim is not None:
-			self.feature_sim /= self.feature_sim.sum(axis=1, keepdims=True)
+			self.feature_sim /= np.maximum(self.feature_sim.sum(axis=1, keepdims=True), 1e-32)
 		np.random.seed(seed)
 		random.seed(seed)
 
