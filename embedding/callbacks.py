@@ -77,7 +77,8 @@ def plot_euclidean_embedding(epoch, edges, euclidean_embedding, labels, label_in
 
 	for c in range(num_classes):
 		idx = labels == c
-		plt.scatter(euclidean_embedding[idx,0], euclidean_embedding[idx,1], s=10, c=colors[c], label=label_info[c], zorder=1)
+		plt.scatter(euclidean_embedding[idx,0], euclidean_embedding[idx,1], s=10, c=colors[c], 
+			label=label_info[c] if label_info is not None else None, zorder=1)
 	# plt.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05),ncol=3)
 	plt.savefig(path)
 	plt.close()
@@ -127,7 +128,8 @@ def plot_disk_embeddings(epoch, edges, poincare_embedding, klein_embedding, labe
 	plt.plot([u_emb[:,0], v_emb[:,0]], [u_emb[:,1], v_emb[:,1]], c="k", linewidth=0.05, zorder=0)
 	for c in range(num_classes):
 		idx = labels == c
-		plt.scatter(poincare_embedding[idx,0], poincare_embedding[idx,1], s=10, c=colors[c], label=label_info[c], zorder=1)
+		plt.scatter(poincare_embedding[idx,0], poincare_embedding[idx,1], s=10, c=colors[c], 
+			label=label_info[c] is label_info is not None else None, zorder=1)
 	# plt.scatter(poincare_embedding[:,0], poincare_embedding[:,1], s=10, c=colors[labels], zorder=1)
 	plt.xlim([-1,1])
 	plt.ylim([-1,1])
@@ -144,7 +146,8 @@ def plot_disk_embeddings(epoch, edges, poincare_embedding, klein_embedding, labe
 	plt.plot([u_emb[:,0], v_emb[:,0]], [u_emb[:,1], v_emb[:,1]], c="k", linewidth=0.05, zorder=0)
 	for c in range(num_classes):
 		idx = labels == c
-		plt.scatter(klein_embedding[idx,0], klein_embedding[idx,1], s=10, c=colors[c], label=label_info[c], zorder=1)
+		plt.scatter(klein_embedding[idx,0], klein_embedding[idx,1], s=10, c=colors[c], 
+			label=label_info[c] if label_info is not None else None, zorder=1)
 	# plt.scatter(klein_embedding[:,0], klein_embedding[:,1], s=10, c=c[labels], zorder=1)
 	plt.xlim([-1,1])
 	plt.ylim([-1,1])

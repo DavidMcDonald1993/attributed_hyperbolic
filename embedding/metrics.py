@@ -10,7 +10,7 @@ from sklearn.multiclass import OneVsRestClassifier
 from sklearn.model_selection import StratifiedShuffleSplit
 
 def evaluate_rank_and_MAP(dists, edgelist, non_edgelist):
-	assert isinstance(edgelist, list)
+	assert not isinstance(edgelist, dict)
 
 	if not isinstance(edgelist, np.ndarray):
 		edgelist = np.array(edgelist)
@@ -131,24 +131,24 @@ def evaluate_classification(klein_embedding, labels, args,
 
 
 
-def evaluate_lexical_entailment(embedding):
+# def evaluate_lexical_entailment(embedding):
 
-	def is_a_score(u, v, alpha=1e3):
-		return -(1 + alpha * (np.linalg.norm(v, axis=-1) - np.linalg.norm(u, axis=-1))) * hyperbolic_distance(u, v)
+# 	def is_a_score(u, v, alpha=1e3):
+# 		return -(1 + alpha * (np.linalg.norm(v, axis=-1) - np.linalg.norm(u, axis=-1))) * hyperbolic_distance(u, v)
 
-	print ("evaluating lexical entailment")
+# 	print ("evaluating lexical entailment")
 
-	hyperlex_noun_idx_df = pd.read_csv("../data/wordnet/hyperlex_idx_ranks.txt", index_col=0, sep=" ")
+# 	hyperlex_noun_idx_df = pd.read_csv("../data/wordnet/hyperlex_idx_ranks.txt", index_col=0, sep=" ")
 
-	U = np.array(hyperlex_noun_idx_df["WORD1"], dtype=int)
-	V = np.array(hyperlex_noun_idx_df["WORD2"], dtype=int)
+# 	U = np.array(hyperlex_noun_idx_df["WORD1"], dtype=int)
+# 	V = np.array(hyperlex_noun_idx_df["WORD2"], dtype=int)
 
-	true_is_a_score = np.array(hyperlex_noun_idx_df["AVG_SCORE_0_10"])
-	predicted_is_a_score = is_a_score(embedding[U], embedding[V])
+# 	true_is_a_score = np.array(hyperlex_noun_idx_df["AVG_SCORE_0_10"])
+# 	predicted_is_a_score = is_a_score(embedding[U], embedding[V])
 
-	r, p = spearmanr(true_is_a_score, predicted_is_a_score)
+# 	r, p = spearmanr(true_is_a_score, predicted_is_a_score)
 
-	print (r, p)
+# 	print (r, p)
 
-	return r, p
+# 	return r, p
 

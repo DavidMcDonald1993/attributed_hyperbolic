@@ -91,7 +91,10 @@ def load_g2g_datasets(dataset_str, args):
 
 	# print (graph["idx_to_class"])
 	# raise SystemExit
-	label_info = graph["idx_to_class"]
+	if idx_to_class:
+		label_info = graph["idx_to_class"]
+	else: 
+		label_info = None 
 
 	return topology_graph, features, labels, label_info
 
