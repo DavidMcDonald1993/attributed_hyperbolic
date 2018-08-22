@@ -14,9 +14,9 @@ arr=(--dataset={cora,citeseer,pubmed}" "{--no-non-edges,--add-non-edges}" "{--no
 # echo ${#arr[*]}
 
 module purge; module load bluebear
-# module load apps/cuda/8.0.44
-# module load apps/cudnn/6.0
-# -I${CUDNN_ROOT}/include/cudnn.h -L${CUDNN_ROOT}/lib64/libcudnn.so
+module load apps/cuda/8.0.44
+module load apps/cudnn/6.0
+-I${CUDNN_ROOT}/include/cudnn.h -L${CUDNN_ROOT}/lib64/libcudnn.so
 # module load bear-apps/2018a
 # module load Python/3.6.3-iomkl-2018a
 # module load apps/python2/2.7.11
