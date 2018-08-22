@@ -129,7 +129,7 @@ def plot_disk_embeddings(epoch, edges, poincare_embedding, klein_embedding, labe
 	for c in range(num_classes):
 		idx = labels == c
 		plt.scatter(poincare_embedding[idx,0], poincare_embedding[idx,1], s=10, c=colors[c], 
-			label=label_info[c] is label_info is not None else None, zorder=1)
+			label=label_info[c] if label_info is not None else None, zorder=1)
 	# plt.scatter(poincare_embedding[:,0], poincare_embedding[:,1], s=10, c=colors[labels], zorder=1)
 	plt.xlim([-1,1])
 	plt.ylim([-1,1])
