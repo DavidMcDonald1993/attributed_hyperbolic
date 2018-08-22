@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import sys
 import os
 import json
@@ -31,6 +33,67 @@ def load_karate(args):
 	features = np.genfromtxt(os.path.join(_dir, "/data/karate/feats.csv"), delimiter=",")
 
 	return topology_graph, features, labels
+
+def load_g2g_datasets(dataset_str, args):
+
+	"""Load a graph from a Numpy binary file.
+	Parameters
+	----------
+	file_name : str
+		Name of the file to load.
+	Returns
+	-------
+	graph : dict
+		Dictionary that contains:
+			* 'A' : The adjacency matrix in sparse matrix format
+			* 'X' : The attribute matrix in sparse matrix format
+			* 'z' : The ground truth class labels
+			* Further dictionaries mapping node, class and attribute IDs
+	"""
+	file_name = os.path.join(args.data_directory,"g2g_datasets")
+	file_name = os.path.join(file_name, dataset_str)
+	if not file_name.endswith('.npz'):
+		file_name += '.npz'
+	with np.load(file_name) as loader:
+		loader = dict(loader)
+		A = sp.sparse.csr_matrix((loader['adj_data'], loader['adj_indices'],
+						   loader['adj_indptr']), shape=loader['adj_shape'])
+
+		X = sp.sparse.csr_matrix((loader['attr_data'], loader['attr_indices'],
+						   loader['attr_indptr']), shape=loader['attr_shape'])
+
+		z = loader.get('labels')
+
+		graph = {
+			'A': A,
+			'X': X,
+			'z': z
+		}
+
+		idx_to_node = loader.get('idx_to_node')
+		if idx_to_node:
+			idx_to_node = idx_to_node.tolist()
+			graph['idx_to_node'] = idx_to_node
+
+		idx_to_attr = loader.get('idx_to_attr')
+		if idx_to_attr:
+			idx_to_attr = idx_to_attr.tolist()
+			graph['idx_to_attr'] = idx_to_attr
+
+		idx_to_class = loader.get('idx_to_class')
+		if idx_to_class:
+			idx_to_class = idx_to_class.tolist()
+			graph['idx_to_class'] = idx_to_class
+
+	topology_graph = nx.from_scipy_sparse_matrix(A)
+	features = X.A
+	labels = z
+
+	# print (graph["idx_to_class"])
+	# raise SystemExit
+	label_info = graph["idx_to_class"]
+
+	return topology_graph, features, labels, label_info
 
 def load_labelled_attributed_network(dataset_str, args, scale=False):
 	"""Load data."""
@@ -113,68 +176,68 @@ def load_labelled_attributed_network(dataset_str, args, scale=False):
 	return topology_graph, features, labels
 
 def load_ppi(args, normalize=True,):
-    prefix = os.path.join(args.data_directory, "/data/ppi/ppi")
-    G_data = json.load(open(prefix + "-G.json"))
-    topology_graph = json_graph.node_link_graph(G_data)
-    if isinstance(topology_graph.nodes()[0], int):
-        conversion = lambda n : int(n)
-    else:
-        conversion = lambda n : n
+	prefix = os.path.join(args.data_directory, "/data/ppi/ppi")
+	G_data = json.load(open(prefix + "-G.json"))
+	topology_graph = json_graph.node_link_graph(G_data)
+	if isinstance(topology_graph.nodes()[0], int):
+		conversion = lambda n : int(n)
+	else:
+		conversion = lambda n : n
 
-    if os.path.exists(prefix + "-feats.npy"):
-        features = np.load(prefix + "-feats.npy")
-    else:
-        print("No features present.. Only identity features will be used.")
-        features = None
-    id_map = json.load(open(prefix + "-id_map.json"))
-    id_map = {conversion(k):int(v) for k,v in id_map.items()}
-    class_map = json.load(open(prefix + "-class_map.json"))
-    if isinstance(list(class_map.values())[0], list):
-        lab_conversion = lambda n : n
-    else:
-        lab_conversion = lambda n : int(n)
+	if os.path.exists(prefix + "-feats.npy"):
+		features = np.load(prefix + "-feats.npy")
+	else:
+		print("No features present.. Only identity features will be used.")
+		features = None
+	id_map = json.load(open(prefix + "-id_map.json"))
+	id_map = {conversion(k):int(v) for k,v in id_map.items()}
+	class_map = json.load(open(prefix + "-class_map.json"))
+	if isinstance(list(class_map.values())[0], list):
+		lab_conversion = lambda n : n
+	else:
+		lab_conversion = lambda n : int(n)
 
-    class_map = {conversion(k):lab_conversion(v) for k,v in class_map.items()}
+	class_map = {conversion(k):lab_conversion(v) for k,v in class_map.items()}
 
-    ## Remove all nodes that do not have val/test annotations
-    ## (necessary because of networkx weirdness with the Reddit data)
-    broken_count = 0
-    for node in topology_graph.nodes():
-        if not 'val' in topology_graph.node[node] or not 'test' in topology_graph.node[node]:
-            topology_graph.remove_node(node)
-            broken_count += 1
-    print("Removed {:d} nodes that lacked proper annotations due to networkx versioning issues".format(broken_count))
+	## Remove all nodes that do not have val/test annotations
+	## (necessary because of networkx weirdness with the Reddit data)
+	broken_count = 0
+	for node in topology_graph.nodes():
+		if not 'val' in topology_graph.node[node] or not 'test' in topology_graph.node[node]:
+			topology_graph.remove_node(node)
+			broken_count += 1
+	print("Removed {:d} nodes that lacked proper annotations due to networkx versioning issues".format(broken_count))
 
-    ## Make sure the graph has edge train_removed annotations
-    ## (some datasets might already have this..)
-    print("Loaded data.. now preprocessing..")
-    for edge in topology_graph.edges():
-        if ( topology_graph.node[edge[0]]['val'] or  topology_graph.node[edge[1]]['val'] or
-             topology_graph.node[edge[0]]['test'] or  topology_graph.node[edge[1]]['test']):
-             topology_graph[edge[0]][edge[1]]['train_removed'] = True
-        else:
-             topology_graph[edge[0]][edge[1]]['train_removed'] = False
+	## Make sure the graph has edge train_removed annotations
+	## (some datasets might already have this..)
+	print("Loaded data.. now preprocessing..")
+	for edge in topology_graph.edges():
+		if ( topology_graph.node[edge[0]]['val'] or  topology_graph.node[edge[1]]['val'] or
+			 topology_graph.node[edge[0]]['test'] or  topology_graph.node[edge[1]]['test']):
+			 topology_graph[edge[0]][edge[1]]['train_removed'] = True
+		else:
+			 topology_graph[edge[0]][edge[1]]['train_removed'] = False
 
-    if normalize and not features is None:
-        from sklearn.preprocessing import StandardScaler
-        train_ids = np.array([id_map[n] 
-                              for n in  topology_graph.nodes() 
-                              if not topology_graph.node[n]['val'] 
-                              and not topology_graph.node[n]['test']])
-        train_feats = features[train_ids]
-        scaler = StandardScaler()
-        scaler.fit(train_feats)
-        features = scaler.transform(features)
-        
-    labels = np.array([class_map[n] for n in topology_graph.nodes()])
-    nx.set_edge_attributes(G=topology_graph, name="weight", values=1.)
-    
-    assert args.only_lcc
-    if args.only_lcc:
-        topology_graph = max(nx.connected_component_subgraphs(topology_graph), key=len)
-        features = features[topology_graph.nodes()]
-        labels = labels[topology_graph.nodes()]
-        topology_graph = nx.convert_node_labels_to_integers(topology_graph, label_attribute="original_name")
-        nx.set_edge_attributes(G=topology_graph, name="weight", values=1.)
+	if normalize and not features is None:
+		from sklearn.preprocessing import StandardScaler
+		train_ids = np.array([id_map[n] 
+							  for n in  topology_graph.nodes() 
+							  if not topology_graph.node[n]['val'] 
+							  and not topology_graph.node[n]['test']])
+		train_feats = features[train_ids]
+		scaler = StandardScaler()
+		scaler.fit(train_feats)
+		features = scaler.transform(features)
+		
+	labels = np.array([class_map[n] for n in topology_graph.nodes()])
+	nx.set_edge_attributes(G=topology_graph, name="weight", values=1.)
+	
+	assert args.only_lcc
+	if args.only_lcc:
+		topology_graph = max(nx.connected_component_subgraphs(topology_graph), key=len)
+		features = features[topology_graph.nodes()]
+		labels = labels[topology_graph.nodes()]
+		topology_graph = nx.convert_node_labels_to_integers(topology_graph, label_attribute="original_name")
+		nx.set_edge_attributes(G=topology_graph, name="weight", values=1.)
 
-    return topology_graph, features, labels
+	return topology_graph, features, labels

@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import sys
 import os
 import numpy as np
@@ -39,18 +41,20 @@ def hyperboloid_to_poincare_ball(X):
 def hyperboloid_to_klein(X):
 	return X[:,:-1] / X[:,-1,None]
 
-def plot_euclidean_embedding(epoch, edges, euclidean_embedding, labels, 
+def plot_euclidean_embedding(epoch, edges, euclidean_embedding, labels, label_info,
 	mean_rank_reconstruction, map_reconstruction, mean_roc_reconstruction,
 	mean_rank_lp, map_lp, mean_roc_lp, path):
 
 	if len(labels.shape) > 1:
-			unique_labels = np.unique(labels, axis=0)
-			labels = np.array([np.where((unique_labels == label).all(axis=-1))[0][0] for label in labels])
+		raise Exception	
+		unique_labels = np.unique(labels, axis=0)
+		labels = np.array([np.where((unique_labels == label).all(axis=-1))[0][0] for label in labels])
 
 	if not isinstance(edges, np.ndarray):
 		edges = np.array(edges)
 
-	c = np.random.rand(len(set(labels)), 3)
+	num_classes = len(set(labels))
+	colors = np.random.rand(num_classes, 3)
 
 	print ("saving plot to {}".format(path))
 
@@ -70,13 +74,16 @@ def plot_euclidean_embedding(epoch, edges, euclidean_embedding, labels,
 	# 	v_emb = poincare_embedding[v]
 	# 	plt.plot([u_emb[0], v_emb[0]], [u_emb[1], v_emb[1]], c="k", linewidth=0.05, zorder=0)
 	plt.plot([u_emb[:,0], v_emb[:,0]], [u_emb[:,1], v_emb[:,1]], c="k", linewidth=0.05, zorder=0)
-	plt.scatter(euclidean_embedding[:,0], euclidean_embedding[:,1], s=10, c=c[labels], zorder=1)
-	
+
+	for c in range(num_classes):
+		idx = labels == c
+		plt.scatter(euclidean_embedding[idx,0], euclidean_embedding[idx,1], s=10, c=colors[c], label=label_info[c], zorder=1)
+	# plt.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05),ncol=3)
 	plt.savefig(path)
 	plt.close()
 
 
-def plot_disk_embeddings(epoch, edges, poincare_embedding, klein_embedding, labels, 
+def plot_disk_embeddings(epoch, edges, poincare_embedding, klein_embedding, labels, label_info,
 	mean_rank_reconstruction, map_reconstruction, mean_roc_reconstruction,
 	mean_rank_lp, map_lp, mean_roc_lp, path):
 
@@ -88,13 +95,15 @@ def plot_disk_embeddings(epoch, edges, poincare_embedding, klein_embedding, labe
 
 
 	if len(labels.shape) > 1:
+		raise Exception
 		unique_labels = np.unique(labels, axis=0)
 		labels = np.array([np.where((unique_labels == label).all(axis=-1))[0][0] for label in labels])
 
 	if not isinstance(edges, np.ndarray):
 		edges = np.array(edges)
 
-	c = np.random.rand(len(set(labels)), 3)
+	num_classes = len(set(labels))
+	colors = np.random.rand(num_classes, 3)
 
 	print ("saving plot to {}".format(path))
 
@@ -116,7 +125,10 @@ def plot_disk_embeddings(epoch, edges, poincare_embedding, klein_embedding, labe
 	# 	v_emb = poincare_embedding[v]
 	# 	plt.plot([u_emb[0], v_emb[0]], [u_emb[1], v_emb[1]], c="k", linewidth=0.05, zorder=0)
 	plt.plot([u_emb[:,0], v_emb[:,0]], [u_emb[:,1], v_emb[:,1]], c="k", linewidth=0.05, zorder=0)
-	plt.scatter(poincare_embedding[:,0], poincare_embedding[:,1], s=10, c=c[labels], zorder=1)
+	for c in range(num_classes):
+		idx = labels == c
+		plt.scatter(poincare_embedding[idx,0], poincare_embedding[idx,1], s=10, c=colors[c], label=label_info[c], zorder=1)
+	# plt.scatter(poincare_embedding[:,0], poincare_embedding[:,1], s=10, c=colors[labels], zorder=1)
 	plt.xlim([-1,1])
 	plt.ylim([-1,1])
 
@@ -130,7 +142,10 @@ def plot_disk_embeddings(epoch, edges, poincare_embedding, klein_embedding, labe
 	# 	v_emb = klein_embedding[v]
 	# 	plt.plot([u_emb[0], v_emb[0]], [u_emb[1], v_emb[1]], c="k", linewidth=0.05, zorder=0)
 	plt.plot([u_emb[:,0], v_emb[:,0]], [u_emb[:,1], v_emb[:,1]], c="k", linewidth=0.05, zorder=0)
-	plt.scatter(klein_embedding[:,0], klein_embedding[:,1], s=10, c=c[labels], zorder=1)
+	for c in range(num_classes):
+		idx = labels == c
+		plt.scatter(klein_embedding[idx,0], klein_embedding[idx,1], s=10, c=colors[c], label=label_info[c], zorder=1)
+	# plt.scatter(klein_embedding[:,0], klein_embedding[:,1], s=10, c=c[labels], zorder=1)
 	plt.xlim([-1,1])
 	plt.ylim([-1,1])
 
@@ -138,7 +153,7 @@ def plot_disk_embeddings(epoch, edges, poincare_embedding, klein_embedding, labe
 	plt.savefig(path)
 	plt.close()
 
-def plot_precisions_recalls(dists, reconstruction_edges, removed_edges, non_edges, path):
+def plot_precisions_recalls(dists, reconstruction_edges, non_edges, val_edges, val_non_edges, path):
 
 	print ("saving precision recall curves to {}".format(path))
 
@@ -161,12 +176,15 @@ def plot_precisions_recalls(dists, reconstruction_edges, removed_edges, non_edge
 
 	legend = ["reconstruction"]
 
-	if removed_edges is not None:
-		removed_edges = np.array(removed_edges)
-		removed_edge_dists = dists[removed_edges[:,0], removed_edges[:,1]]
+	if val_edges is not None:
+		val_edges = np.array(val_edges)
+		val_edge_dists = dists[val_edges[:,0], val_edges[:,1]]
 
-		targets = np.append(np.ones_like(removed_edge_dists), np.zeros_like(non_edge_dists))
-		_dists = np.append(removed_edge_dists, non_edge_dists)
+		val_non_edges = np.array(val_non_edges)
+		val_non_edge_dists = dists[val_non_edges[:,0], val_non_edges[:,1]]
+
+		targets = np.append(np.ones_like(val_edge_dists), np.zeros_like(val_non_edge_dists))
+		_dists = np.append(val_edge_dists, val_non_edge_dists)
 
 		precisions, recalls, _ = precision_recall_curve(targets, -_dists)
 
@@ -182,7 +200,7 @@ def plot_precisions_recalls(dists, reconstruction_edges, removed_edges, non_edge
 	plt.close()
 
 
-def plot_roc(dists, reconstruction_edges, removed_edges, non_edges, path):
+def plot_roc(dists, reconstruction_edges, non_edges, val_edges, val_non_edges, path):
 
 	print ("saving roc plot to {}".format(path))
 
@@ -207,12 +225,15 @@ def plot_roc(dists, reconstruction_edges, removed_edges, non_edges, path):
 
 	legend = ["reconstruction AUC={}".format(auc)]
 
-	if removed_edges is not None:
-		removed_edges = np.array(removed_edges)
-		removed_edge_dists = dists[removed_edges[:,0], removed_edges[:,1]]
+	if val_edges is not None:
+		val_edges = np.array(val_edges)
+		val_edge_dists = dists[val_edges[:,0], val_edges[:,1]]
 
-		targets = np.append(np.ones_like(removed_edge_dists), np.zeros_like(non_edge_dists))
-		_dists = np.append(removed_edge_dists, non_edge_dists)
+		val_non_edges = np.array(val_non_edges)
+		val_non_edge_dists = dists[val_non_edges[:,0], val_non_edges[:,1]]
+
+		targets = np.append(np.ones_like(val_edge_dists), np.zeros_like(val_non_edge_dists))
+		_dists = np.append(val_edge_dists, val_non_edge_dists)
 
 		fpr, tpr, _ = roc_curve(targets, -_dists)
 		auc = roc_auc_score(targets, -_dists)
@@ -249,16 +270,19 @@ def plot_classification(label_percentages, f1_micros, f1_macros, path):
 
 class PeriodicStdoutLogger(Callback):
 
-	def __init__(self, reconstruction_edges, val_edges, non_edges, non_edge_dict, labels, 
+	def __init__(self, reconstruction_edges, non_edges, val_edges, val_non_edges, labels, label_info,
 		epoch, n, args):
 		self.reconstruction_edges = reconstruction_edges
-		self.reconstruction_edge_dict = convert_edgelist_to_dict(reconstruction_edges)
-		self.val_edges = val_edges
-		self.val_edge_dict = convert_edgelist_to_dict(val_edges)
 		self.non_edges = non_edges
+
+		# self.reconstruction_edge_dict = convert_edgelist_to_dict(reconstruction_edges)
+		self.val_edges = val_edges
+		self.val_non_edges = val_non_edges
+		# self.val_edge_dict = convert_edgelist_to_dict(val_edges)
 		# self.non_edge_dict = convert_edgelist_to_dict(non_edges)
-		self.non_edge_dict = non_edge_dict
+		# self.non_edge_dict = non_edge_dict
 		self.labels = labels
+		self.label_info = label_info
 		self.epoch = epoch
 		self.n = n
 		self.args = args
@@ -287,12 +311,12 @@ class PeriodicStdoutLogger(Callback):
 
 		if self.args.verbose:
 			print ("reconstruction")
-		(mean_rank_reconstruction, map_reconstruction, 
-			mean_roc_reconstruction) = evaluate_rank_and_MAP(dists, 
-			self.reconstruction_edge_dict, self.non_edge_dict)
 		# (mean_rank_reconstruction, map_reconstruction, 
 		# 	mean_roc_reconstruction) = evaluate_rank_and_MAP(dists, 
-		# 	self.reconstruction_edges, self.non_edges)
+		# 	self.reconstruction_edge_dict, self.non_edge_dict)
+		(mean_rank_reconstruction, map_reconstruction, 
+			mean_roc_reconstruction) = evaluate_rank_and_MAP(dists, 
+			self.reconstruction_edges, self.non_edges)
 
 		logs.update({"mean_rank_reconstruction": mean_rank_reconstruction, 
 			"map_reconstruction": map_reconstruction,
@@ -302,13 +326,13 @@ class PeriodicStdoutLogger(Callback):
 		if self.args.evaluate_link_prediction:
 			if self.args.verbose:
 				print ("link prediction")
-			(mean_rank_lp, map_lp, 
-			mean_roc_lp) = evaluate_rank_and_MAP(dists, 
-			self.val_edge_dict, self.non_edge_dict)
-
 			# (mean_rank_lp, map_lp, 
 			# mean_roc_lp) = evaluate_rank_and_MAP(dists, 
-			# self.val_edges, self.non_edges)
+			# self.val_edge_dict, self.non_edge_dict)
+
+			(mean_rank_lp, map_lp, 
+			mean_roc_lp) = evaluate_rank_and_MAP(dists, 
+			self.val_edges, self.val_non_edges)
 
 			logs.update({"mean_rank_lp": mean_rank_lp, 
 				"map_lp": map_lp,
@@ -337,29 +361,33 @@ class PeriodicStdoutLogger(Callback):
 
 		if self.epoch % self.n == 0:
 
-			plot_path = os.path.join(self.args.plot_path, "epoch_{:05d}_plot.png".format(self.epoch) )
-			if self.args.euclidean:
-				plot_euclidean_embedding(self.epoch, self.reconstruction_edges, 
-					poincare_embedding,
-					self.labels, 
-					mean_rank_reconstruction, map_reconstruction, mean_roc_reconstruction,
-					mean_rank_lp, map_lp, mean_roc_lp,
-					plot_path)
+			if self.args.embedding_dim == 2:
+				plot_path = os.path.join(self.args.plot_path, "epoch_{:05d}_plot.png".format(self.epoch) )
+				if self.args.euclidean:
+					plot_euclidean_embedding(self.epoch, self.reconstruction_edges, 
+						poincare_embedding,
+						self.labels, self.label_info,
+						mean_rank_reconstruction, map_reconstruction, mean_roc_reconstruction,
+						mean_rank_lp, map_lp, mean_roc_lp,
+						plot_path)
 
+				else:
+					plot_disk_embeddings(self.epoch, self.reconstruction_edges, 
+						poincare_embedding, klein_embedding,
+						self.labels, self.label_info,
+						mean_rank_reconstruction, map_reconstruction, mean_roc_reconstruction,
+						mean_rank_lp, map_lp, mean_roc_lp,
+						plot_path)
 			else:
-				plot_disk_embeddings(self.epoch, self.reconstruction_edges, 
-					poincare_embedding, klein_embedding,
-					self.labels, 
-					mean_rank_reconstruction, map_reconstruction, mean_roc_reconstruction,
-					mean_rank_lp, map_lp, mean_roc_lp,
-					plot_path)
+				print ("dim > 2, omitting plot")
 
 			roc_path = os.path.join(self.args.plot_path, "epoch_{:05d}_roc_curve.png".format(self.epoch) )
-			plot_roc(dists, self.reconstruction_edges, self.val_edges, self.non_edges, roc_path)
+			plot_roc(dists, self.reconstruction_edges, self.non_edges, 
+				self.val_edges, self.val_non_edges, roc_path)
 
 			precision_recall_path = os.path.join(self.args.plot_path, "epoch_{:05d}_precision_recall_curve.png".format(self.epoch) )
-			plot_precisions_recalls(dists, self.reconstruction_edges, 
-				self.val_edges, self.non_edges, precision_recall_path)
+			plot_precisions_recalls(dists, self.reconstruction_edges, self.non_edges, 
+				self.val_edges, self.val_non_edges, precision_recall_path)
 
 			if self.args.evaluate_class_prediction:
 				f1_path = os.path.join(self.args.plot_path, "epoch_{:05d}_class_prediction_f1.png".format(self.epoch))

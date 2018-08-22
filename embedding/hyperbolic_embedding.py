@@ -21,7 +21,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from sklearn.metrics.pairwise import cosine_similarity, euclidean_distances
 
-from data_utils import load_karate, load_labelled_attributed_network, load_ppi
+from data_utils import load_karate, load_labelled_attributed_network, load_ppi, load_g2g_datasets
 from utils import load_walks, determine_positive_and_negative_samples, convert_edgelist_to_dict, split_edges, get_training_sample, make_validation_data
 from callbacks import PeriodicStdoutLogger, hyperboloid_to_klein, hyperboloid_to_poincare_ball, hyperbolic_distance_hyperboloid_pairwise
 from losses import hyperbolic_negative_sampling_loss, hyperbolic_sigmoid_loss, hyperbolic_softmax_loss, euclidean_negative_sampling_loss
@@ -157,11 +157,10 @@ class ExponentialMappingOptimizer(optimizer.Optimizer):
 		def adjust_to_hyperboloid(x):
 			x = x[:,:-1]
 			t = K.sqrt(1. + K.sum(K.square(x), axis=-1, keepdims=True))
-			return tf.concat([x,t], axis=-1)
+			return tf.concat([x, t], axis=-1)
 
 		norm_x = tf.sqrt( tf.maximum(K.cast(0., K.floatx()), minkowski_dot(x, x), name="maximum") )
 
-		# norm_x = tf.minimum(norm_x, 1.)
 		#####################################################
 		# exp_map_p = tf.cosh(norm_x) * p
 		
@@ -170,7 +169,7 @@ class ExponentialMappingOptimizer(optimizer.Optimizer):
 		# z = tf.gather(x, idx) / non_zero_norm
 
 		# updates = tf.sinh(non_zero_norm) * z
-		# dense_shape = tf.cast( tf.shape(p), tf.int32)
+		# dense_shape = tf.cast( tf.shape(p), tf.int64)
 		# exp_map_x = tf.scatter_nd(indices=idx, updates=updates, shape=dense_shape)
 
 		
@@ -188,9 +187,6 @@ class ExponentialMappingOptimizer(optimizer.Optimizer):
 
 		# params = adjust_to_hyperboloid(params)
 		# exp_map = tf.scatter_update(ref=exp_map, updates=params, indices=idx)
-
-		# exp_map = K.minimum(exp_map, 10000)
-
 
 		return exp_map
 
@@ -358,7 +354,10 @@ def parse_args():
 	parser.add_argument('--no-load', action="store_true", help='flag to terminate program if trained model exists')
 
 
-	parser.add_argument('--use-generator', action="store_true", help='flag train using a generator')
+	parser.add_argument('--use-generator', action="store_true", help='flag to train using a generator')
+
+	parser.add_argument('--no-non-edges', action="store_true", help='flag to not add non edges to training graph')
+	parser.add_argument('--add-non-edges', action="store_true", help='flag to add non edges to training graph')
 
 
 	args = parser.parse_args()
@@ -379,6 +378,10 @@ def configure_paths(args):
 
 	if args.evaluate_link_prediction:
 		directory += "eval_lp/"
+		if args.add_non_edges:
+			directory += "add_non_edges/"
+		else:
+			directory += "no_non_edges/"
 	elif args.evaluate_class_prediction:
 		directory += "eval_class_pred/"
 	else: 
@@ -449,6 +452,10 @@ def configure_paths(args):
 		args.walk_path += "all_components/"
 	if args.evaluate_link_prediction:
 		args.walk_path += "eval_lp/"
+		if args.add_non_edges:
+			args.walk_path += "add_non_edges/"
+		else:
+			args.walk_path += "no_non_edges/"
 	# elif args.evaluate_class_prediction:
 	# 	args.walk_path += "/eval_class_pred/"
 	else:
@@ -496,8 +503,9 @@ def main():
 	dataset = args.dataset
 	if dataset == "karate":
 		topology_graph, features, labels = load_karate(args)
-	elif dataset in ["cora", "pubmed", "citeseer"]:
-		topology_graph, features, labels = load_labelled_attributed_network(dataset, args)
+	elif dataset in ["cora", "cora_ml", "pubmed", "citeseer"]:
+		# topology_graph, features, labels = load_labelled_attributed_network(dataset, args)
+		topology_graph, features, labels, label_info = load_g2g_datasets(dataset, args)
 	elif dataset == "ppi":
 		topology_graph, features, labels = load_ppi(args)
 	else:
@@ -505,6 +513,8 @@ def main():
 
 	# original edges for reconstruction
 	reconstruction_edges = topology_graph.edges()
+	non_edges = list(nx.non_edges(topology_graph))
+
 	if args.verbose:
 		print ("determined reconstruction edges")
 
@@ -516,13 +526,29 @@ def main():
 		feature_sim = None
 
 	if args.evaluate_link_prediction:
-		train_edges, val_edges, test_edges = split_edges(reconstruction_edges, args)
+		train_edges, (val_edges, val_non_edges), (test_edges, test_non_edges) = split_edges(reconstruction_edges, non_edges, args)
+		n1 = len(topology_graph)
+		print ("removing {} edges from training set".format(len(val_edges) + len(test_edges)))
 		topology_graph.remove_edges_from(val_edges + test_edges)
+		n2 = len(topology_graph)
+		if args.add_non_edges:
+			print ("adding {} non edges as edges to training set".format(len(val_non_edges) + len(test_non_edges)))
+			topology_graph.add_edges_from(val_non_edges + test_non_edges)
+			nx.set_edge_attributes(topology_graph, "weight", 1)
+		n3 = len(topology_graph)
+		assert n1 == n2 == n3
+		# for u, v, d in topology_graph.edges(data=True):
+		# 	# print (d)
+		# 	assert "weight" in d, d
+		# # print (topology_graph.edges(data=True))
+		# raise SystemExit
 
 	else:
 		train_edges = reconstruction_edges
 		val_edges = None
 		test_edges = None
+		val_non_edges = None
+		test_non_edges = None
 
 
 
@@ -573,7 +599,7 @@ def main():
 	model.summary()
 
 
-	non_edges = list(nx.non_edges(topology_graph))
+	# non_edges = list(nx.non_edges(topology_graph))
 	non_edge_dict = convert_edgelist_to_dict(non_edges)
 	if args.verbose:
 		print ("determined true non edges")
@@ -582,7 +608,7 @@ def main():
 		print ("determined validation data")
 
 	early_stopping = EarlyStopping(monitor="val_loss", patience=args.patience, verbose=1)
-	logger = PeriodicStdoutLogger(reconstruction_edges, val_edges, non_edges, non_edge_dict, labels, 
+	logger = PeriodicStdoutLogger(reconstruction_edges, non_edges, val_edges, val_non_edges, labels, label_info,
 				n=args.plot_freq, epoch=initial_epoch, args=args) 
 	if args.verbose:
 		print ("created logger")
@@ -637,16 +663,21 @@ def main():
 	print (hyperboloid_embedding)
 	# print minkowski_dot_np(hyperboloid_embedding, hyperboloid_embedding)
 
-	reconstruction_edge_dict = convert_edgelist_to_dict(reconstruction_edges)
-	non_edge_dict = convert_edgelist_to_dict(non_edges)
+	# reconstruction_edge_dict = convert_edgelist_to_dict(reconstruction_edges)
+	# non_edge_dict = convert_edgelist_to_dict(non_edges)
+	# (mean_rank_reconstruction, map_reconstruction, 
+	# 	mean_roc_reconstruction) = evaluate_rank_and_MAP(dists, 
+	# 	reconstruction_edge_dict, non_edge_dict)
 	(mean_rank_reconstruction, map_reconstruction, 
 		mean_roc_reconstruction) = evaluate_rank_and_MAP(dists, 
-		reconstruction_edge_dict, non_edge_dict)
+		reconstruction_edges, non_edges)
 
 	if args.evaluate_link_prediction:
-		test_edge_dict = convert_edgelist_to_dict(test_edges)	
+		# test_edge_dict = convert_edgelist_to_dict(test_edges)	
 		(mean_rank_lp, map_lp, 
-		mean_roc_lp) = evaluate_rank_and_MAP(dists, test_edge_dict, non_edge_dict)
+		# mean_roc_lp) = evaluate_rank_and_MAP(dists, test_edge_dict, non_edge_dict)
+		mean_roc_lp) = evaluate_rank_and_MAP(dists, test_edges, test_non_edges)
+
 	else:
 		mean_rank_lp, map_lp, mean_roc_lp = None, None, None 
 
@@ -676,12 +707,11 @@ def main():
 			plot_path)
 
 	roc_path = os.path.join(args.plot_path, "epoch_{:05d}_roc_curve_test.png".format(epoch) )
-	plot_roc(dists, reconstruction_edges, test_edges, non_edges, roc_path)
+	plot_roc(dists, reconstruction_edges, non_edges, test_edges, test_non_edges, roc_path)
 
 	precision_recall_path = os.path.join(args.plot_path, 
 		"epoch_{:05d}_precision_recall_curve_test.png".format(epoch) )
-	plot_precisions_recalls(dists, reconstruction_edges, 
-		test_edges, non_edges, precision_recall_path)
+	plot_precisions_recalls(dists, reconstruction_edges, non_edges, test_edges, test_non_edges, precision_recall_path)
 
 	if args.evaluate_class_prediction:
 		label_percentages, f1_micros, f1_macros = evaluate_classification(klein_embedding, labels, args)

@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import os
 import numpy as np
 import networkx as nx
@@ -129,10 +131,10 @@ def create_feature_graph(features, args):
 
 	return feature_graph
 
-def split_edges(edges, args, val_split=0.05, test_split=0.1):
+def split_edges(edges, non_edges, args, val_split=0.05, test_split=0.1, neg_mul=1):
 	
-	num_val_edges = int(len(edges) * val_split)
-	num_test_edges = int(len(edges) * test_split)
+	num_val_edges = int(np.ceil(len(edges) * val_split))
+	num_test_edges = int(np.ceil(len(edges) * test_split))
 
 	random.seed(args.seed)
 	random.shuffle(edges)
@@ -141,7 +143,10 @@ def split_edges(edges, args, val_split=0.05, test_split=0.1):
 	test_edges = edges[num_val_edges:num_val_edges+num_test_edges]
 	train_edges = edges[num_val_edges+num_test_edges:]
 
-	return train_edges, val_edges, test_edges
+	val_non_edges = non_edges[:num_val_edges*neg_mul]
+	test_non_edges = non_edges[num_val_edges*neg_mul:num_val_edges*neg_mul+num_test_edges*neg_mul]
+
+	return train_edges, (val_edges, val_non_edges), (test_edges, test_non_edges)
 
 def determine_positive_and_negative_samples(nodes, walks, context_size):
 
@@ -190,7 +195,7 @@ def determine_positive_and_negative_samples(nodes, walks, context_size):
 
 	prob_dict = {n: probs[n] * probs[negative_samples[n]] ** .75 for n in sorted(nodes)}
 	prob_dict = {n: probs / probs.sum() for n, probs in prob_dict.items()}
-	prob_dict = {n: np.ones_like(negative_samples[n], dtype=np.float) / len(negative_samples[n]) for n in prob_dict.keys()}
+	# prob_dict = {n: np.ones_like(negative_samples[n], dtype=np.float) / len(negative_samples[n]) for n in prob_dict.keys()}
 	# probs = {n: counts[negative_samples[n]] / counts[negative_samples[n]].sum() for n in sorted(nodes)}
 	alias_dict = {n: alias_setup(probs) for n, probs in prob_dict.items()}
 
