@@ -24,11 +24,11 @@ module load apps/python3/3.5.2
 # module load apps/scikit-learn/0.19.0-python-3.5.2
 # module load apps/h5py/2.7.0-python-3.5.2
 # module load TensorFlow/1.8.0-foss-2018a-Python-3.6.3
-# module load apps/tensorflow/1.3.1-python-2.7.11
-module load apps/tensorflow/1.3.1-python-3.5.2-cuda-8.0.44
+module load apps/tensorflow/1.3.1-python-2.7.11
+# module load apps/tensorflow/1.3.1-python-3.5.2-cuda-8.0.44
 # module load apps/tensorflow/1.3.1-python-2.7.11-cuda-8.0.44
-# module load apps/keras/2.0.8-python-2.7.11
-module load apps/keras/2.0.8-python-3.5.2-cuda-8.0.44
+module load apps/keras/2.0.8-python-2.7.11
+# module load apps/keras/2.0.8-python-3.5.2-cuda-8.0.44
 
 echo starting, ${arr[${SLURM_ARRAY_TASK_ID}]}
 python embedding/hyperbolic_embedding.py  --data-directory /rds/homes/d/dxm237/data \
