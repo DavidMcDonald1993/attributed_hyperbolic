@@ -294,6 +294,8 @@ class PeriodicStdoutLogger(Callback):
 	
 		self.epoch += 1
 
+		print (self.epoch)
+
 
 		if self.args.verbose:
 			s = "Completed epoch {}, loss={}".format(self.epoch, logs["loss"])
