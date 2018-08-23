@@ -85,7 +85,7 @@ def plot_euclidean_embedding(epoch, edges, euclidean_embedding, labels, label_in
 	plt.close()
 
 
-def plot_disk_embeddings(epoch, edges, poincare_embedding, klein_embedding, labels, label_info,
+def plot_disk_embeddings(epoch, edges, poincare_embedding, labels, label_info,
 	mean_rank_reconstruction, map_reconstruction, mean_roc_reconstruction,
 	mean_rank_lp, map_lp, mean_roc_lp, path):
 
@@ -381,7 +381,7 @@ class PeriodicStdoutLogger(Callback):
 
 				else:
 					plot_disk_embeddings(self.epoch, self.reconstruction_edges, 
-						poincare_embedding, klein_embedding,
+						poincare_embedding,
 						self.labels, self.label_info,
 						mean_rank_reconstruction, map_reconstruction, mean_roc_reconstruction,
 						mean_rank_lp, map_lp, mean_roc_lp,

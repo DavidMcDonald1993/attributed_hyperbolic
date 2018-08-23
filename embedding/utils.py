@@ -155,7 +155,7 @@ def determine_positive_and_negative_samples(nodes, walks, context_size):
 	if not isinstance(nodes, set):
 		nodes = set(nodes)
 	
-	all_positive_samples = {n: {n}for n in sorted(nodes)}
+	all_positive_samples = {n: {n} for n in sorted(nodes)}
 	positive_samples = []
 
 	counts = {n: 0. for n in sorted(nodes)}
@@ -183,7 +183,7 @@ def determine_positive_and_negative_samples(nodes, walks, context_size):
 		if num_walk % 1000 == 0:  
 			print ("processed walk {}/{}".format(num_walk, len(walks)))
 
-	negative_samples = {n: np.array(sorted(nodes.difference(all_positive_samples[n]))) for n in nodes}
+	negative_samples = {n: np.array(sorted(nodes.difference(all_positive_samples[n]))) for n in sorted(nodes)}
 	for u in negative_samples:
 		assert u not in negative_samples[u], "u should not be in negative samples"
 		assert len(negative_samples[u]) > 0, "node {} does not have any negative samples".format(u)

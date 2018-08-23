@@ -599,6 +599,8 @@ def main():
 	model.summary()
 
 
+	
+
 	# non_edges = list(nx.non_edges(topology_graph))
 	non_edge_dict = convert_edgelist_to_dict(non_edges)
 	if args.verbose:
@@ -607,9 +609,21 @@ def main():
 	if args.verbose:
 		print ("determined validation data")
 
-	early_stopping = EarlyStopping(monitor="val_loss", patience=args.patience, verbose=1)
+	monitor = "val_loss"#"mean_rank_reconstruction"
+	mode = "min"
+	early_stopping = EarlyStopping(monitor=monitor, mode=mode, patience=args.patience, verbose=1)
 	logger = PeriodicStdoutLogger(reconstruction_edges, non_edges, val_edges, val_non_edges, labels, label_info,
 				n=args.plot_freq, epoch=initial_epoch, args=args) 
+
+	callbacks=[
+		TerminateOnNaN(), 
+		logger,
+		ModelCheckpoint(os.path.join(args.model_path, 
+			"{epoch:05d}.h5"), save_weights_only=True),
+		CSVLogger(args.log_path, append=True), 
+		early_stopping
+	]
+
 	if args.verbose:
 		print ("created logger")
 
@@ -623,14 +637,7 @@ def main():
 			workers=args.workers, max_queue_size=25, use_multiprocessing=args.workers>0, steps_per_epoch=num_steps, 
 			epochs=args.num_epochs, initial_epoch=initial_epoch, verbose=args.verbose,
 			validation_data=[val_in, val_target],
-			callbacks=[
-				TerminateOnNaN(), 
-				logger,
-				ModelCheckpoint(os.path.join(args.model_path, 
-					"{epoch:05d}.h5"), save_weights_only=True),
-				CSVLogger(args.log_path, append=True), 
-				early_stopping
-			]
+			callbacks=callbacks
 			)
 
 	else:
@@ -644,14 +651,7 @@ def main():
 		model.fit(x, y, batch_size=args.batch_size, 
 		epochs=args.num_epochs, initial_epoch=initial_epoch, verbose=args.verbose,
 		validation_data=[val_in, val_target],
-		callbacks=[
-			TerminateOnNaN(), 
-			logger,
-			ModelCheckpoint(os.path.join(args.model_path, 
-				"{epoch:05d}.h5"), save_weights_only=True),
-			CSVLogger(args.log_path, append=True), 
-			early_stopping
-		]
+		callbacks=callbacks
 		)
 
 
@@ -694,14 +694,14 @@ def main():
 	if args.euclidean:
 		plot_euclidean_embedding(epoch, reconstruction_edges, 
 					poincare_embedding,
-					labels, 
+					labels, label_info,
 					mean_rank_reconstruction, map_reconstruction, mean_roc_reconstruction,
 					mean_rank_lp, map_lp, mean_roc_lp,
 					plot_path)
 	else:
 		plot_disk_embeddings(epoch, reconstruction_edges, 
-			poincare_embedding, klein_embedding,
-			labels, 
+			poincare_embedding, 
+			labels, label_info,
 			mean_rank_reconstruction, map_reconstruction, mean_roc_reconstruction,
 			mean_rank_lp, map_lp, mean_roc_lp,
 			plot_path)

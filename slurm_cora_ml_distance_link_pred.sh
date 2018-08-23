@@ -5,16 +5,16 @@
 #SBATCH --job-name=coraMLDistanceLinkPred
 #SBATCH --output=coraMLDistanceLinkPred_%A_%a.out
 #SBATCH --error=coraMLDistanceLinkPred_%A_%a.err
-#SBATCH --array=0-5
+#SBATCH --array=0-8
 #SBATCH --time=1-00:00:00
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task 5
 #SBATCH --mem=8gb
 
 
 # arr=(-r{5,3,1}" "-t{1,3,5}" "{--no-attributes,--multiply-attributes,--jump-prob=0.05})
-arr=(-r=1" "-t=1" "--dim=2" "{--no-non-edges,--add-non-edges}" "{--no-attributes,--multiply-attributes,--jump-prob=0.05})
+# arr=(-r=1" "-t=1" "--dim=2" "{--no-non-edges,--add-non-edges}" "{--no-attributes,--multiply-attributes,--jump-prob=0.05})
 
+arr=(-r=10" "-t=3" "--dim={2,32,128}" --evaluate-link-prediction --add-non-edges "{--no-attributes,--multiply-attributes,--jump-prob=0.05})
 
 
 module purge; module load bluebear
@@ -36,4 +36,4 @@ module load apps/keras/2.0.8-python-3.5.2-cuda-8.0.44
 
 echo starting, ${arr[${SLURM_ARRAY_TASK_ID}]}
 python embedding/hyperbolic_embedding.py  --dataset cora_ml --data-directory /rds/homes/d/dxm237/data \
---no-load --evaluate-link-prediction ${arr[${SLURM_ARRAY_TASK_ID}]} 
+--no-load  ${arr[${SLURM_ARRAY_TASK_ID}]} 

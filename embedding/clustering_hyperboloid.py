@@ -216,7 +216,7 @@ def main():
 	max_clusters = 0
 	best_eps = -1
 	best_clusters = [-1] * dists.shape[0]
-	for eps in np.arange(0.01,0.5,0.01):
+	for eps in np.arange(0.01,5,0.01):
 		args.eps = eps
 		clusters = perform_clustering(dists, args)
 
@@ -230,8 +230,8 @@ def main():
 			num_connected += nx.is_connected(module)
 		print ("number connected modules = {}".format(num_connected))
 
-		if num_connected > max_clusters:
-			max_clusters = num_connected
+		if num_clusters > max_clusters:
+			max_clusters = num_clusters
 			best_eps = eps
 			best_clusters = clusters
 
