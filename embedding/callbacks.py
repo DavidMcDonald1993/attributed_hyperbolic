@@ -79,7 +79,8 @@ def plot_euclidean_embedding(epoch, edges, euclidean_embedding, labels, label_in
 		idx = labels == c
 		plt.scatter(euclidean_embedding[idx,0], euclidean_embedding[idx,1], s=10, c=colors[c], 
 			label=label_info[c] if label_info is not None else None, zorder=1)
-	# plt.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05),ncol=3)
+		
+	plt.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05), ncol=3)
 	plt.savefig(path)
 	plt.close()
 
@@ -116,7 +117,7 @@ def plot_disk_embeddings(epoch, edges, poincare_embedding, klein_embedding, labe
 			map_lp, mean_roc_lp)
 	plt.suptitle(title)
 	
-	ax = fig.add_subplot(121)
+	ax = fig.add_subplot(111)
 	plt.title("Poincare")
 	ax.add_artist(plt.Circle([0,0], 1, fill=False))
 	u_emb = poincare_embedding[edges[:,0]]
@@ -134,25 +135,31 @@ def plot_disk_embeddings(epoch, edges, poincare_embedding, klein_embedding, labe
 	plt.xlim([-1,1])
 	plt.ylim([-1,1])
 
-	ax = fig.add_subplot(122)
-	plt.title("Klein")
-	ax.add_artist(plt.Circle([0,0], 1, fill=False))
-	u_emb = klein_embedding[edges[:,0]]
-	v_emb = klein_embedding[edges[:,1]]
-	# for u, v in edges:
-	# 	u_emb = klein_embedding[u]
-	# 	v_emb = klein_embedding[v]
-	# 	plt.plot([u_emb[0], v_emb[0]], [u_emb[1], v_emb[1]], c="k", linewidth=0.05, zorder=0)
-	plt.plot([u_emb[:,0], v_emb[:,0]], [u_emb[:,1], v_emb[:,1]], c="k", linewidth=0.05, zorder=0)
-	for c in range(num_classes):
-		idx = labels == c
-		plt.scatter(klein_embedding[idx,0], klein_embedding[idx,1], s=10, c=colors[c], 
-			label=label_info[c] if label_info is not None else None, zorder=1)
-	# plt.scatter(klein_embedding[:,0], klein_embedding[:,1], s=10, c=c[labels], zorder=1)
-	plt.xlim([-1,1])
-	plt.ylim([-1,1])
+	# ax = fig.add_subplot(122)
+	# plt.title("Klein")
+	# ax.add_artist(plt.Circle([0,0], 1, fill=False))
+	# u_emb = klein_embedding[edges[:,0]]
+	# v_emb = klein_embedding[edges[:,1]]
+	# # for u, v in edges:
+	# # 	u_emb = klein_embedding[u]
+	# # 	v_emb = klein_embedding[v]
+	# # 	plt.plot([u_emb[0], v_emb[0]], [u_emb[1], v_emb[1]], c="k", linewidth=0.05, zorder=0)
+	# plt.plot([u_emb[:,0], v_emb[:,0]], [u_emb[:,1], v_emb[:,1]], c="k", linewidth=0.05, zorder=0)
+	# for c in range(num_classes):
+	# 	idx = labels == c
+	# 	plt.scatter(klein_embedding[idx,0], klein_embedding[idx,1], s=10, c=colors[c], 
+	# 		label=label_info[c] if label_info is not None else None, zorder=1)
+	# # plt.scatter(klein_embedding[:,0], klein_embedding[:,1], s=10, c=c[labels], zorder=1)
+	# plt.xlim([-1,1])
+	# plt.ylim([-1,1])
 
-	
+	# Shrink current axis by 20%
+	box = ax.get_position()
+	ax.set_position([box.x0, box.y0, box.width * 0.5, box.height])
+
+	# Put a legend to the right of the current axis
+	ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), ncol=1)
+
 	plt.savefig(path)
 	plt.close()
 
@@ -294,14 +301,10 @@ class PeriodicStdoutLogger(Callback):
 	
 		self.epoch += 1
 
-		print (self.epoch)
-
-
-		if self.args.verbose:
-			s = "Completed epoch {}, loss={}".format(self.epoch, logs["loss"])
-			if "val_loss" in logs.keys():
-				s += ", val_loss={}".format(logs["val_loss"])
-			print (s)
+		s = "Completed epoch {}, loss={}".format(self.epoch, logs["loss"])
+		if "val_loss" in logs.keys():
+			s += ", val_loss={}".format(logs["val_loss"])
+		print (s)
 
 		hyperboloid_embedding = self.model.layers[-1].get_weights()[0]
 		# print (hyperboloid_embedding)

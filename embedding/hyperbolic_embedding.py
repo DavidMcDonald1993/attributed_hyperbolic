@@ -460,8 +460,8 @@ def configure_paths(args):
 	# 	args.walk_path += "/eval_class_pred/"
 	else:
 		args.walk_path += "no_lp/"
-	# if not os.path.exists(args.walk_path):
-	# 	os.makedirs(args.walk_path)
+	if not os.path.exists(args.walk_path):
+		os.makedirs(args.walk_path)
 
 	args.model_path = os.path.join(args.model_path, dataset)
 	if not os.path.exists(args.model_path):
