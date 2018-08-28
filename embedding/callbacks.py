@@ -1,5 +1,6 @@
 from __future__ import print_function
 
+import re
 import sys
 import os
 import numpy as np
@@ -402,4 +403,21 @@ class PeriodicStdoutLogger(Callback):
 				f1_path = os.path.join(self.args.plot_path, "epoch_{:05d}_class_prediction_f1.png".format(self.epoch))
 				plot_classification(label_percentages, f1_micros, f1_macros, f1_path)
 
+		self.remove_old_models()
+		self.save_model()
+
 		sys.stdout.flush()
+
+	def remove_old_models(self):
+		old_models = sorted([f for f in os.listdir(self.args.model_path) 
+			if re.match(r"^[0-9][0-9][0-9][0-9]*", f)])
+		for model in old_models:
+			old_model_path = os.path.join(self.args.model_path, model)
+			print ("removing model: {}".format(old_model_path))
+			os.remove(old_model_path)
+
+
+	def save_model(self):
+		filename = os.path.join(self.args.model_path, "{:05d}.h5".format(self.epoch))
+		print("saving model to {}".format(filename))
+		self.model.save_weights(filename)
