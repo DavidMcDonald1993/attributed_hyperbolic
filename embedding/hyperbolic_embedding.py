@@ -179,7 +179,7 @@ class ExponentialMappingOptimizer(optimizer.Optimizer):
 		# z = x / norm_x
 		z = x / K.maximum(norm_x, K.epsilon())
 
-		# norm_x = K.minimum(norm_x, 1)
+		norm_x = K.minimum(norm_x, 1)
 
 		exp_map = tf.cosh(norm_x) * y + tf.sinh(norm_x) * z
 		#####################################################
@@ -224,17 +224,14 @@ def build_model(num_nodes, args):
 	else:
 		y = EmbeddingLayer(num_nodes, args.embedding_dim, name="embedding_layer")(x)
 	# y = Dense(args.embedding_dim, use_bias=False, activation=None, 
-	# 	kernel_initializer=hyperboloid_initializer, name="embedding_layer")(x)
+	#   kernel_initializer=hyperboloid_initializer, name="embedding_layer")(x)
 
 	model = Model(x, y)
 
 
 	# if os.path.exists(args.model_path):
-	# 	print ("Loading model from file: {}".format(args.model_path))
-	# 	model.load_weights(args.model_path)
-
-
-
+	#   print ("Loading model from file: {}".format(args.model_path))
+	#   model.load_weights(args.model_path)
 
 	initial_epoch = 0
 
@@ -256,8 +253,6 @@ def build_model(num_nodes, args):
 		print ("initial epoch={}".format(initial_epoch))
 
 	return model, initial_epoch
-
-
 
 def parse_args():
 	'''
@@ -308,8 +303,8 @@ def parse_args():
 		help="node2vec return parameter (default is 1.).")
 	parser.add_argument("-q", dest="q", type=float, default=1.,
 		help="node2vec in-out parameter (default is 1.).")
-	parser.add_argument('--num-walks', dest="num_walks", type=int, default=10, 
-		help="Number of walks per source (default is 10).")
+	parser.add_argument('--num-walks', dest="num_walks", type=int, default=25, 
+		help="Number of walks per source (default is 25).")
 	parser.add_argument('--walk-length', dest="walk_length", type=int, default=15, 
 		help="Length of random walk from source (default is 15).")
 
@@ -318,11 +313,11 @@ def parse_args():
 
 
 	# parser.add_argument("--second-order", action="store_true", 
-	# 	help="Use this flag to use second order topological similarity information.")
+	#   help="Use this flag to use second order topological similarity information.")
 	parser.add_argument("--no-attributes", action="store_true", 
 		help="Use this flag to not use attributes.")
 	# parser.add_argument("--add-attributes", action="store_true", 
-	# 	help="Use this flag to add attribute sim to adj.")
+	#   help="Use this flag to add attribute sim to adj.")
 	parser.add_argument("--multiply-attributes", action="store_true", 
 		help="Use this flag to multiply attribute sim to adj.")
 	parser.add_argument("--jump-prob", dest="jump_prob", type=float, default=0, 
@@ -334,7 +329,7 @@ def parse_args():
 		help="Number of worker threads to generate training patterns (default is 2).")
 
 	# parser.add_argument("--distance", dest="distance", action="store_true", 
-	# 	help="Use this flag to use hyperbolic distance loss.")
+	#   help="Use this flag to use hyperbolic distance loss.")
 	parser.add_argument("--sigmoid", dest="sigmoid", action="store_true", 
 		help="Use this flag to use sigmoid loss.")
 	parser.add_argument("--softmax", dest="softmax", action="store_true", 
@@ -347,11 +342,11 @@ def parse_args():
 	parser.add_argument("--plot", dest="plot_path", default="plots/", 
 		help="path to save plots (default is 'plots/)'.")
 	# parser.add_argument("--embeddings", dest="embedding_path", default="../embeddings/", 
-	# 	help="path to save embeddings (default is '../embeddings/)'.")
+	#   help="path to save embeddings (default is '../embeddings/)'.")
 	parser.add_argument("--logs", dest="log_path", default="logs/", 
 		help="path to save logs (default is 'logs/)'.")
 	# parser.add_argument("--boards", dest="board_path", default="../tensorboards/", 
-	# 	help="path to save tensorboards (default is '../tensorboards/)'.")
+	#   help="path to save tensorboards (default is '../tensorboards/)'.")
 	parser.add_argument("--walks", dest="walk_path", default="walks/", 
 		help="path to save random walks (default is 'walks/)'.")
 	parser.add_argument("--model", dest="model_path", default="models/", 
@@ -425,7 +420,7 @@ def configure_paths(args):
 
 
 	# if args.second_order:
-	# 	directory += "second_order_sim/"
+	#   directory += "second_order_sim/"
 
 
 	args.plot_path = os.path.join(args.plot_path, dataset)
@@ -437,10 +432,10 @@ def configure_paths(args):
 
 	# args.embedding_path = os.path.join(args.embedding_path, dataset)
 	# if not os.path.exists(args.embedding_path):
-	# 	os.makedirs(args.embedding_path)
+	#   os.makedirs(args.embedding_path)
 	# args.embedding_path = os.path.join(args.embedding_path, directory)
 	# if not os.path.exists(args.embedding_path):
-	# 	os.makedirs(args.embedding_path)
+	#   os.makedirs(args.embedding_path)
 
 	args.log_path = os.path.join(args.log_path, dataset)
 	if not os.path.exists(args.log_path):
@@ -452,10 +447,10 @@ def configure_paths(args):
 
 	# args.board_path = os.path.join(args.board_path, dataset)
 	# if not os.path.exists(args.board_path):
-	# 	os.makedirs(args.board_path)
+	#   os.makedirs(args.board_path)
 	# args.board_path = os.path.join(args.board_path, directory)
 	# if not os.path.exists(args.board_path):
-	# 	os.makedirs(args.board_path)
+	#   os.makedirs(args.board_path)
 
 	args.walk_path = os.path.join(args.walk_path, dataset)
 	if not os.path.exists(args.walk_path):
@@ -472,7 +467,7 @@ def configure_paths(args):
 		else:
 			args.walk_path += "no_non_edges/"
 	# elif args.evaluate_class_prediction:
-	# 	args.walk_path += "/eval_class_pred/"
+	#   args.walk_path += "/eval_class_pred/"
 	else:
 		args.walk_path += "no_lp/"
 	if not os.path.exists(args.walk_path):
@@ -531,6 +526,9 @@ def main():
 	reconstruction_edges = topology_graph.edges()
 	non_edges = list(nx.non_edges(topology_graph))
 
+	# print (len(topology_graph), len(reconstruction_edges))
+	# raise SystemExit
+
 	if args.verbose:
 		print ("determined reconstruction edges")
 
@@ -543,19 +541,20 @@ def main():
 
 	if args.evaluate_link_prediction:
 		train_edges, (val_edges, val_non_edges), (test_edges, test_non_edges) = split_edges(reconstruction_edges, non_edges, args)
-		n1 = len(topology_graph)
+		n1, e1 = len(topology_graph), len(topology_graph.edges())
 		print ("removing {} edges from training set".format(len(val_edges) + len(test_edges)))
 		topology_graph.remove_edges_from(val_edges + test_edges)
-		n2 = len(topology_graph)
+		n2, e2 = len(topology_graph), len(topology_graph.edges())
 		if args.add_non_edges:
 			print ("adding {} non edges as edges to training set".format(len(val_non_edges) + len(test_non_edges)))
 			topology_graph.add_edges_from(val_non_edges + test_non_edges)
 			nx.set_edge_attributes(topology_graph, "weight", 1)
-		n3 = len(topology_graph)
+		n3, e3 = len(topology_graph), len(topology_graph.edges())
 		assert n1 == n2 == n3
+		assert e1 < e2 
 		# for u, v, d in topology_graph.edges(data=True):
-		# 	# print (d)
-		# 	assert "weight" in d, d
+		#   # print (d)
+		#   assert "weight" in d, d
 		# # print (topology_graph.edges(data=True))
 		# raise SystemExit
 
@@ -586,11 +585,33 @@ def main():
 
 	if args.just_walks:
 		return
-	
 
+	# print (val_edges[:10])
+	# raise SystemExit
+		
 	positive_samples, negative_samples, alias_dict =\
 		determine_positive_and_negative_samples(nodes=topology_graph.nodes(), 
 		walks=walks, context_size=args.context_size)
+
+	# for k, v in negative_samples.items():
+	# 	print (k, len(v))
+
+	# for edge in topology_graph.edges():
+	# 	print ( positive_samples.count(edge))
+
+	# raise SystemExit
+
+	# a = nx.floyd_warshall_numpy(topology_graph).A
+	# print ("done lfmfke")
+
+	# for u, v in positive_samples:
+		# print (u,v, a[u,v])
+		# assert a[u,v] <= args.context_size, a[u, v]
+		# assert all([z in negative_samples[u] for z in w])
+	# print ("tested positive_samples")
+	# raise SystemExit
+
+
 
 	num_nodes = len(topology_graph)
 	num_steps = int((len(positive_samples) + args.batch_size - 1) / args.batch_size)
@@ -633,7 +654,7 @@ def main():
 		TerminateOnNaN(), 
 		logger,
 		# ModelCheckpoint(os.path.join(args.model_path, 
-		# 	"latest_model.h5"), save_weights_only=True),
+		#   "latest_model.h5"), save_weights_only=True),
 		# ModelCheckpoint(args.model_path, save_weights_only=True),
 		CSVLogger(args.log_path, append=True), 
 		early_stopping
@@ -644,7 +665,21 @@ def main():
 
 	if args.use_generator:
 		print ("Training with data generator")
+		random.shuffle(positive_samples)
 		training_gen = TrainingSequence(positive_samples, negative_samples, alias_dict, args)
+
+		# b =  training_gen[0][0]
+
+		# a = nx.floyd_warshall_numpy(topology_graph).A
+		# print ("done lfmfke")
+
+		# for u, v, w in zip(b[:,0], b[:,1], b[:,2:]):
+		# 	assert a[u,v] <= args.context_size, a[u, v]
+		# 	assert all([z in negative_samples[u] for z in w])
+
+		# print ("tested generator")
+
+		# raise SystemExit
 
 		sys.stdout.flush()
 
@@ -664,7 +699,6 @@ def main():
 
 		sys.stdout.flush()
 
-
 		model.fit(x, y, batch_size=args.batch_size, 
 			epochs=args.num_epochs, initial_epoch=initial_epoch, verbose=args.verbose,
 			validation_data=[val_in, val_target],
@@ -683,14 +717,14 @@ def main():
 	# reconstruction_edge_dict = convert_edgelist_to_dict(reconstruction_edges)
 	# non_edge_dict = convert_edgelist_to_dict(non_edges)
 	# (mean_rank_reconstruction, map_reconstruction, 
-	# 	mean_roc_reconstruction) = evaluate_rank_and_MAP(dists, 
-	# 	reconstruction_edge_dict, non_edge_dict)
+	#   mean_roc_reconstruction) = evaluate_rank_and_MAP(dists, 
+	#   reconstruction_edge_dict, non_edge_dict)
 	(mean_rank_reconstruction, map_reconstruction, 
 		mean_roc_reconstruction) = evaluate_rank_and_MAP(dists, 
 		reconstruction_edges, non_edges)
 
 	if args.evaluate_link_prediction:
-		# test_edge_dict = convert_edgelist_to_dict(test_edges)	
+		# test_edge_dict = convert_edgelist_to_dict(test_edges) 
 		(mean_rank_lp, map_lp, 
 		# mean_roc_lp) = evaluate_rank_and_MAP(dists, test_edge_dict, non_edge_dict)
 		mean_roc_lp) = evaluate_rank_and_MAP(dists, test_edges, test_non_edges)

@@ -22,36 +22,36 @@ def alias_setup(probs):
 	smaller = []
 	larger = []
 	for kk, prob in enumerate(probs):
-	    q[kk] = K*prob
-	    if q[kk] < 1.0:
-	        smaller.append(kk)
-	    else:
-	        larger.append(kk)
+		q[kk] = K*prob
+		if q[kk] < 1.0:
+			smaller.append(kk)
+		else:
+			larger.append(kk)
 
 	while len(smaller) > 0 and len(larger) > 0:
-	    small = smaller.pop()
-	    large = larger.pop()
+		small = smaller.pop()
+		large = larger.pop()
 
-	    J[small] = large
-	    q[large] = q[large] + q[small] - 1.0
-	    if q[large] < 1.0:
-	        smaller.append(large)
-	    else:
-	        larger.append(large)
+		J[small] = large
+		q[large] = q[large] + q[small] - 1.0
+		if q[large] < 1.0:
+			smaller.append(large)
+		else:
+			larger.append(large)
 
 	return J, q
 
 def alias_draw(J, q, size=1):
-    '''
-    Draw sample from a non-uniform discrete distribution using alias sampling.
-    '''
-    K = len(J)
+	'''
+	Draw sample from a non-uniform discrete distribution using alias sampling.
+	'''
+	K = len(J)
 
-    kk = np.floor(np.random.uniform(high=K, size=size)).astype(np.int)
-    r = np.random.uniform(size=size)
-    idx = r >= q[kk]
-    kk[idx] = J[kk[idx]]
-    return kk
+	kk = np.floor(np.random.uniform(high=K, size=size)).astype(np.int)
+	r = np.random.uniform(size=size)
+	idx = r >= q[kk]
+	kk[idx] = J[kk[idx]]
+	return kk
 
 def convert_edgelist_to_dict(edgelist, undirected=True, self_edges=False):
 	if edgelist is None:
@@ -171,8 +171,8 @@ def determine_positive_and_negative_samples(nodes, walks, context_size):
 				v = walk[i+j+1]
 				if u == v:
 					continue
-				# n = 1
-				n = context_size - j
+				n = 1
+				# n = context_size - j
 				positive_samples.extend([(u, v)] * n)
 				positive_samples.extend([(v, u)] * n)
 				
@@ -196,6 +196,11 @@ def determine_positive_and_negative_samples(nodes, walks, context_size):
 
 	prob_dict = {n: probs[negative_samples[n]] ** .75 for n in sorted(nodes)}
 	prob_dict = {n: probs / probs.sum() for n, probs in prob_dict.items()}
+	# for k, v in prob_dict.items():
+		# print (k, len(negative_samples[k]), len(v), v.sum())
+		# print (probs)
+		# print (alias_setup(probs))
+	# print (np.array(prob_dict.values()).shape)
 	# prob_dict = {n: np.ones_like(negative_samples[n], dtype=np.float) / len(negative_samples[n]) for n in prob_dict.keys()}
 	# probs = {n: counts[negative_samples[n]] / counts[negative_samples[n]].sum() for n in sorted(nodes)}
 	alias_dict = {n: alias_setup(probs) for n, probs in prob_dict.items()}
@@ -209,15 +214,20 @@ def load_walks(G, walk_file, feature_sim, args):
 	def save_walks_to_file(walks, walk_file):
 		with open(walk_file, "w") as f:
 			for walk in walks:
-				for n in walk:
-					f.write("{} ".format(n))
+				f.write(",".join([str(n) for n in walk]) + "\n")
+				# for n in walk:
+				# 	f.write("{} ".format(n))
 
 	def load_walks_from_file(walk_file, walk_length):
 
+		walks = []
+
 		with open(walk_file, "r") as f:
-			l = f.readline().rstrip()
-			l = [int(n) for n in l.split(" ")]
-			walks = [l[i:i+walk_length] for i in range(0, len(l), walk_length)]
+			for line in (line.rstrip() for line in f.readlines()):
+				walks.append([int(n) for n in line.split(",")])
+			# l = f.readline().rstrip()
+			# l = [int(n) for n in l.split(" ")]
+			# walks = [l[i:i+walk_length] for i in range(0, len(l), walk_length)]
 		return walks
 
 
