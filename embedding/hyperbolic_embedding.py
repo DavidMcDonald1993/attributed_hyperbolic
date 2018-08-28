@@ -551,7 +551,7 @@ def main():
 			nx.set_edge_attributes(topology_graph, "weight", 1)
 		n3, e3 = len(topology_graph), len(topology_graph.edges())
 		assert n1 == n2 == n3
-		assert e1 < e2 
+		assert e1 > e2 
 		# for u, v, d in topology_graph.edges(data=True):
 		#   # print (d)
 		#   assert "weight" in d, d
@@ -585,33 +585,10 @@ def main():
 
 	if args.just_walks:
 		return
-
-	# print (val_edges[:10])
-	# raise SystemExit
 		
 	positive_samples, negative_samples, alias_dict =\
 		determine_positive_and_negative_samples(nodes=topology_graph.nodes(), 
 		walks=walks, context_size=args.context_size)
-
-	# for k, v in negative_samples.items():
-	# 	print (k, len(v))
-
-	# for edge in topology_graph.edges():
-	# 	print ( positive_samples.count(edge))
-
-	# raise SystemExit
-
-	# a = nx.floyd_warshall_numpy(topology_graph).A
-	# print ("done lfmfke")
-
-	# for u, v in positive_samples:
-		# print (u,v, a[u,v])
-		# assert a[u,v] <= args.context_size, a[u, v]
-		# assert all([z in negative_samples[u] for z in w])
-	# print ("tested positive_samples")
-	# raise SystemExit
-
-
 
 	num_nodes = len(topology_graph)
 	num_steps = int((len(positive_samples) + args.batch_size - 1) / args.batch_size)
@@ -667,19 +644,6 @@ def main():
 		print ("Training with data generator")
 		random.shuffle(positive_samples)
 		training_gen = TrainingSequence(positive_samples, negative_samples, alias_dict, args)
-
-		# b =  training_gen[0][0]
-
-		# a = nx.floyd_warshall_numpy(topology_graph).A
-		# print ("done lfmfke")
-
-		# for u, v, w in zip(b[:,0], b[:,1], b[:,2:]):
-		# 	assert a[u,v] <= args.context_size, a[u, v]
-		# 	assert all([z in negative_samples[u] for z in w])
-
-		# print ("tested generator")
-
-		# raise SystemExit
 
 		sys.stdout.flush()
 
