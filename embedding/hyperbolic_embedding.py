@@ -493,6 +493,8 @@ def main():
 	print ("There are {} available threads".format(multiprocessing.cpu_count()))
 	print ("Training with {} worker threads".format(args.workers))
 
+	sys.stdout.flush()
+
 	# args.only_lcc = True
 	if not args.evaluate_link_prediction:
 		args.evaluate_class_prediction = True

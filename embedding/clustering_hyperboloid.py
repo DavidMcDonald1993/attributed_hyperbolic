@@ -164,6 +164,7 @@ def parse_filename(args):
 
 	args.model_path = os.path.join(args.model_path, dataset)
 	args.model_path = os.path.join(args.model_path, directory)
+	# args.mode
 
 
 	saved_models = sorted([f for f in os.listdir(args.model_path) 

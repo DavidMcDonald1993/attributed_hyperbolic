@@ -318,8 +318,8 @@ class PeriodicStdoutLogger(Callback):
 
 		# print minkowski_dot_np(hyperboloid_embedding, hyperboloid_embedding)
 
-		if self.args.verbose:
-			print ("reconstruction")
+		# if self.args.verbose:
+		print ("reconstruction")
 		# (mean_rank_reconstruction, map_reconstruction, 
 		# 	mean_roc_reconstruction) = evaluate_rank_and_MAP(dists, 
 		# 	self.reconstruction_edge_dict, self.non_edge_dict)
@@ -333,8 +333,8 @@ class PeriodicStdoutLogger(Callback):
 
 
 		if self.args.evaluate_link_prediction:
-			if self.args.verbose:
-				print ("link prediction")
+			# if self.args.verbose:
+			print ("link prediction")
 			# (mean_rank_lp, map_lp, 
 			# mean_roc_lp) = evaluate_rank_and_MAP(dists, 
 			# self.val_edge_dict, self.non_edge_dict)
