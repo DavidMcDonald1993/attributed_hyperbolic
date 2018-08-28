@@ -5,7 +5,7 @@
 #SBATCH --job-name=coraMLDistanceLinkPred
 #SBATCH --output=coraMLDistanceLinkPred_%A_%a.out
 #SBATCH --error=coraMLDistanceLinkPred_%A_%a.err
-#SBATCH --array=0-17
+#SBATCH --array=0-26
 #SBATCH --time=1-00:00:00
 #SBATCH --ntasks=1
 #SBATCH --mem=8gb
@@ -14,8 +14,7 @@
 # arr=(-r{5,3,1}" "-t{1,3,5}" "{--no-attributes,--multiply-attributes,--jump-prob=0.05})
 # arr=(-r=1" "-t=1" "--dim=2" "{--no-non-edges,--add-non-edges}" "{--no-attributes,--multiply-attributes,--jump-prob=0.05})
 
-arr=(-r=3" "-t={1,3}" "--dim={2,32,128}" --evaluate-link-prediction "{--no-attributes,--multiply-attributes,--jump-prob=0.05})
-
+arr=({--softmax,-r=3" "-t={1,3}}" "--dim={2,32,128}" --evaluate-link-prediction "{--no-attributes,--multiply-attributes,--jump-prob=0.05})
 
 module purge; module load bluebear
 # module load apps/cuda/8.0.44

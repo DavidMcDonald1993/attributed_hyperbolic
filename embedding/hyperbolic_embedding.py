@@ -228,17 +228,27 @@ def build_model(num_nodes, args):
 
 	model = Model(x, y)
 
-	saved_models = sorted([f for f in os.listdir(args.model_path) 
-		if re.match(r"^[0-9][0-9][0-9][0-9]*", f)])
-	initial_epoch = len(saved_models)
 
-	# print (model.layers[-1].get_weights()[0])
+	if os.path.exists(args.model_path):
+		print ("Loading model from file: {}".format(args.model_path))
+		model.load_weights(args.model_path)
 
-	if initial_epoch > 0:
 
-		model_file = os.path.join(args.model_path, saved_models[-1])
-		print ("Loading model from file: {}".format(model_file))
-		model.load_weights(model_file)
+
+
+	initial_epoch = 0
+
+	# saved_models = sorted([f for f in os.listdir(args.model_path) 
+	# 	if re.match(r"^[0-9][0-9][0-9][0-9]*", f)])
+	# initial_epoch = len(saved_models)
+
+	# # print (model.layers[-1].get_weights()[0])
+
+	# if initial_epoch > 0:
+
+	# 	model_file = os.path.join(args.model_path, saved_models[-1])
+	# 	print ("Loading model from file: {}".format(model_file))
+	# 	model.load_weights(model_file)
 
 		# print (model.layers[-1].get_weights()[0])
 
@@ -285,8 +295,8 @@ def parse_args():
 	parser.add_argument("--patience", dest="patience", type=int, default=25,
 		help="The number of epochs of no improvement in validation loss before training is stopped. (Default is 25)")
 
-	parser.add_argument("--plot-freq", dest="plot_freq", type=int, default=1000, 
-		help="Frequency for plotting (default is 1000).")
+	parser.add_argument("--plot-freq", dest="plot_freq", type=int, default=100, 
+		help="Frequency for plotting (default is 100).")
 
 	parser.add_argument("-d", "--dim", dest="embedding_dim", type=int,
 		help="Dimension of embeddings for each layer (default is 2).", default=2)
@@ -471,6 +481,7 @@ def configure_paths(args):
 	args.model_path = os.path.join(args.model_path, directory)
 	if not os.path.exists(args.model_path):
 		os.makedirs(args.model_path)
+	args.model_path = os.path.join(args.model_path, "latest_model.h5")
 
 
 
@@ -618,8 +629,9 @@ def main():
 	callbacks=[
 		TerminateOnNaN(), 
 		logger,
-		ModelCheckpoint(os.path.join(args.model_path, 
-			"{epoch:05d}.h5"), save_weights_only=True),
+		# ModelCheckpoint(os.path.join(args.model_path, 
+		# 	"latest_model.h5"), save_weights_only=True),
+		ModelCheckpoint(args.model_path, save_weights_only=True),
 		CSVLogger(args.log_path, append=True), 
 		early_stopping
 	]
