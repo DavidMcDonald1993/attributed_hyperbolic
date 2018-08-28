@@ -17,18 +17,18 @@ class Tree(object):
         self.min_samples_split = min_samples_split
         self.min_neighbours = min_neighbours
         
-        print ("creating tree at depth {} with parent_index={}".format(self.depth, self.parent_index))
-        print ("data shape is {}".format(self.data.shape))
+        # print ("creating tree at depth {} with parent_index={}".format(self.depth, self.parent_index))
+        # print ("data shape is {}".format(self.data.shape))
         
         if (self.depth == max_depth 
             or data.shape[0] < min_samples_split 
             or len(set(self.labels)) == 1
            or (self.parent_index is not None and len(g.neighbors(self.parent_index)) < self.min_neighbours)):
-            self.is_terminal = True
-            print ("this node is terminal")
+            self.is_leaf = True
+            # print ("this node is a leaf")
         else:
-            self.is_terminal = False
-            print ("this node is not terminal")
+            self.is_leaf = False
+            # print ("this node is not a leaf")
             self.get_split()
 #         print()
     
@@ -85,11 +85,11 @@ class Tree(object):
         self.value = b_value
         self.score = b_score
         
-        print ("selected index={} and value={} with gini_score={}".format(self.index, self.value, self.score))
-        
-        self.left = Tree(b_index, None, self.g, b_groups[0], self.depth + 1, 
+        # print ("selected index={} and value={} with gini_score={}".format(self.index, self.value, self.score))
+
+        self.left = Tree(self.index, None, self.g, b_groups[0], self.depth + 1, 
                          self.max_depth, self.min_samples_split, self.min_neighbours)
-        self.right = Tree(b_index, None, self.g, b_groups[1], self.depth + 1, 
+        self.right = Tree(self.index, None, self.g, b_groups[1], self.depth + 1, 
                           self.max_depth, self.min_samples_split, self.min_neighbours )
         
     def evaluate_prediction(self, y_true, y_pred):
@@ -102,20 +102,20 @@ class Tree(object):
             data = np.expand_dims(data, 0)
         self.val_data = data
         
-        if not self.is_terminal:
+        if not self.is_leaf:
             idx = data[:,self.index] < self.value
 
             self.left.assign_val_data(data[idx])
             self.right.assign_val_data(data[~idx])
             
-    def has_seen_val_data(self):
-        if self.is_terminal:
+    def val_data_on_all_leaves(self):
+        if self.is_leaf:
             return self.val_data is not None
         else:
-            return self.val_data is not None and self.left.has_seen_val_data() and self.right.has_seen_val_data()
+            return self.val_data is not None and self.left.val_data_on_all_leaves() and self.right.val_data_on_all_leaves()
     
     def compute_gain(self, ):
-        if self.is_terminal or not self.has_seen_val_data():
+        if self.is_leaf or not self.val_data_on_all_leaves():
             return -np.inf
         labels = self.val_data[:,-1]
         leaf_prediction = np.array([max(set(self.labels), key=list(self.labels).count)] * self.val_data.shape[0])
@@ -128,13 +128,13 @@ class Tree(object):
         return gain
     
     def postorder(self):
-        if self.is_terminal:
+        if self.is_leaf:
             return [self]
         else:
             return self.left.postorder() + self.right.postorder() + [self]
         
     def make_leaf(self):
-        self.is_terminal = True
+        self.is_leaf = True
         self.left = None
         self.right = None
         
@@ -142,7 +142,7 @@ class Tree(object):
 #         assert len(data.shape) > 1
         if len(data.shape) == 1:
             data = np.expand_dims(data, 0)
-        if self.is_terminal:
+        if self.is_leaf:
             return np.array([max(set(self.labels), key=list(self.labels).count)] * data.shape[0])
         
         idx = data[:,self.index] < self.value   
@@ -156,14 +156,14 @@ class Tree(object):
         return pred
     
     def __len__(self):
-        if self.is_terminal:
+        if self.is_leaf:
             return 1
         else:
             return 1 + len(self.left) + len(self.right)
     
     def __str__(self):
         s = "|" * (self.depth - 1) + "-" * int(self.depth > 0)
-        if not self.is_terminal:
+        if not self.is_leaf:
             s += "index={}, value={}, gini_score={}, data_shape={}\n".format(self.index, 
                              self.value, self.score, self.data.shape)
             s += "|" * (self.depth - 1) + "-" * int(self.depth > 0) + "left=\n" +\

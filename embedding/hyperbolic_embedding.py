@@ -62,14 +62,14 @@ K.tensorflow_backend.set_session(tf.Session(config=config))
 
 
 def minkowski_dot(x, y):
-    # assert len(x.shape) == 2
-    axes = len(x.shape) - 1, len(y.shape) -1
-    return K.batch_dot( x[...,:-1], y[...,:-1], axes=axes) - K.batch_dot(x[...,-1:], y[...,-1:], axes=axes)
-    # rank = x.shape[1] - 1
-    # if len(y.shape) == 2:
-    #     return K.sum(x[:,:rank] * y[:,:rank], axis=-1, keepdims=True) - x[:,rank:] * y[:,rank:]
-    # else:
-    #     return K.batch_dot( x[:,:rank], y[:,:,:rank], axes=[1,2]) - K.batch_dot(x[:,rank:], y[:,:,rank:], axes=[1, 2])
+	# assert len(x.shape) == 2
+	axes = len(x.shape) - 1, len(y.shape) -1
+	return K.batch_dot( x[...,:-1], y[...,:-1], axes=axes) - K.batch_dot(x[...,-1:], y[...,-1:], axes=axes)
+	# rank = x.shape[1] - 1
+	# if len(y.shape) == 2:
+	#     return K.sum(x[:,:rank] * y[:,:rank], axis=-1, keepdims=True) - x[:,rank:] * y[:,rank:]
+	# else:
+	#     return K.batch_dot( x[:,:rank], y[:,:,:rank], axes=[1,2]) - K.batch_dot(x[:,rank:], y[:,:,rank:], axes=[1, 2])
 
 
 def hyperboloid_initializer(shape, r_max=1e-3):
@@ -134,7 +134,7 @@ class ExponentialMappingOptimizer(optimizer.Optimizer):
 		self._lr_t = ops.convert_to_tensor(self._lr, name="learning_rate", dtype=K.floatx())
 
 	def _apply_dense(self, grad, var):
-        # print "dense"
+		# print "dense"
 		assert False
 		lr_t = math_ops.cast(self._lr_t, var.dtype.base_dtype)
 			# K.floatx())

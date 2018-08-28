@@ -63,20 +63,11 @@ def convert_module_to_tree(dists, poincare_embedding, module):
 	plt.show()
 
 	t_sort = t.argsort()
-	i = 0
-	root = t_sort[i]
-	neighbors = module.neighbors(root)
-	while len(neighbors) == 0:
-		i += 1
-		root = t_sort[i]
-		neighbors = module.neighbors(root)
-	print (i, neighbors)
 
 
 	directed_edges = [(u, v) for u ,v in module.edges() if t[u] < t[v]]
 	module = nx.DiGraph(directed_edges, )
 
-	# module = nx.minimum_spanning_tree(module)
 	nx.draw_networkx_nodes(module, pos, cmap=plt.get_cmap('jet'), 
 	                       node_size = 50)
 	nx.draw_networkx_labels(module, pos)
@@ -164,8 +155,6 @@ def parse_filename(args):
 
 	args.model_path = os.path.join(args.model_path, dataset)
 	args.model_path = os.path.join(args.model_path, directory)
-	# args.mode
-
 
 	saved_models = sorted([f for f in os.listdir(args.model_path) 
 		if re.match(r"^[0-9][0-9][0-9][0-9]*", f)])
