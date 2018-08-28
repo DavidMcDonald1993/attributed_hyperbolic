@@ -40,7 +40,7 @@ from tensorflow.python.ops import math_ops, control_flow_ops
 from tensorflow.python.training import optimizer
 
 K.set_floatx("float64")
-K.set_epsilon(1e-32)
+K.set_epsilon(1e-15)
 
 np.set_printoptions(suppress=True)
 
@@ -179,6 +179,8 @@ class ExponentialMappingOptimizer(optimizer.Optimizer):
 		# z = x / norm_x
 		z = x / K.maximum(norm_x, K.epsilon())
 
+		# norm_x = K.minimum(norm_x, 1)
+
 		exp_map = tf.cosh(norm_x) * y + tf.sinh(norm_x) * z
 		#####################################################
 		exp_map = adjust_to_hyperboloid(exp_map)
@@ -276,8 +278,8 @@ def parse_args():
 		help="The number of epochs to train for (default is 50000).")
 	parser.add_argument("-b", "--batch_size", dest="batch_size", type=int, default=512, 
 		help="Batch size for training (default is 512).")
-	parser.add_argument("--nneg", dest="num_negative_samples", type=int, default=10, 
-		help="Number of negative samples for training (default is 10).")
+	parser.add_argument("--nneg", dest="num_negative_samples", type=int, default=3, 
+		help="Number of negative samples for training (default is 3).")
 	parser.add_argument("--context-size", dest="context_size", type=int, default=3,
 		help="Context size for generating positive samples (default is 3).")
 	parser.add_argument("--patience", dest="patience", type=int, default=25,
@@ -433,7 +435,7 @@ def configure_paths(args):
 	args.log_path = os.path.join(args.log_path, directory)
 	if not os.path.exists(args.log_path):
 		os.makedirs(args.log_path)
-	args.log_path += "{}.log".format(dataset)
+	args.log_path += "{}.csv".format(dataset)
 
 	# args.board_path = os.path.join(args.board_path, dataset)
 	# if not os.path.exists(args.board_path):
@@ -479,7 +481,6 @@ def main():
 
 	print ("There are {} available threads".format(multiprocessing.cpu_count()))
 	print ("Training with {} worker threads".format(args.workers))
-	# raise SystemExit
 
 	# args.only_lcc = True
 	if not args.evaluate_link_prediction:
@@ -493,7 +494,6 @@ def main():
 
 	configure_paths(args)
 
-	#####early stop
 	if args.no_load:
 		plots = os.listdir(args.plot_path)
 		if len(plots) > 0 and any(["test.png" in plot for plot in plots]):
@@ -638,9 +638,11 @@ def main():
 			epochs=args.num_epochs, initial_epoch=initial_epoch, verbose=args.verbose,
 			validation_data=[val_in, val_target],
 			callbacks=callbacks
-			)
+		)
 
 	else:
+		print ("Training without data generator")
+
 		x = get_training_sample(np.array(positive_samples), negative_samples, args.num_negative_samples, alias_dict)
 		y = np.zeros(list(x.shape) + [1])
 		print ("determined training samples")
@@ -649,9 +651,9 @@ def main():
 
 
 		model.fit(x, y, batch_size=args.batch_size, 
-		epochs=args.num_epochs, initial_epoch=initial_epoch, verbose=args.verbose,
-		validation_data=[val_in, val_target],
-		callbacks=callbacks
+			epochs=args.num_epochs, initial_epoch=initial_epoch, verbose=args.verbose,
+			validation_data=[val_in, val_target],
+			callbacks=callbacks
 		)
 
 

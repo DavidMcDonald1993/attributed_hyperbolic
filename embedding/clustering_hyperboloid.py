@@ -32,8 +32,8 @@ def load_embedding(filename):
 		embedding = np.array(f.get("embedding_layer/embedding_layer/embedding:0"))
 	return embedding
 
-def perform_clustering(dists, args):
-	dbs = DBSCAN(metric="precomputed", eps=args.eps, n_jobs=-1)
+def perform_clustering(dists, eps):
+	dbs = DBSCAN(metric="precomputed", eps=eps, n_jobs=-1)
 	labels = dbs.fit_predict(dists)
 	return labels
 
@@ -42,6 +42,47 @@ def hyperboloid_to_poincare_ball(X):
 
 def hyperboloid_to_klein(X):
 	return X[:,:-1] / X[:,-1,None]
+
+def convert_module_to_tree(dists, poincare_embedding, module):
+	module = nx.Graph(module)
+	idx = module.nodes()
+	module_embedding = poincare_embedding[idx]
+	t = np.sqrt(np.square(module_embedding).sum(axis=-1, keepdims=False))
+
+	weights = {( u, v) : dists[u,v] for u, v in module.edges()} 
+	nx.set_edge_attributes(module, "weight", weights)
+	module = nx.convert_node_labels_to_integers(module)
+
+
+	# pos = nx.spring_layout(module)
+	pos = module_embedding[:,:2]
+	nx.draw_networkx_nodes(module, pos, cmap=plt.get_cmap('jet'), 
+	                       node_size = 50)
+	nx.draw_networkx_labels(module, pos)
+	nx.draw_networkx_edges(module, pos, arrows=False)
+	plt.show()
+
+	t_sort = t.argsort()
+	i = 0
+	root = t_sort[i]
+	neighbors = module.neighbors(root)
+	while len(neighbors) == 0:
+		i += 1
+		root = t_sort[i]
+		neighbors = module.neighbors(root)
+	print (i, neighbors)
+
+
+	directed_edges = [(u, v) for u ,v in module.edges() if t[u] < t[v]]
+	module = nx.DiGraph(directed_edges, )
+
+	# module = nx.minimum_spanning_tree(module)
+	nx.draw_networkx_nodes(module, pos, cmap=plt.get_cmap('jet'), 
+	                       node_size = 50)
+	nx.draw_networkx_labels(module, pos)
+	nx.draw_networkx_edges(module, pos, arrows=True)
+	plt.show()
+	raise SystemExit
 
 def plot_disk_embeddings(edges, poincare_embedding, clusters,):
 
@@ -140,6 +181,10 @@ def parse_args():
 		help="The dataset to load. Must be one of [wordnet, cora, citeseer, pubmed,\
 		AstroPh, CondMat, GrQc, HepPh, karate]. (Default is karate)")
 	
+	
+	parser.add_argument("-e", dest="max_eps", type=float, default=0.5,
+		help="maximum eps.")
+
 	parser.add_argument("--seed", dest="seed", type=int, default=0,
 		help="Random seed (default is 0).")
 
@@ -213,31 +258,48 @@ def main():
 	poincare_embedding = hyperboloid_to_poincare_ball(embedding)
 	# klein_embedding = hyperboloid_to_klein(embedding)
 	dists = hyperbolic_distance(embedding, embedding)
-	max_clusters = 0
+	max_modules = 0
 	best_eps = -1
-	best_clusters = [-1] * dists.shape[0]
-	for eps in np.arange(0.01,5,0.01):
-		args.eps = eps
-		clusters = perform_clustering(dists, args)
+	best_modules = [-1] * dists.shape[0]
+	best_num_connected = 0
+	for eps in np.arange(0.01,args.max_eps,0.01):
+		modules = perform_clustering(dists, eps)
 
-		num_clusters = len(set(clusters)) - 1
-		print ("discovered {} clusters with eps = {}".format(num_clusters, args.eps))
+		num_modules = len(set(modules)) - 1
+		print ("discovered {} modules with eps = {}".format(num_modules, eps))
+
+		print ("fraction nodes in modules: {}".format((modules > -1).sum() / float(len(modules))))
 
 		num_connected = 0
-		for cluster in range(num_clusters):
-			idx = np.where(clusters == cluster)[0]
+		for m in range(num_modules):
+			idx = np.where(modules == m)[0]
 			module = topology_graph.subgraph(idx)
 			num_connected += nx.is_connected(module)
 		print ("number connected modules = {}".format(num_connected))
 
-		if num_clusters > max_clusters:
-			max_clusters = num_clusters
+		if num_modules > 0:
+			ratio = float(num_connected) / num_modules
+
+		if num_connected > best_num_connected:
+			best_num_connected= num_connected
+			max_modules = num_modules
 			best_eps = eps
-			best_clusters = clusters
+			best_modules = modules
+
+	eps = best_eps
+	modules = perform_clustering(dists, eps)
+
+	for m in range(max_modules):
+		idx = np.where(modules == m)[0]
+		module = topology_graph.subgraph(idx)
+		print ("module {} contrains {} nodes and {} edges and connected={}".format(m, 
+			len(module), len(module.edges()), nx.is_connected(module)))
+		# if len(module) < 50 and nx.is_connected(module):
+		convert_module_to_tree(dists, poincare_embedding, module)
 
 
-	print ("Best eps was {}, found {} clusters".format(best_eps, max_clusters))
-	plot_disk_embeddings(topology_graph.edges(), poincare_embedding, best_clusters)
+	print ("Best eps was {}, found {} clusters, {} connected".format(best_eps, max_modules, best_num_connected))
+	plot_disk_embeddings(topology_graph.edges(), poincare_embedding, best_modules)
 
 if __name__ == "__main__":
 	main()

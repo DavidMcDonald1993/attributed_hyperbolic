@@ -31,7 +31,9 @@ def hyperbolic_negative_sampling_loss(r, t):
         samples_emb = y_pred[:,1:]
         
         inner_uv = minkowski_dot(u_emb, samples_emb)
-        inner_uv = K.clip(inner_uv, min_value=-np.inf, max_value=-(1+K.epsilon()))
+        # inner_uv = K.clip(inner_uv, min_value=-np.inf, max_value=-(1+K.epsilon()))
+        inner_uv = K.minimum(inner_uv, -(1+K.epsilon()))
+
         d_uv = tf.acosh(-inner_uv)
         out_uv = (K.square(r) - K.square(d_uv)) / t
         # out_uv = (r - d_uv) / t
@@ -92,5 +94,11 @@ def hyperbolic_softmax_loss(y_true, y_pred,):
     samples_emb = y_pred[:,1:]
     
     inner_uv = minkowski_dot(u_emb, samples_emb)
+    inner_uv = K.minimum(inner_uv, -(1+K.epsilon()))
 
-    return - K.mean(K.log(tf.nn.softmax(inner_uv, axis=-1,)[:,0], ))
+    d_uv = tf.acosh(-inner_uv)
+    exp_minus_d_uv_sq = K.exp(-K.square(d_uv))
+    exp_minus_d_uv_sq = K.clip(exp_minus_d_uv_sq,  min_value=K.epsilon(), max_value=1-K.epsilon())
+    return -K.mean(K.log(exp_minus_d_uv_sq[:,0]) - K.log(K.sum(exp_minus_d_uv_sq[:,1:], axis=-1)))
+
+    # return - K.mean(K.log(tf.nn.softmax(inner_uv, axis=-1,)[:,0], ))

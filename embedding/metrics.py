@@ -29,8 +29,8 @@ def evaluate_rank_and_MAP(dists, edgelist, non_edgelist):
 	idx = non_edge_dists.argsort()
 	ranks = np.searchsorted(non_edge_dists, edge_dists, sorter=idx).mean()
 
-	print ("MEAN RANK=", ranks, "MEAN AP=", ap_score, 
-		"MEAN ROC AUC=", auc_score)
+	print ("MEAN RANK=", ranks, "AP=", ap_score, 
+		"ROC AUC=", auc_score)
 
 	return ranks, ap_score, auc_score
 
@@ -122,9 +122,6 @@ def evaluate_classification(klein_embedding, labels, args,
 			f1_macro = f1_score(labels[split_test], predictions, average="macro")
 			f1_micros[seed,i] = f1_micro
 			f1_macros[seed,i] = f1_macro
-
-	# print label_percentages, f1_micros, f1_macros
-	# raise SystemExit
 
 	return label_percentages, f1_micros.mean(axis=0), f1_macros.mean(axis=0)
 

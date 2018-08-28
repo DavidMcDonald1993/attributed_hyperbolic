@@ -32,7 +32,8 @@ def minkowski_dot_pairwise(u, v):
 
 def hyperbolic_distance_hyperboloid_pairwise(X, Y):
 	inner_product = minkowski_dot_pairwise(X, Y)
-	inner_product = np.clip(inner_product, a_max=-1, a_min=-np.inf)
+	inner_product = np.minimum(inner_product, -(1 + 1e-32))
+	# inner_product = np.clip(inner_product, a_max=-1, a_min=-np.inf)
 	return np.arccosh(-inner_product)
 
 def hyperboloid_to_poincare_ball(X):
