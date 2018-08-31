@@ -21,7 +21,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from sklearn.metrics.pairwise import cosine_similarity, euclidean_distances
 
-from data_utils import load_karate, load_labelled_attributed_network, load_ppi, load_g2g_datasets
+from data_utils import load_karate, load_labelled_attributed_network, load_ppi, load_g2g_datasets, load_tf_interaction
 from utils import load_walks, determine_positive_and_negative_samples, convert_edgelist_to_dict, split_edges, get_training_sample, make_validation_data
 from callbacks import PeriodicStdoutLogger, hyperboloid_to_klein, hyperboloid_to_poincare_ball, hyperbolic_distance_hyperboloid_pairwise
 from losses import hyperbolic_negative_sampling_loss, hyperbolic_sigmoid_loss, hyperbolic_softmax_loss, euclidean_negative_sampling_loss
@@ -179,7 +179,7 @@ class ExponentialMappingOptimizer(optimizer.Optimizer):
 		# z = x / norm_x
 		z = x / K.maximum(norm_x, K.epsilon())
 
-		norm_x = K.minimum(norm_x, 1)
+		# norm_x = K.minimum(norm_x, 1)
 
 		exp_map = tf.cosh(norm_x) * y + tf.sinh(norm_x) * z
 		#####################################################
@@ -494,8 +494,7 @@ def main():
 	sys.stdout.flush()
 
 	# args.only_lcc = True
-	if not args.evaluate_link_prediction:
-		args.evaluate_class_prediction = True
+
 
 	assert not sum([args.multiply_attributes, args.alpha>0, args.jump_prob>0]) > 1
 
@@ -519,8 +518,13 @@ def main():
 		topology_graph, features, labels, label_info = load_g2g_datasets(dataset, args)
 	elif dataset == "ppi":
 		topology_graph, features, labels = load_ppi(args)
+	elif dataset == "tf_interaction":
+		topology_graph, features, labels, label_info = load_tf_interaction(args)
 	else:
 		raise Exception
+
+	if not args.evaluate_link_prediction:
+		args.evaluate_class_prediction = labels is not None
 
 	# original edges for reconstruction
 	reconstruction_edges = topology_graph.edges()
@@ -590,9 +594,19 @@ def main():
 		determine_positive_and_negative_samples(nodes=topology_graph.nodes(), 
 		walks=walks, context_size=args.context_size)
 
+	# assert args.context_size == 1
+
+	# for u, v in positive_samples:
+	# 	assert (u, v) in topology_graph.edges() or (v, u) in topology_graph.edges(), (u,v)
+
+	# for u, v_list in negative_samples.items():
+	# 	assert all ([(u, v) not in topology_graph.edges() and (v, u) not in topology_graph.edges() for v in v_list])
+
+	# print ("ok")
+	# raise SystemExit
+
 	num_nodes = len(topology_graph)
 	num_steps = int((len(positive_samples) + args.batch_size - 1) / args.batch_size)
-
 	model, initial_epoch = build_model(num_nodes, args)
 	optimizer = ("adam" if args.euclidean else
 		ExponentialMappingOptimizer(learning_rate=args.lr)

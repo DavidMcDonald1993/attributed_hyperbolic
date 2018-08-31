@@ -47,16 +47,17 @@ def plot_euclidean_embedding(epoch, edges, euclidean_embedding, labels, label_in
 	mean_rank_reconstruction, map_reconstruction, mean_roc_reconstruction,
 	mean_rank_lp, map_lp, mean_roc_lp, path):
 
-	if len(labels.shape) > 1:
-		raise Exception	
-		unique_labels = np.unique(labels, axis=0)
-		labels = np.array([np.where((unique_labels == label).all(axis=-1))[0][0] for label in labels])
+	# if len(labels.shape) > 1:
+		# raise Exception	
+		# unique_labels = np.unique(labels, axis=0)
+		# labels = np.array([np.where((unique_labels == label).all(axis=-1))[0][0] for label in labels])
 
 	if not isinstance(edges, np.ndarray):
 		edges = np.array(edges)
 
-	num_classes = len(set(labels))
-	colors = np.random.rand(num_classes, 3)
+	if labels is not None:
+		num_classes = len(set(labels))
+		colors = np.random.rand(num_classes, 3)
 
 	print ("saving plot to {}".format(path))
 
@@ -77,10 +78,15 @@ def plot_euclidean_embedding(epoch, edges, euclidean_embedding, labels, label_in
 	# 	plt.plot([u_emb[0], v_emb[0]], [u_emb[1], v_emb[1]], c="k", linewidth=0.05, zorder=0)
 	plt.plot([u_emb[:,0], v_emb[:,0]], [u_emb[:,1], v_emb[:,1]], c="k", linewidth=0.05, zorder=0)
 
-	for c in range(num_classes):
-		idx = labels == c
-		plt.scatter(euclidean_embedding[idx,0], euclidean_embedding[idx,1], s=10, c=colors[c], 
-			label=label_info[c] if label_info is not None else None, zorder=1)
+	if labels is None:
+		plt.scatter(euclidean_embedding[:,0], euclidean_embedding[:,1], s=10, c="r", zorder=1)
+
+	else:
+
+		for c in range(num_classes):
+			idx = labels == c
+			plt.scatter(euclidean_embedding[idx,0], euclidean_embedding[idx,1], s=10, c=colors[c], 
+				label=label_info[c] if label_info is not None else None, zorder=1)
 		
 	plt.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05), ncol=3)
 	plt.savefig(path)
@@ -98,16 +104,20 @@ def plot_disk_embeddings(epoch, edges, poincare_embedding, labels, label_info,
 	#     return out
 
 
-	if len(labels.shape) > 1:
-		raise Exception
-		unique_labels = np.unique(labels, axis=0)
-		labels = np.array([np.where((unique_labels == label).all(axis=-1))[0][0] for label in labels])
+	# if len(labels.shape) > 1:
+	# 	raise Exception
+	# 	unique_labels = np.unique(labels, axis=0)
+	# 	labels = np.array([np.where((unique_labels == label).all(axis=-1))[0][0] for label in labels])
 
 	if not isinstance(edges, np.ndarray):
 		edges = np.array(edges)
 
-	num_classes = len(set(labels))
-	colors = np.random.rand(num_classes, 3)
+	if labels is not None:
+		num_classes = len(set(labels))
+		colors = np.random.rand(num_classes, 3)
+
+	# num_classes = len(set(labels))
+	# colors = np.random.rand(num_classes, 3)
 
 	print ("saving plot to {}".format(path))
 
@@ -129,10 +139,13 @@ def plot_disk_embeddings(epoch, edges, poincare_embedding, labels, label_info,
 	# 	v_emb = poincare_embedding[v]
 	# 	plt.plot([u_emb[0], v_emb[0]], [u_emb[1], v_emb[1]], c="k", linewidth=0.05, zorder=0)
 	plt.plot([u_emb[:,0], v_emb[:,0]], [u_emb[:,1], v_emb[:,1]], c="k", linewidth=0.05, zorder=0)
-	for c in range(num_classes):
-		idx = labels == c
-		plt.scatter(poincare_embedding[idx,0], poincare_embedding[idx,1], s=10, c=colors[c], 
-			label=label_info[c] if label_info is not None else None, zorder=1)
+	if labels is None:
+		plt.scatter(poincare_embedding[:,0], poincare_embedding[:,1], s=10, c="r", zorder=1)
+	else:
+		for c in range(num_classes):
+			idx = labels == c
+			plt.scatter(poincare_embedding[idx,0], poincare_embedding[idx,1], s=10, c=colors[c], 
+				label=label_info[c] if label_info is not None else None, zorder=1)
 	# plt.scatter(poincare_embedding[:,0], poincare_embedding[:,1], s=10, c=colors[labels], zorder=1)
 	plt.xlim([-1,1])
 	plt.ylim([-1,1])
@@ -371,25 +384,25 @@ class PeriodicStdoutLogger(Callback):
 
 		if self.epoch % self.n == 0:
 
-			if self.args.embedding_dim == 2:
-				plot_path = os.path.join(self.args.plot_path, "epoch_{:05d}_plot.png".format(self.epoch) )
-				if self.args.euclidean:
-					plot_euclidean_embedding(self.epoch, self.reconstruction_edges, 
-						poincare_embedding,
-						self.labels, self.label_info,
-						mean_rank_reconstruction, map_reconstruction, mean_roc_reconstruction,
-						mean_rank_lp, map_lp, mean_roc_lp,
-						plot_path)
+			# if self.args.embedding_dim == 2:
+			plot_path = os.path.join(self.args.plot_path, "epoch_{:05d}_plot.png".format(self.epoch) )
+			if self.args.euclidean:
+				plot_euclidean_embedding(self.epoch, self.reconstruction_edges, 
+					poincare_embedding,
+					self.labels, self.label_info,
+					mean_rank_reconstruction, map_reconstruction, mean_roc_reconstruction,
+					mean_rank_lp, map_lp, mean_roc_lp,
+					plot_path)
 
-				else:
-					plot_disk_embeddings(self.epoch, self.reconstruction_edges, 
-						poincare_embedding,
-						self.labels, self.label_info,
-						mean_rank_reconstruction, map_reconstruction, mean_roc_reconstruction,
-						mean_rank_lp, map_lp, mean_roc_lp,
-						plot_path)
 			else:
-				print ("dim > 2, omitting plot")
+				plot_disk_embeddings(self.epoch, self.reconstruction_edges, 
+					poincare_embedding,
+					self.labels, self.label_info,
+					mean_rank_reconstruction, map_reconstruction, mean_roc_reconstruction,
+					mean_rank_lp, map_lp, mean_roc_lp,
+					plot_path)
+			# else:
+			# 	print ("dim > 2, omitting plot")
 
 			roc_path = os.path.join(self.args.plot_path, "epoch_{:05d}_roc_curve.png".format(self.epoch) )
 			plot_roc(dists, self.reconstruction_edges, self.non_edges, 

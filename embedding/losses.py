@@ -98,7 +98,7 @@ def hyperbolic_softmax_loss(y_true, y_pred,):
 
     d_uv = tf.acosh(-inner_uv)
     exp_minus_d_uv_sq = K.exp(-K.square(d_uv))
-    exp_minus_d_uv_sq = K.clip(exp_minus_d_uv_sq,  min_value=K.epsilon(), max_value=1-K.epsilon())
+    exp_minus_d_uv_sq = K.clip(exp_minus_d_uv_sq, min_value=K.epsilon(), max_value=1-K.epsilon())
     return -K.mean(K.log(exp_minus_d_uv_sq[:,0]) - K.log(K.sum(exp_minus_d_uv_sq[:,1:], axis=-1)))
 
     # return - K.mean(K.log(tf.nn.softmax(inner_uv, axis=-1,)[:,0], ))

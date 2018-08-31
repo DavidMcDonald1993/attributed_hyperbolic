@@ -178,8 +178,43 @@ def load_labelled_attributed_network(dataset_str, args, scale=False):
 
 	return topology_graph, features, labels
 
+def load_tf_interaction(args, normalize=True):
+	_dir = os.path.join(args.data_directory, "tissue_classification")
+	interaction_df = pd.read_csv(os.path.join(_dir, "NIHMS177825-supplement-03-1.csv"), 
+		sep=",", skiprows=1).iloc[1:]
+	topology_graph = nx.from_pandas_dataframe(interaction_df, "Gene 1 Symbol", "Gene 2 Symbol")
+
+	features_df = pd.read_csv(os.path.join(_dir, "NIHMS177825-supplement-06-2.csv"), 
+        sep=",", skiprows=1, index_col="Symbol", ).iloc[:,2:]
+
+	# remove nodes with no expression data
+	for n in topology_graph.nodes():
+		if n not in features_df.index:
+			topology_graph.remove_node(n)
+
+	# sort features by node order
+	features_df = features_df.loc[topology_graph.nodes(),:]
+
+	features = features_df.values
+
+	if normalize:
+		features = StandardScaler().fit_transform(features)
+
+	topology_graph = nx.convert_node_labels_to_integers(topology_graph, label_attribute="original_name")
+	nx.set_edge_attributes(topology_graph, "weight", 1)
+	labels = None
+	label_info = None
+
+	# print (len(topology_graph))
+	# print (features)
+
+	# raise SystemExit
+
+	return topology_graph, features, labels, label_info
+
+
 def load_ppi(args, normalize=True,):
-	prefix = os.path.join(args.data_directory, "/data/ppi/ppi")
+	prefix = os.path.join(args.data_directory, "/ppi/ppi")
 	G_data = json.load(open(prefix + "-G.json"))
 	topology_graph = json_graph.node_link_graph(G_data)
 	if isinstance(topology_graph.nodes()[0], int):

@@ -3,7 +3,7 @@ import networkx as nx
 
 from sklearn.metrics import f1_score, log_loss
 
-class Tree(object):
+class TopologyConstrainedTree(object):
     
     def __init__(self, parent_index, index, g, data, depth, max_depth, min_samples_split, min_neighbours):
         self.parent_index = parent_index
@@ -73,7 +73,6 @@ class Tree(object):
         else:
             index_choices = [self.index]
             
-        print index_choices
         for index in index_choices:
             for row in self.data:
                 value = row[index]
@@ -87,9 +86,9 @@ class Tree(object):
         
         # print ("selected index={} and value={} with gini_score={}".format(self.index, self.value, self.score))
 
-        self.left = Tree(self.index, None, self.g, b_groups[0], self.depth + 1, 
+        self.left = TopologyConstrainedTree(self.index, None, self.g, b_groups[0], self.depth + 1, 
                          self.max_depth, self.min_samples_split, self.min_neighbours)
-        self.right = Tree(self.index, None, self.g, b_groups[1], self.depth + 1, 
+        self.right = TopologyConstrainedTree(self.index, None, self.g, b_groups[1], self.depth + 1, 
                           self.max_depth, self.min_samples_split, self.min_neighbours )
         
     def evaluate_prediction(self, y_true, y_pred):
@@ -166,9 +165,9 @@ class Tree(object):
         if not self.is_leaf:
             s += "index={}, value={}, gini_score={}, data_shape={}\n".format(self.index, 
                              self.value, self.score, self.data.shape)
-            s += "|" * (self.depth - 1) + "-" * int(self.depth > 0) + "left=\n" +\
+            s += "|" * (self.depth - 1) + "-" * int(self.depth > 0) + "if feat[{}] < {}:\n".format(self.index, self.value) +\
             "{}\n".format(self.left)+\
-            "|" * (self.depth - 1) + "-" * int(self.depth > 0) + "right=\n" +\
+            "|" * (self.depth - 1) + "-" * int(self.depth > 0) + "if feat[{}] >= {}:\n".format(self.index, self.value) +\
             "{}".format(self.right)
         else:
             s += "[LEAF] prediction={}".format(max(set(self.labels), key=list(self.labels).count))
