@@ -194,7 +194,7 @@ def determine_positive_and_negative_samples(nodes, walks, context_size):
 	print ("found {} positive sample pairs".format(len(positive_samples)))
 
 	counts = np.array(list(counts.values())) ** 0.75
-	probs = counts / counts.sum()
+	probs = counts #/ counts.sum()
 
 	prob_dict = {n: probs[negative_samples[n]] for n in sorted(nodes)}
 	prob_dict = {n: probs / probs.sum() for n, probs in prob_dict.items()}
@@ -217,8 +217,6 @@ def load_walks(G, walk_file, feature_sim, args):
 		with open(walk_file, "w") as f:
 			for walk in walks:
 				f.write(",".join([str(n) for n in walk]) + "\n")
-				# for n in walk:
-				# 	f.write("{} ".format(n))
 
 	def load_walks_from_file(walk_file, walk_length):
 
@@ -227,9 +225,6 @@ def load_walks(G, walk_file, feature_sim, args):
 		with open(walk_file, "r") as f:
 			for line in (line.rstrip() for line in f.readlines()):
 				walks.append([int(n) for n in line.split(",")])
-			# l = f.readline().rstrip()
-			# l = [int(n) for n in l.split(" ")]
-			# walks = [l[i:i+walk_length] for i in range(0, len(l), walk_length)]
 		return walks
 
 

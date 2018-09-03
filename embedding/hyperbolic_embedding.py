@@ -523,6 +523,8 @@ def main():
 	else:
 		raise Exception
 
+	topology_graph.remove_edges_from(topology_graph.selfloop_edges())
+
 	if not args.evaluate_link_prediction:
 		args.evaluate_class_prediction = labels is not None
 
@@ -594,13 +596,24 @@ def main():
 		determine_positive_and_negative_samples(nodes=topology_graph.nodes(), 
 		walks=walks, context_size=args.context_size)
 
-	# assert args.context_size == 1
+	# sp = nx.floyd_warshall_numpy(topology_graph).A
+	# print ("DONE SHORTEST PATH")
 
-	# for u, v in positive_samples:
-	# 	assert (u, v) in topology_graph.edges() or (v, u) in topology_graph.edges(), (u,v)
+	# for i, (u, v) in enumerate(topology_graph.edges()):
+	# 	assert (u, v) in positive_samples, (u, v)
+	# 	if i % 100 == 0:
+	# 		print ("done {}/{}".format(i, len(topology_graph.edges())))
+
+	# for i, (u, v) in enumerate(positive_samples):
+	# 	assert sp[u,v] <= args.context_size, (u, v, sp[u,v])
+	# 	if i % 1000 == 0:
+	# 		print ("done {}/{}".format(i, len(positive_samples)))
 
 	# for u, v_list in negative_samples.items():
-	# 	assert all ([(u, v) not in topology_graph.edges() and (v, u) not in topology_graph.edges() for v in v_list])
+	# 	for v in v_list:
+	# 		if sp[u,v] <= args.context_size:
+	# 			print (sp[u,v])
+	# 	print ("done {}/{}".format(u, len(negative_samples)))
 
 	# print ("ok")
 	# raise SystemExit
@@ -624,10 +637,6 @@ def main():
 	model.compile(optimizer=optimizer, loss=loss)
 	model.summary()
 
-
-	
-
-	# non_edges = list(nx.non_edges(topology_graph))
 	non_edge_dict = convert_edgelist_to_dict(non_edges)
 	if args.verbose:
 		print ("determined true non edges")
@@ -644,15 +653,9 @@ def main():
 	callbacks=[
 		TerminateOnNaN(), 
 		logger,
-		# ModelCheckpoint(os.path.join(args.model_path, 
-		#   "latest_model.h5"), save_weights_only=True),
-		# ModelCheckpoint(args.model_path, save_weights_only=True),
 		CSVLogger(args.log_path, append=True), 
 		early_stopping
 	]
-
-	if args.verbose:
-		print ("created logger")
 
 	if args.use_generator:
 		print ("Training with data generator")

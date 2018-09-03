@@ -37,8 +37,8 @@ def load_embedding(filename):
 	return embedding
 
 def perform_clustering(dists, eps):
-	dbs = DBSCAN(metric="precomputed", eps=eps, n_jobs=-1)
-	labels = dbs.fit_predict(dists)
+	dbsc = DBSCAN(metric="precomputed", eps=eps, n_jobs=-1)
+	labels = dbsc.fit_predict(dists)
 	return labels
 
 def hyperboloid_to_poincare_ball(X):
@@ -56,8 +56,10 @@ def convert_module_to_directed_module(module, ranks):
 	for connected_component in nx.connected_component_subgraphs(module):
 		nodes = connected_component.nodes()
 		root = nodes[ranks[nodes].argmin()]
-		directed_edges = [(u, v) if ranks[u] < ranks[v] else (v, u) for u ,v in connected_component.edges()]
+		directed_edges = [(u, v) if ranks[u] < ranks[v] else (v, u) for u ,v in connected_component.edges() if u != v]
 		directed_module = nx.DiGraph(directed_edges)
+
+		# print (len(connected_component), len(connected_component.edges()), len(directed_module), len(directed_edges), )
 
 		if len(directed_module) > 0:
 			directed_modules += [directed_module]
@@ -70,10 +72,41 @@ def grow_forest(data_train, directed_modules, ranks):
 	for directed_module in directed_modules:
 		feats = directed_module.nodes()
 		root = feats[ranks[feats].argmin()]
+		assert nx.is_connected(directed_module.to_undirected())
+		# print (feats)
+		# print (ranks[feats])
+		# print (ranks[feats].argmin())
+		# print (root)
 		tree = TopologyConstrainedTree(parent_index=None, index=root, g=directed_module, 
 			data=data_train, depth=0, max_depth=np.inf, min_samples_split=2, min_neighbours=1)
 		forest.append(tree)
 	return forest
+
+def evaluate_modules(features, labels, directed_modules, ranks, 
+	n_repeats=10, test_size=0.3):
+
+	data = np.column_stack([features, labels])
+
+	f1_micros = []
+
+	sss = StratifiedShuffleSplit(n_splits=n_repeats, test_size=test_size, random_state=0)
+	for split_train, split_test in sss.split(features, labels):
+
+		data_train = data[split_train]
+		data_test = data[split_test]
+
+		forest = grow_forest(data_train, directed_modules, ranks)
+		prediction = np.array([t.predict(data_test) for t in forest])
+		# print (prediction)
+		# print (prediction.mean(axis=0))
+		prediction = prediction.mean(axis=0) > 0.5
+		# print (prediction.astype(np.float))
+		# print (data_test[:,-1])
+		# print ()
+		f1_micro = f1_score(data_test[:,-1], prediction, average="micro")
+		f1_micros.append(f1_micro)
+	return np.mean(f1_micros)
+
 
 def plot_disk_embeddings(edges, poincare_embedding, modules,):
 
@@ -269,28 +302,30 @@ def main():
 	poincare_embedding = hyperboloid_to_poincare_ball(embedding)
 	ranks = np.sqrt(np.sum(np.square(poincare_embedding), axis=-1, keepdims=False))
 
+	assert (ranks.argsort() == embedding[:,-1].argsort()).all()
+
 	# klein_embedding = hyperboloid_to_klein(embedding)
 	dists = hyperbolic_distance(embedding, embedding)
 
 
 
-	sss = StratifiedShuffleSplit(n_splits=1, test_size=0.3, random_state=0)
-	split_train, split_test = next(sss.split(features, labels))
+	# sss = StratifiedShuffleSplit(n_splits=10, test_size=0.3, random_state=0)
+	# split_train, split_test = next(sss.split(features, labels))
 
-	data = np.column_stack([features, labels])
-	data_train = data[split_train]
-	data_test = data[split_test]
+	# data = np.column_stack([features, labels])
+	# data_train = data[split_train]
+	# data_test = data[split_test]
 
 	# max_modules = 0
 	best_eps = -1
 	best_f1 = 0
-	best_forest = []
+	# best_forest = []
 	# best_modules = [-1] * dists.shape[0]
 	# best_num_connected = 0
+	# for eps in [1.87]:
 	for eps in np.arange(0.01, args.max_eps, 0.01):
 		modules = perform_clustering(dists, eps)
-
-		num_modules = len(set(modules)) - 1
+		num_modules = len(set(modules) - {-1})
 		print ("discovered {} modules with eps = {}".format(num_modules, eps))
 
 		print ("fraction nodes in modules: {}".format((modules > -1).sum() / float(len(modules))))
@@ -300,25 +335,20 @@ def main():
 		for m in range(num_modules):
 			idx = np.where(modules == m)[0]
 			module = topology_graph.subgraph(idx)
+			print (m, len(module), len(module.edges()))
 			num_connected += nx.is_connected(module)
 			directed_modules += convert_module_to_directed_module(module, ranks)
 		print ("created {} directed_modules".format(len(directed_modules)))
-		print ("number connected modules = {}".format(num_connected))
+		# print ("number connected modules = {}".format(num_connected))
 
-		if len(directed_modules) > 3:
-			forest = grow_forest(data_train, directed_modules, ranks)
-			prediction = np.array([t.predict(data_test) for t in forest])
-			print (prediction)
-			print (prediction.mean(axis=0))
-			prediction = prediction.mean(axis=0) > 0.5
-			print (prediction.astype(np.float))
-			f1 = f1_score(data_test[:,-1], prediction, average="macro")
-			print ("f1={}".format(f1), len(forest))
-			if f1 > best_f1:
-				print ("best f1={}".format(f1))
-				best_f1 = f1
+		if len(directed_modules) > 0:
+			mean_f1_micro = evaluate_modules(features, labels, directed_modules, ranks, n_repeats=25, test_size=0.3)
+			print ("f1={}".format(mean_f1_micro, ))
+			if mean_f1_micro > best_f1:
+				print ("best f1={}".format(mean_f1_micro))
+				best_f1 = mean_f1_micro
 				best_eps = eps
-				best_forest = forest
+				# best_forest = forest
 		print ()
 
 		# if num_connected > best_num_connected:
@@ -327,24 +357,29 @@ def main():
 		# 	best_eps = eps
 		# 	best_modules = modules
 
-	eps = best_eps
-	modules = perform_clustering(dists, eps)
+	# eps = best_eps
+	modules = perform_clustering(dists, best_eps)
+	num_modules = len(set(modules) - {-1})
 
-	# for m in range(max_modules):
-	# 	idx = np.where(modules == m)[0]
-	# 	module = topology_graph.subgraph(idx)
-	# 	print ("module {} contrains {} nodes and {} edges and connected={}".format(m, 
-	# 		len(module), len(module.edges()), nx.is_connected(module)))
-	# 	# if len(module) < 50 and nx.is_connected(module):
-	# 	convert_module_to_tree(dists, poincare_embedding, module)
+	for m in range(num_modules):
+		idx = np.where(modules == m)[0]
+		module = topology_graph.subgraph(idx)
+		print ("module {} contrains {} nodes and {} edges and connected={}".format(m, 
+			len(module), len(module.edges()), nx.is_connected(module)))
+		# pos = poincare_embedding[idx]
+		nx.draw_networkx_nodes(module, pos=poincare_embedding[:,:2])
+		nx.draw_networkx_edges(module, pos=poincare_embedding[:,:2])
+		plt.show()
+		# if len(module) < 50 and nx.is_connected(module):
+		# convert_module_to_tree(dists, poincare_embedding, module)
 
-	prediction = np.array([t.predict(data_test) for t in best_forest])
-	print (prediction)
-	print (prediction.mean(axis=0))
-	prediction = prediction.mean(axis=0) > 0.5
-	print (prediction.astype(np.float))
-	print (data_test[:,-1])
-	print ([len(t) for t in best_forest])
+	# prediction = np.array([t.predict(data_test) for t in best_forest])
+	# print (prediction)
+	# print (prediction.mean(axis=0))
+	# prediction = prediction.mean(axis=0) > 0.5
+	# print (prediction.astype(np.float))
+	# print (data_test[:,-1])
+	# print ([len(t) for t in best_forest])
 
 	print ("Best eps was {}, best f1={}".format(best_eps, best_f1))
 	plot_disk_embeddings(topology_graph.edges(), poincare_embedding, modules)

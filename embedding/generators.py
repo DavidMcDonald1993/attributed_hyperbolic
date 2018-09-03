@@ -44,10 +44,6 @@ class TrainingSequence(Sequence):
 		input_nodes = batch_positive_samples[:,0]
 
 		batch_negative_samples = np.array([
-			# np.random.choice(negative_samples[u], 
-			# replace=True, size=(num_negative_samples,), 
-			# p=probs[u] if probs is not None else probs
-			# )
 			negative_samples[u][self.alias_draw(alias_dict[u][0], alias_dict[u][1], size=num_negative_samples)]
 			for u in input_nodes
 		], dtype=np.int64)
