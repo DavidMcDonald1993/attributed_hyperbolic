@@ -371,6 +371,9 @@ class PeriodicStdoutLogger(Callback):
 			poincare_embedding = hyperboloid_to_poincare_ball(hyperboloid_embedding)
 			klein_embedding = hyperboloid_to_klein(hyperboloid_embedding)
 
+			rank = np.sqrt(np.sum(np.square(poincare_embedding), axis=-1, keepdims=False), )
+			assert (rank < 1).all()
+
 		if self.args.evaluate_class_prediction:
 			label_percentages, f1_micros, f1_macros = evaluate_classification(klein_embedding, self.labels, self.args)
 
@@ -428,7 +431,6 @@ class PeriodicStdoutLogger(Callback):
 			old_model_path = os.path.join(self.args.model_path, model)
 			print ("removing model: {}".format(old_model_path))
 			os.remove(old_model_path)
-
 
 	def save_model(self):
 		filename = os.path.join(self.args.model_path, "{:05d}.h5".format(self.epoch))

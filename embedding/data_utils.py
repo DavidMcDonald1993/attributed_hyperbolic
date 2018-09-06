@@ -89,8 +89,6 @@ def load_g2g_datasets(dataset_str, args):
 	features = X.A
 	labels = z
 
-	# print (graph["idx_to_class"])
-	# raise SystemExit
 	if idx_to_class:
 		label_info = graph["idx_to_class"]
 	else: 

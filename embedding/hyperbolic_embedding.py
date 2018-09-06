@@ -577,7 +577,7 @@ def main():
 	elif args.multiply_attributes:
 		walk_file = os.path.join(args.walk_path, "multiply_attributes")
 		A = nx.adjacency_matrix(topology_graph).A
-		g = nx.from_numpy_matrix(A + A * feature_sim)
+		g = nx.from_numpy_matrix(A * feature_sim)
 	elif args.jump_prob > 0:
 		walk_file = os.path.join(args.walk_path, "jump_prob={}".format(args.jump_prob))
 		g = topology_graph
@@ -693,21 +693,15 @@ def main():
 	else:
 		dists = hyperbolic_distance_hyperboloid_pairwise(hyperboloid_embedding, hyperboloid_embedding)
 	print (hyperboloid_embedding)
-	# print minkowski_dot_np(hyperboloid_embedding, hyperboloid_embedding)
+	
+	print ("Evaluating on test data")
 
-	# reconstruction_edge_dict = convert_edgelist_to_dict(reconstruction_edges)
-	# non_edge_dict = convert_edgelist_to_dict(non_edges)
-	# (mean_rank_reconstruction, map_reconstruction, 
-	#   mean_roc_reconstruction) = evaluate_rank_and_MAP(dists, 
-	#   reconstruction_edge_dict, non_edge_dict)
 	(mean_rank_reconstruction, map_reconstruction, 
 		mean_roc_reconstruction) = evaluate_rank_and_MAP(dists, 
 		reconstruction_edges, non_edges)
 
 	if args.evaluate_link_prediction:
-		# test_edge_dict = convert_edgelist_to_dict(test_edges) 
 		(mean_rank_lp, map_lp, 
-		# mean_roc_lp) = evaluate_rank_and_MAP(dists, test_edge_dict, non_edge_dict)
 		mean_roc_lp) = evaluate_rank_and_MAP(dists, test_edges, test_non_edges)
 
 	else:

@@ -25,6 +25,14 @@ class TopologyConstrainedTree(object):
 			or len(set(self.labels)) == 1
 		   or (self.parent_index is not None and len(g.neighbors(self.parent_index)) < self.min_neighbours)):
 			self.is_leaf = True
+			# if self.depth == max_depth:
+			# 	print ("MAX DEPTH")
+			# elif data.shape[0] < min_samples_split :
+			# 	print ("TOO FEW SAMPLES")
+			# elif len(set(self.labels)) == 1:
+			# 	print ("ALL LABELS ARE THE SAME")
+			# elif self.parent_index is not None and len(g.neighbors(self.parent_index)) < self.min_neighbours:
+			# 	print ("TOO FEW NEIGHBOURS")
 			# print ("this node is a leaf")
 		else:
 			self.is_leaf = False
@@ -91,8 +99,9 @@ class TopologyConstrainedTree(object):
 		self.right = TopologyConstrainedTree(self.index, None, self.g, b_groups[1], self.depth + 1, 
 						  self.max_depth, self.min_samples_split, self.min_neighbours )
 		
-	def evaluate_prediction(self, y_true, y_pred):
+	def prediction_accuracy(self, y_true, y_pred):
 		return f1_score(y_true, y_pred, average="micro")
+		# return (y_true != y_pred).sum()
 	
 	def assign_val_data(self, data):
 		if len(data) == 0:

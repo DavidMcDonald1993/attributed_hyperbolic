@@ -171,8 +171,8 @@ def determine_positive_and_negative_samples(nodes, walks, context_size):
 				v = walk[i+j+1]
 				if u == v:
 					continue
-				# n = 1
-				n = context_size - j
+				n = 1
+				# n = context_size - j
 				positive_samples.extend([(u, v)] * n)
 				positive_samples.extend([(v, u)] * n)
 				

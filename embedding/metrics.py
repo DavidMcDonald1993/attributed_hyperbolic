@@ -29,8 +29,8 @@ def evaluate_rank_and_MAP(dists, edgelist, non_edgelist):
 	idx = non_edge_dists.argsort()
 	ranks = np.searchsorted(non_edge_dists, edge_dists, sorter=idx).mean()
 
-	print ("MEAN RANK=", ranks, "AP=", ap_score, 
-		"ROC AUC=", auc_score)
+	print ("MEAN RANK =", ranks, "AP =", ap_score, 
+		"ROC AUC =", auc_score)
 
 	return ranks, ap_score, auc_score
 
@@ -110,7 +110,7 @@ def evaluate_classification(klein_embedding, labels, args,
 	
 		for i, label_percentage in enumerate(label_percentages):
 
-			sss = StratifiedShuffleSplit(n_splits=1, test_size=1 - label_percentage, random_state=seed)
+			sss = StratifiedShuffleSplit(n_splits=1, test_size=1-label_percentage, random_state=seed)
 			split_train, split_test = next(sss.split(klein_embedding, labels))
 			# num_labels = int(max(num_nodes * label_percentage, len(classes)))
 			# idx = np.random.permutation(num_nodes)

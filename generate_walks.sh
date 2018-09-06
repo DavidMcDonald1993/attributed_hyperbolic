@@ -3,13 +3,13 @@
 #SBATCH --job-name=generateWalks
 #SBATCH --output=generateWalks_%A_%a.out
 #SBATCH --error=generateWalks_%A_%a.err
-#SBATCH --array=0-296
+#SBATCH --array=0-35
 #SBATCH --time=1-00:00:00
 #SBATCH --ntasks=1
 #SBATCH --mem=64gb
 
 
-arr=(--seed={0..10}" "--dataset={cora,citeseer,pubmed}" "{--evaluate-class-prediction,--evaluate-link-prediction" "{--no-non-edges,--add-non-edges}}" "{--no-attributes,--multiply-attributes,--jump-prob=0.05})
+arr=(--seed={0..2}" "--dataset={cora_ml,cora,citeseer,pubmed}" "{--evaluate-class-prediction,--evaluate-link-prediction" "{--no-non-edges,--add-non-edges}}" "--multiply-attributes)
 
 echo ${#arr[*]}
 
