@@ -9,9 +9,10 @@
 #SBATCH --mem=64gb
 
 
+PROJECT_DIR=/rds/projects/2018/hesz01/attributed_hyperbolic
 arr=(--seed={0..2}" "--dataset={cora_ml,cora,citeseer,pubmed}" "{--evaluate-class-prediction,--evaluate-link-prediction" "{--no-non-edges,--add-non-edges}}" "--multiply-attributes)
 
-echo ${#arr[*]}
+# echo ${#arr[*]}
 
 module purge; module load bluebear
 module load apps/cuda/8.0.44
@@ -31,5 +32,5 @@ module load apps/keras/2.0.8-python-2.7.11
 # module load apps/keras/2.0.8-python-3.5.2-cuda-8.0.44
 
 echo starting, ${arr[${SLURM_ARRAY_TASK_ID}]}
-python embedding/hyperbolic_embedding.py  --data-directory /rds/homes/d/dxm237/data \
+python embedding/hyperbolic_embedding.py  --data-directory ${PROJECT_DIR}/data \
 ${arr[${SLURM_ARRAY_TASK_ID}]} --evaluate-link-prediction --just-walks
