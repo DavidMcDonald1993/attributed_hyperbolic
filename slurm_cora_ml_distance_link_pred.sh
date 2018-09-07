@@ -5,14 +5,14 @@
 #SBATCH --job-name=coraMLDistanceLinkPred
 #SBATCH --output=coraMLDistanceLinkPred_%A_%a.out
 #SBATCH --error=coraMLDistanceLinkPred_%A_%a.err
-#SBATCH --array=0-8
+#SBATCH --array=0-29
 #SBATCH --time=1-00:00:00
 #SBATCH --ntasks=1
 #SBATCH --mem=8gb
 
 PROJECT_DIR=/rds/projects/2018/hesz01/attributed_hyperbolic
 # ARR=({--softmax,-r={5,3}" "-t={1,3}}" "--dim={2,3,5,32,128}" --evaluate-link-prediction "{--no-attributes,--multiply-attributes,--jump-prob=0.05})
-ARR=(--seed={0..2}" "-r=3" "-t=1" "--dim=32" --evaluate-link-prediction "{--no-attributes,--multiply-attributes,--jump-prob=0.05})
+ARR=(--seed={0..29}" "-r=3" "-t=1" "--dim=3" --evaluate-link-prediction "--no-attributes)
 
 module purge; module load bluebear
 module load apps/python3/3.5.2
