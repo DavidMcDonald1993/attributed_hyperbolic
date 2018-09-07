@@ -27,7 +27,8 @@ def evaluate_rank_and_MAP(dists, edgelist, non_edgelist):
 
 
 	idx = non_edge_dists.argsort()
-	ranks = np.searchsorted(non_edge_dists, edge_dists, sorter=idx).mean()
+	ranks = np.searchsorted(non_edge_dists, edge_dists, sorter=idx) + 1
+	ranks = ranks.mean()
 
 	print ("MEAN RANK =", ranks, "AP =", ap_score, 
 		"ROC AUC =", auc_score)

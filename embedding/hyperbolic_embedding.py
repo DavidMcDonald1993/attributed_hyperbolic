@@ -542,7 +542,7 @@ def main():
 	# raise SystemExit
 
 	if args.verbose:
-		print ("determined reconstruction edges")
+		print ("determined reconstruction edges and non-edges")
 
 	if features is not None:
 		feature_sim = cosine_similarity(features)
