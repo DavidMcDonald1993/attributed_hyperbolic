@@ -2,6 +2,7 @@ from __future__ import print_function
 
 
 import os
+import h5py
 # os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 # import psutil
 import multiprocessing 
