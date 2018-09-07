@@ -580,11 +580,6 @@ def main():
 		n3, e3 = len(topology_graph), len(topology_graph.edges())
 		assert n1 == n2 == n3
 		assert e1 > e2 
-		# for u, v, d in topology_graph.edges(data=True):
-		#   # print (d)
-		#   assert "weight" in d, d
-		# # print (topology_graph.edges(data=True))
-		# raise SystemExit
 
 	else:
 		train_edges = reconstruction_edges

@@ -138,6 +138,7 @@ def split_edges(edges, non_edges, args, val_split=0.05, test_split=0.1, neg_mul=
 
 	random.seed(args.seed)
 	random.shuffle(edges)
+	random.shuffle(non_edges)
 
 	val_edges = edges[:num_val_edges]
 	test_edges = edges[num_val_edges:num_val_edges+num_test_edges]
