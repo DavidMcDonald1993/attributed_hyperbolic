@@ -427,7 +427,7 @@ class PeriodicStdoutLogger(Callback):
 	def remove_old_models(self):
 		old_models = sorted([f for f in os.listdir(self.args.model_path) 
 			if re.match(r"^[0-9][0-9][0-9][0-9]*", f)])
-		for model in old_models:
+		for model in old_models[:-self.args.patience]:
 			old_model_path = os.path.join(self.args.model_path, model)
 			print ("removing model: {}".format(old_model_path))
 			os.remove(old_model_path)

@@ -254,6 +254,11 @@ def build_model(num_nodes, args):
 
 	return model, initial_epoch
 
+def load_embedding(filename):
+	with h5py.File(filename, 'r') as f:
+		embedding = np.array(f.get("embedding_layer/embedding_layer/embedding:0"))
+	return embedding
+
 def parse_args():
 	'''
 	parse args from the command line
@@ -288,8 +293,8 @@ def parse_args():
 		help="Batch size for training (default is 512).")
 	parser.add_argument("--nneg", dest="num_negative_samples", type=int, default=3, 
 		help="Number of negative samples for training (default is 3).")
-	parser.add_argument("--context-size", dest="context_size", type=int, default=3,
-		help="Context size for generating positive samples (default is 3).")
+	parser.add_argument("--context-size", dest="context_size", type=int, default=1,
+		help="Context size for generating positive samples (default is 1).")
 	parser.add_argument("--patience", dest="patience", type=int, default=25,
 		help="The number of epochs of no improvement in validation loss before training is stopped. (Default is 25)")
 
@@ -542,6 +547,19 @@ def main():
 		feature_sim = cosine_similarity(features)
 		feature_sim -= np.identity(len(features))
 		feature_sim [feature_sim  < args.rho] = 0
+
+		# print (feature_sim[0].sum())
+
+		# from sklearn.preprocessing import StandardScaler
+		# features = StandardScaler().fit_transform(features)
+		# feature_sim = cosine_similarity(features)
+		# feature_sim -= np.identity(len(features))
+		# feature_sim [feature_sim  < args.rho] = 0
+
+		# print (feature_sim[0].sum())
+		# print (len(topology_graph.neighbors(0)))
+
+		# raise SystemExit
 	else:
 		feature_sim = None
 
@@ -644,8 +662,15 @@ def main():
 	if args.verbose:
 		print ("determined validation data")
 
-	monitor = "val_loss"#"mean_rank_reconstruction"
-	mode = "min"
+	if args.evaluate_link_prediction:
+		monitor = "mean_roc_lp"
+		mode = "max"
+	elif args.evaluate_class_prediction:
+		monitor = "0.1_micro"
+		mode = "max"
+	else:
+		monitor = "val_loss"#"mean_rank_reconstruction"
+		mode = "min"
 	early_stopping = EarlyStopping(monitor=monitor, mode=mode, patience=args.patience, verbose=1)
 	logger = PeriodicStdoutLogger(reconstruction_edges, non_edges, val_edges, val_non_edges, labels, label_info,
 				n=args.plot_freq, epoch=initial_epoch, args=args) 
@@ -686,13 +711,21 @@ def main():
 			callbacks=callbacks
 		)
 
+	print ("Training completed -- loading best model according to {}".format(monitor))
 
-	hyperboloid_embedding = model.layers[-1].get_weights()[0]
+	saved_models = sorted([f for f in os.listdir(args.model_path) 
+		if re.match(r"^[0-9][0-9][0-9][0-9]*", f)])
+	model_file = os.path.join(args.model_path, saved_models[0])
+
+	print ("Determined best model filename: {}".format(model_file))
+	embedding = load_embedding(model_file)
+	print (embedding)
+
+	# hyperboloid_embedding = model.layers[-1].get_weights()[0]
 	if args.euclidean:
-		dists = euclidean_distances(hyperboloid_embedding)
+		dists = euclidean_distances(embedding)
 	else:
-		dists = hyperbolic_distance_hyperboloid_pairwise(hyperboloid_embedding, hyperboloid_embedding)
-	print (hyperboloid_embedding)
+		dists = hyperbolic_distance_hyperboloid_pairwise(embedding, embedding)
 	
 	print ("Evaluating on test data")
 
