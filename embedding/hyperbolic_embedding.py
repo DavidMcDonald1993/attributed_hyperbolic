@@ -22,7 +22,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from sklearn.metrics.pairwise import cosine_similarity, euclidean_distances
 
-from data_utils import load_karate, load_labelled_attributed_network, load_ppi, load_g2g_datasets, load_tf_interaction
+from data_utils import load_karate, load_labelled_attributed_network, load_ppi, load_g2g_datasets, load_tf_interaction, load_wordnet
 from utils import load_walks, determine_positive_and_negative_samples, convert_edgelist_to_dict, split_edges, get_training_sample, make_validation_data
 from callbacks import PeriodicStdoutLogger, hyperboloid_to_klein, hyperboloid_to_poincare_ball, hyperbolic_distance_hyperboloid_pairwise
 from losses import hyperbolic_negative_sampling_loss, hyperbolic_sigmoid_loss, hyperbolic_softmax_loss, euclidean_negative_sampling_loss
@@ -292,8 +292,8 @@ def parse_args():
 		help="The number of epochs to train for (default is 50000).")
 	parser.add_argument("-b", "--batch_size", dest="batch_size", type=int, default=512, 
 		help="Batch size for training (default is 512).")
-	parser.add_argument("--nneg", dest="num_negative_samples", type=int, default=3, 
-		help="Number of negative samples for training (default is 3).")
+	parser.add_argument("--nneg", dest="num_negative_samples", type=int, default=10, 
+		help="Number of negative samples for training (default is 10).")
 	parser.add_argument("--context-size", dest="context_size", type=int, default=1,
 		help="Context size for generating positive samples (default is 1).")
 	parser.add_argument("--patience", dest="patience", type=int, default=25,
@@ -526,6 +526,8 @@ def main():
 		topology_graph, features, labels = load_ppi(args)
 	elif dataset == "tf_interaction":
 		topology_graph, features, labels, label_info = load_tf_interaction(args)
+	elif dataset == "wordnet":
+		topology_graph, features, labels, label_info = load_wordnet(args)
 	else:
 		raise Exception
 
@@ -543,6 +545,7 @@ def main():
 
 	if args.verbose:
 		print ("determined reconstruction edges and non-edges")
+
 
 	if features is not None:
 		feature_sim = cosine_similarity(features)

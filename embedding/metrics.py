@@ -22,8 +22,9 @@ def evaluate_rank_and_MAP(dists, edgelist, non_edgelist):
 	non_edge_dists = dists[non_edgelist[:,0], non_edgelist[:,1]]
 
 	labels = np.append(np.ones_like(edge_dists), np.zeros_like(non_edge_dists))
-	ap_score = average_precision_score(labels, -np.append(edge_dists, non_edge_dists))
-	auc_score = roc_auc_score(labels, -np.append(edge_dists, non_edge_dists))
+	scores = -np.append(edge_dists, non_edge_dists)
+	ap_score = average_precision_score(labels, scores) # macro by default
+	auc_score = roc_auc_score(labels, scores)
 
 
 	idx = non_edge_dists.argsort()

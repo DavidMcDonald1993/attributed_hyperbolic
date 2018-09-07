@@ -277,3 +277,19 @@ def load_ppi(args, normalize=True,):
 		nx.set_edge_attributes(G=topology_graph, name="weight", values=1.)
 
 	return topology_graph, features, labels
+
+def load_wordnet(args):
+
+    '''
+    testing link prediciton / reconstruction / lexical entailment
+    '''
+
+    topology_graph = nx.read_edgelist(os.path.join(args.data_directory, "wordnet/noun_closure.tsv", ))
+    topology_graph = nx.convert_node_labels_to_integers(topology_graph, label_attribute="original_name")
+    nx.set_edge_attributes(topology_graph, name="weight", values=1)
+
+    features = None
+    labels = None
+    label_info = None
+    
+    return topology_graph, features, labels, label_info
