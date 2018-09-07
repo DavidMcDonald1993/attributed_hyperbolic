@@ -741,12 +741,9 @@ def main():
 	else:
 		mean_rank_lp, map_lp, mean_roc_lp = None, None, None 
 
-	if args.euclidean:
-		poincare_embedding = hyperboloid_embedding
-		klein_embedding = hyperboloid_embedding
-	else:
-		poincare_embedding = hyperboloid_to_poincare_ball(hyperboloid_embedding)
-		klein_embedding = hyperboloid_to_klein(hyperboloid_embedding)
+	if not args.euclidean:
+		poincare_embedding = hyperboloid_to_poincare_ball(embedding)
+		klein_embedding = hyperboloid_to_klein(embedding)
 
 	epoch = logger.epoch
 
@@ -760,7 +757,7 @@ def main():
 					plot_path)
 	else:
 		plot_disk_embeddings(epoch, reconstruction_edges, 
-			poincare_embedding, 
+			embedding, 
 			labels, label_info,
 			mean_rank_reconstruction, map_reconstruction, mean_roc_reconstruction,
 			mean_rank_lp, map_lp, mean_roc_lp,
@@ -774,7 +771,10 @@ def main():
 	plot_precisions_recalls(dists, reconstruction_edges, non_edges, test_edges, test_non_edges, precision_recall_path)
 
 	if args.evaluate_class_prediction:
-		label_percentages, f1_micros, f1_macros = evaluate_classification(klein_embedding, labels, args)
+		if args.euclidean:
+			label_percentages, f1_micros, f1_macros = evaluate_classification(embedding, labels, args)
+		else:
+			label_percentages, f1_micros, f1_macros = evaluate_classification(klein_embedding, labels, args)
 
 		f1_path = os.path.join(args.plot_path, "epoch_{:05d}_class_prediction_f1_test.png".format(epoch))
 		plot_classification(label_percentages, f1_micros, f1_macros, f1_path)
