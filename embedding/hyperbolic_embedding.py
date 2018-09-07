@@ -664,7 +664,7 @@ def main():
 		print ("determined validation data")
 
 	if args.evaluate_link_prediction:
-		monitor = "mean_roc_lp"
+		monitor = "mean_roc_reconstruction"
 		mode = "max"
 	elif args.evaluate_class_prediction:
 		monitor = "0.1_micro"
