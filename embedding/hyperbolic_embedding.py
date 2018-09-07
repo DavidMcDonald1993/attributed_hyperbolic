@@ -529,7 +529,7 @@ def main():
 	else:
 		raise Exception
 
-	topology_graph.remove_edges_from(topology_graph.selfloop_edges())
+	# topology_graph.remove_edges_from(topology_graph.selfloop_edges())
 
 	if not args.evaluate_link_prediction:
 		args.evaluate_class_prediction = labels is not None
