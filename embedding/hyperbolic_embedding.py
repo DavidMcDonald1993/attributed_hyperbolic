@@ -588,7 +588,7 @@ def main():
 		val_non_edges = None
 		test_non_edges = None
 
-	if args.alpha>0:
+	if args.alpha > 0:
 		walk_file = os.path.join(args.walk_path, "add_attributes_alpha={}".format(args.alpha))
 		g = nx.from_numpy_matrix((1 - args.alpha) * nx.adjacency_matrix(topology_graph).A + args.alpha * feature_sim)
 	elif args.multiply_attributes:
@@ -748,14 +748,14 @@ def main():
 	plot_path = os.path.join(args.plot_path, "epoch_{:05d}_plot_test.png".format(epoch) )
 	if args.euclidean:
 		plot_euclidean_embedding(epoch, reconstruction_edges, 
-					poincare_embedding,
+					embedding,
 					labels, label_info,
 					mean_rank_reconstruction, map_reconstruction, mean_roc_reconstruction,
 					mean_rank_lp, map_lp, mean_roc_lp,
 					plot_path)
 	else:
 		plot_disk_embeddings(epoch, reconstruction_edges, 
-			embedding, 
+			poincare_embedding, 
 			labels, label_info,
 			mean_rank_reconstruction, map_reconstruction, mean_roc_reconstruction,
 			mean_rank_lp, map_lp, mean_roc_lp,
