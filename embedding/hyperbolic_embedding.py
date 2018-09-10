@@ -4,7 +4,6 @@ from __future__ import print_function
 import os
 import h5py
 # os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
-# import psutil
 import multiprocessing 
 import re
 import argparse
@@ -160,7 +159,7 @@ class ExponentialMappingOptimizer(optimizer.Optimizer):
 			t = K.sqrt(1. + K.sum(K.square(x), axis=-1, keepdims=True))
 			return tf.concat([x, t], axis=-1)
 
-		norm_x = tf.sqrt( tf.maximum(K.cast(0., K.floatx()), minkowski_dot(x, x), name="maximum") )
+		norm_x = K.sqrt( K.maximum(K.cast(0., K.floatx()), minkowski_dot(x, x), ) )
 
 		#####################################################
 		# exp_map_p = tf.cosh(norm_x) * p
@@ -180,7 +179,7 @@ class ExponentialMappingOptimizer(optimizer.Optimizer):
 		# z = x / norm_x
 		z = x / K.maximum(norm_x, K.epsilon())
 
-		# norm_x = K.minimum(norm_x, 1)
+		# norm_x = K.minimum(norm_x, .01)
 
 		exp_map = tf.cosh(norm_x) * y + tf.sinh(norm_x) * z
 		#####################################################
@@ -616,6 +615,8 @@ def main():
 	# sp = nx.floyd_warshall_numpy(topology_graph).A
 	# print ("DONE SHORTEST PATH")
 
+	# counts = {i: 0 for i in range(4)}
+
 	# for i, (u, v) in enumerate(topology_graph.edges()):
 	# 	assert (u, v) in positive_samples, (u, v)
 	# 	if i % 100 == 0:
@@ -623,8 +624,12 @@ def main():
 
 	# for i, (u, v) in enumerate(positive_samples):
 	# 	assert sp[u,v] <= args.context_size, (u, v, sp[u,v])
+	# 	counts [sp[u,v]] += 1
 	# 	if i % 1000 == 0:
 	# 		print ("done {}/{}".format(i, len(positive_samples)))
+
+	# print (counts)
+	# raise SystemExit
 
 	# for u, v_list in negative_samples.items():
 	# 	for v in v_list:
@@ -662,7 +667,8 @@ def main():
 		print ("determined validation data")
 
 	if args.evaluate_link_prediction:
-		monitor = "mean_roc_reconstruction"
+		# monitor = "mean_roc_reconstruction"
+		monitor = "map_lp"
 		mode = "max"
 	elif args.evaluate_class_prediction:
 		monitor = "0.1_micro"
@@ -748,11 +754,11 @@ def main():
 	plot_path = os.path.join(args.plot_path, "epoch_{:05d}_plot_test.png".format(epoch) )
 	if args.euclidean:
 		plot_euclidean_embedding(epoch, reconstruction_edges, 
-					embedding,
-					labels, label_info,
-					mean_rank_reconstruction, map_reconstruction, mean_roc_reconstruction,
-					mean_rank_lp, map_lp, mean_roc_lp,
-					plot_path)
+			embedding,
+			labels, label_info,
+			mean_rank_reconstruction, map_reconstruction, mean_roc_reconstruction,
+			mean_rank_lp, map_lp, mean_roc_lp,
+			plot_path)
 	else:
 		plot_disk_embeddings(epoch, reconstruction_edges, 
 			poincare_embedding, 

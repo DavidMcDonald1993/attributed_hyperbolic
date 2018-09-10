@@ -18,10 +18,10 @@ from utils import convert_edgelist_to_dict
 from metrics import evaluate_rank_and_MAP, evaluate_classification
 
 
-def minkowski_dot_np(x, y):
-	assert len(x.shape) == 2
-	rank = x.shape[1] - 1
-	return np.sum(x[:,:rank] * y[:,:rank], axis=-1, keepdims=True) - x[:,rank:] * y[:,rank:]
+# def minkowski_dot_np(x, y):
+# 	assert len(x.shape) == 2
+# 	rank = x.shape[1] - 1
+# 	return np.sum(x[:,:rank] * y[:,:rank], axis=-1, keepdims=True) - x[:,rank:] * y[:,rank:]
 
 def minkowski_dot_pairwise(u, v):
 	"""
@@ -34,7 +34,6 @@ def minkowski_dot_pairwise(u, v):
 def hyperbolic_distance_hyperboloid_pairwise(X, Y):
 	inner_product = minkowski_dot_pairwise(X, Y)
 	inner_product = np.minimum(inner_product, -(1 + 1e-32))
-	# inner_product = np.clip(inner_product, a_max=-1, a_min=-np.inf)
 	return np.arccosh(-inner_product)
 
 def hyperboloid_to_poincare_ball(X):
@@ -76,7 +75,8 @@ def plot_euclidean_embedding(epoch, edges, euclidean_embedding, labels, label_in
 	# 	u_emb = poincare_embedding[u]
 	# 	v_emb = poincare_embedding[v]
 	# 	plt.plot([u_emb[0], v_emb[0]], [u_emb[1], v_emb[1]], c="k", linewidth=0.05, zorder=0)
-	plt.plot([u_emb[:,0], v_emb[:,0]], [u_emb[:,1], v_emb[:,1]], c="k", linewidth=0.05, zorder=0)
+	plt.plot([u_emb[:,0], v_emb[:,0]], 
+		[u_emb[:,1], v_emb[:,1]], c="k", linewidth=0.05, zorder=0)
 
 	if labels is None:
 		plt.scatter(euclidean_embedding[:,0], euclidean_embedding[:,1], s=10, c="r", zorder=1)
