@@ -182,3 +182,20 @@ class TopologyConstrainedTree(object):
 			s += "[LEAF] prediction={}".format(max(set(self.labels), key=list(self.labels).count))
 		
 		return s
+
+	def __eq__(self, other):
+		if isinstance(other, self.__class__):
+			return (
+				self.parent_index == other.parent_index 
+				and self.index == other.index
+				and self.g == other.g
+				and (self.data == other.data).all()
+				and self.depth == other.depth
+				and self.max_depth == other.max_depth
+				and self.min_samples_split == other.min_samples_split
+				and self.min_neighbours == other.min_neighbours
+				)
+		return False
+
+	def __ne__(self, other):
+		return not self == other

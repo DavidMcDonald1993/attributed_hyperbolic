@@ -512,7 +512,7 @@ def main():
 	if args.no_load:
 		plots = os.listdir(args.plot_path)
 		if len(plots) > 0 and any(["test.png" in plot for plot in plots]):
-			print ("Training already competed and no-load flag is raised -- terminating")
+			print ("Training already completed and no-load flag is raised -- terminating")
 			raise SystemExit
 
 	dataset = args.dataset
@@ -668,8 +668,10 @@ def main():
 
 	if args.evaluate_link_prediction:
 		# monitor = "mean_roc_reconstruction"
-		monitor = "map_lp"
-		mode = "max"
+		# monitor = "map_lp"
+		# mode = "max"
+		monitor = "val_loss"
+		mode = "min"
 	elif args.evaluate_class_prediction:
 		monitor = "0.1_micro"
 		mode = "max"
