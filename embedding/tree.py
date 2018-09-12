@@ -5,11 +5,12 @@ from sklearn.metrics import f1_score, log_loss
 
 class TopologyConstrainedTree(object):
 	
-	def __init__(self, parent_index, index, g, data, depth, max_depth, min_samples_split, min_neighbours):
+	def __init__(self, parent_index, index, g, data, feature_names, depth, max_depth, min_samples_split, min_neighbours):
 		self.parent_index = parent_index
 		self.index = index
 		self.g = g
 		self.data = data
+		self.feature_names = feature_names
 		self.val_data = None
 		self.labels = data[:,-1]
 		self.depth = depth
@@ -94,9 +95,9 @@ class TopologyConstrainedTree(object):
 		
 		# print ("selected index={} and value={} with gini_score={}".format(self.index, self.value, self.score))
 
-		self.left = TopologyConstrainedTree(self.index, None, self.g, b_groups[0], self.depth + 1, 
+		self.left = TopologyConstrainedTree(self.index, None, self.g, b_groups[0], self.feature_names, self.depth + 1, 
 						 self.max_depth, self.min_samples_split, self.min_neighbours)
-		self.right = TopologyConstrainedTree(self.index, None, self.g, b_groups[1], self.depth + 1, 
+		self.right = TopologyConstrainedTree(self.index, None, self.g, b_groups[1], self.feature_names, self.depth + 1, 
 						  self.max_depth, self.min_samples_split, self.min_neighbours )
 		
 	def prediction_accuracy(self, y_true, y_pred):
@@ -174,9 +175,9 @@ class TopologyConstrainedTree(object):
 		if not self.is_leaf:
 			s += "index={}, value={}, gini_score={}, data_shape={}\n".format(self.index, 
 							 self.value, self.score, self.data.shape)
-			s += "|" * (self.depth - 1) + "-" * int(self.depth > 0) + "if feat[{}] < {}:\n".format(self.index, self.value) +\
+			s += "|" * (self.depth - 1) + "-" * int(self.depth > 0) + "if {} < {}:\n".format(self.feature_names[self.index], self.value) +\
 			"{}\n".format(self.left)+\
-			"|" * (self.depth - 1) + "-" * int(self.depth > 0) + "if feat[{}] >= {}:\n".format(self.index, self.value) +\
+			"|" * (self.depth - 1) + "-" * int(self.depth > 0) + "if {} >= {}:\n".format(self.feature_names[self.index], self.value) +\
 			"{}".format(self.right)
 		else:
 			s += "[LEAF] prediction={}".format(max(set(self.labels), key=list(self.labels).count))
@@ -199,3 +200,5 @@ class TopologyConstrainedTree(object):
 
 	def __ne__(self, other):
 		return not self == other
+
+	

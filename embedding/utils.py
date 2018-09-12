@@ -149,7 +149,7 @@ def split_edges(edges, non_edges, args, val_split=0.05, test_split=0.1, neg_mul=
 
 	return train_edges, (val_edges, val_non_edges), (test_edges, test_non_edges)
 
-def determine_positive_and_negative_samples(nodes, walks, context_size):
+def determine_positive_and_negative_samples(nodes, walks, context_size, directed=False):
 
 	print ("determining positive and negative samples")
 
@@ -175,7 +175,8 @@ def determine_positive_and_negative_samples(nodes, walks, context_size):
 				n = 1
 				# n = context_size - j
 				positive_samples.extend([(u, v)] * n)
-				positive_samples.extend([(v, u)] * n)
+				if not directed:
+					positive_samples.extend([(v, u)] * n)
 				
 				all_positive_samples[u].add(v)
 				all_positive_samples[v].add(u)

@@ -36,61 +36,50 @@ def evaluate_rank_and_MAP(dists, edgelist, non_edgelist):
 
 	return ranks, ap_score, auc_score
 
-# def evaluate_rank_and_MAP(dists, edge_dict, non_edge_dict):
+def evaluate_rank_and_MAP_fb(dists, edge_dict, non_edge_dict):
 
-# 	ranks = []
-# 	ap_scores = []
-# 	roc_auc_scores = []
+	assert isinstance(edge_dict, dict)
+
+	ranks = []
+	ap_scores = []
+	roc_auc_scores = []
 	
-# 	for u, neighbours in edge_dict.items():
-# 		_dists = dists[u, neighbours + non_edge_dict[u]]
-# 		_labels = np.append(np.ones(len(neighbours)), np.zeros(len(non_edge_dict[u])))
-# 		# _dists = dists[u]
-# 		# _dists[u] = 1e+12
-# 		# _labels = np.zeros(embedding.shape[0])
-# 		# _dists_masked = _dists.copy()
-# 		# _ranks = []
-# 		# for v in v_set:
-# 		# 	_labels[v] = 1
-# 		# 	_dists_masked[v] = np.Inf
-# 		ap_scores.append(average_precision_score(_labels, -_dists))
-# 		roc_auc_scores.append(roc_auc_score(_labels, -_dists))
+	for u, neighbours in edge_dict.items():
+		# _dists = dists[u, neighbours + non_edge_dict[u]]
+		# _labels = np.append(np.ones(len(neighbours)), np.zeros(len(non_edge_dict[u])))
+		_dists = dists[u]
+		_dists[u] = 1e+12
+		_labels = np.zeros(embedding.shape[0])
+		_dists_masked = _dists.copy()
+		_ranks = []
+		for v in v_set:
+			_labels[v] = 1
+			_dists_masked[v] = np.Inf
+		ap_scores.append(average_precision_score(_labels, -_dists))
+		roc_auc_scores.append(roc_auc_score(_labels, -_dists))
 
-# 		neighbour_dists = dists[u, neighbours]
-# 		non_neighbour_dists = dists[u, non_edge_dict[u]]
-# 		idx = non_neighbour_dists.argsort()
-# 		_ranks = np.searchsorted(non_neighbour_dists, neighbour_dists, sorter=idx) + 1
+		# neighbour_dists = dists[u, neighbours]
+		# non_neighbour_dists = dists[u, non_edge_dict[u]]
+		# idx = non_neighbour_dists.argsort()
+		# _ranks = np.searchsorted(non_neighbour_dists, neighbour_dists, sorter=idx) + 1
 
-# 		# _ranks = []
-# 		# _dists_masked = _dists.copy()
-# 		# _dists_masked[:len(neighbours)] = np.inf
+		_ranks = []
+		_dists_masked = _dists.copy()
+		_dists_masked[:len(neighbours)] = np.inf
 
-# 		# for v in neighbours:
-# 		# 	d = _dists_masked.copy()
-# 		# 	d[v] = _dists[v]
-# 		# 	r = np.argsort(d)
-# 		# 	raise Exception
-# 		# 	_ranks.append(np.where(r==v)[0][0] + 1)
+		for v in neighbours:
+			d = _dists_masked.copy()
+			d[v] = _dists[v]
+			r = np.argsort(d)
+			_ranks.append(np.where(r==v)[0][0] + 1)
 
-# 		ranks.append(np.mean(_ranks))
-# 	print ("MEAN RANK=", np.mean(ranks), "MEAN AP=", np.mean(ap_scores), 
-# 		"MEAN ROC AUC=", np.mean(roc_auc_scores))
-# 	return np.mean(ranks), np.mean(ap_scores), np.mean(roc_auc_scores)
+		ranks.append(np.mean(_ranks))
+	print ("MEAN RANK=", np.mean(ranks), "MEAN AP=", np.mean(ap_scores), 
+		"MEAN ROC AUC=", np.mean(roc_auc_scores))
+	return np.mean(ranks), np.mean(ap_scores), np.mean(roc_auc_scores)
 
 def evaluate_classification(klein_embedding, labels, args,
 	label_percentages=np.arange(0.02, 0.11, 0.01), n_repeats=10):
-
-	# def idx_shuffle(labels):
-	# 	class_memberships = [list(np.random.permutation(np.where(labels==c)[0])) for c in sorted(set(labels))]
-	# 	idx = []
-	# 	while len(class_memberships) > 0:
-	# 		for _class in class_memberships:
-	# 			idx.append(_class.pop(0))
-	# 			if len(_class) == 0:
-	# 				class_memberships.remove(_class)
-		# return idx
-
-	# np.random.seed(args.seed)
 
 	assert len(labels.shape) == 1
 
@@ -99,12 +88,6 @@ def evaluate_classification(klein_embedding, labels, args,
 	f1_micros = np.zeros((n_repeats, len(label_percentages)))
 	f1_macros = np.zeros((n_repeats, len(label_percentages)))
 
-	# if len(labels.shape) > 1:
-	# 	classes = np.arange(labels.shape[1])
-	# 	idx = np.random.permutation(num_nodes)
-	# else:
-	# 	classes = sorted(set(labels))
-	# 	idx = idx_shuffle(labels)
 	
 	model = LogisticRegressionCV()
 

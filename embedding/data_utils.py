@@ -85,7 +85,12 @@ def load_g2g_datasets(dataset_str, args):
 			idx_to_class = idx_to_class.tolist()
 			graph['idx_to_class'] = idx_to_class
 
-	topology_graph = nx.from_scipy_sparse_matrix(A)
+	if args.directed:
+		create_using = nx.DiGraph()
+	else:
+		create_using = nx.Graph() 
+
+	topology_graph = nx.from_scipy_sparse_matrix(A, create_using=create_using)
 	features = X.A
 	labels = z
 

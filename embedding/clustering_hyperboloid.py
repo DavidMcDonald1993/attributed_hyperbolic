@@ -7,6 +7,9 @@ import numpy as np
 import networkx as nx
 import pandas as pd
 
+from networkx.drawing.nx_agraph import graphviz_layout
+
+
 import matplotlib.pyplot as plt
 
 import h5py
@@ -15,7 +18,7 @@ from sklearn.cluster import DBSCAN
 from sklearn.model_selection import StratifiedShuffleSplit
 from sklearn.metrics import f1_score
 
-from data_utils import load_karate, load_g2g_datasets, load_ppi, load_tf_interaction
+# from data_utils import load_karate, load_g2g_datasets, load_ppi, load_tf_interaction
 from tree import TopologyConstrainedTree
 
 def minkowki_dot(u, v):
@@ -66,7 +69,7 @@ def convert_module_to_directed_module(module, ranks):
 
 	return directed_modules
 
-def grow_forest(data_train, directed_modules, ranks, bootstrap=True, ):
+def grow_forest(data_train, directed_modules, ranks, feature_names, bootstrap=True, ):
 
 	n = data_train.shape[0]
 
@@ -86,7 +89,7 @@ def grow_forest(data_train, directed_modules, ranks, bootstrap=True, ):
 			_data_train = data_train
 
 		tree = TopologyConstrainedTree(parent_index=None, index=root, g=directed_module, 
-			data=_data_train, depth=0, max_depth=np.inf, min_samples_split=2, min_neighbours=1)
+			data=_data_train, feature_names=feature_names, depth=0, max_depth=np.inf, min_samples_split=2, min_neighbours=1)
 
 		if bootstrap:
 			oob_samples = list(set(range(n)) - set(idx))
@@ -100,7 +103,7 @@ def grow_forest(data_train, directed_modules, ranks, bootstrap=True, ):
 		forest.append(tree)
 	return forest, all_oob_samples
 
-def evaluate_modules_on_test_data(features, labels, directed_modules, ranks, 
+def evaluate_modules_on_test_data(features, labels, directed_modules, ranks, feature_names,
 	n_repeats=10, test_size=0.3, ):
 
 	data = np.column_stack([features, labels])
@@ -114,7 +117,7 @@ def evaluate_modules_on_test_data(features, labels, directed_modules, ranks,
 		data_test = data[split_test]
 
 
-		forest, _ = grow_forest(data_train, directed_modules, ranks)
+		forest, _ = grow_forest(data_train, directed_modules, ranks, feature_names)
 
 
 		test_prediction = np.array([t.predict(data_test) for t in forest])
@@ -196,6 +199,31 @@ def plot_disk_embeddings(edges, poincare_embedding, modules,):
 
 # def load_features(filename):
 # 	pass
+
+def load_tf_interaction(args, ):
+	_dir = os.path.join(args.data_directory, "tissue_classification")
+	interaction_df = pd.read_csv(os.path.join(_dir, "NIHMS177825-supplement-03-1.csv"), 
+	    sep=",", skiprows=1).iloc[1:]
+	topology_graph = nx.from_pandas_dataframe(interaction_df, "Gene 1 Symbol", "Gene 2 Symbol")
+
+	features_df = pd.read_csv(os.path.join(_dir, "NIHMS177825-supplement-06-2.csv"), 
+	    sep=",", skiprows=1, index_col="Symbol", ).iloc[:,2:]
+
+	# remove nodes with no expression data
+	for n in topology_graph.nodes():
+	    if n not in features_df.index:
+	        topology_graph.remove_node(n)
+
+	# sort features by node order
+	features_df = features_df.loc[topology_graph.nodes(),:]
+
+	features = features_df.values
+	tfs = features_df.index
+
+	topology_graph = nx.convert_node_labels_to_integers(topology_graph, label_attribute="original_name")
+	nx.set_edge_attributes(topology_graph, "weight", 1)
+
+	return topology_graph, features, tfs
 
 def load_labels(filename, label_column="Cell Line", label_of_interest="Mesoderm"):
 	label_df = pd.read_csv(filename, index_col=0)
@@ -332,7 +360,7 @@ def main():
 	# elif dataset == "ppi":
 	# 	topology_graph, features, labels = load_ppi(args)
 	elif dataset == "tf_interaction":
-		topology_graph, features, labels, label_info = load_tf_interaction(args, normalize=False)
+		topology_graph, features, tfs = load_tf_interaction(args, )
 	else:
 		raise Exception
 
@@ -363,7 +391,7 @@ def main():
 	best_eps = -1
 	best_f1 = 0
 	# for eps in [2.3]:
-	for eps in np.arange(0.001, args.max_eps, 0.001):
+	for eps in np.arange(0.1, args.max_eps, 0.1):
 		modules = perform_clustering(dists, eps)
 		num_modules = len(set(modules) - {-1})
 		print ("discovered {} modules with eps = {}".format(num_modules, eps))
@@ -375,15 +403,16 @@ def main():
 		for m in range(num_modules):
 			idx = np.where(modules == m)[0]
 			module = topology_graph.subgraph(idx)
-			print ("module=", m, "number of nodes=", len(module), 
-				"number of edges=", len(module.edges()))
+			print ("module =", m, "number of nodes =", len(module), 
+				"number of edges =", len(module.edges()))
 			num_connected += nx.is_connected(module)
 			directed_modules += convert_module_to_directed_module(module, ranks)
 		print ("created {} directed_modules".format(len(directed_modules)))
 		# print ("number connected modules = {}".format(num_connected))
 
 		if len(directed_modules) > 0:
-			mean_f1_micro = evaluate_modules_on_test_data(features, labels, directed_modules, ranks, n_repeats=25, test_size=0.3)
+			mean_f1_micro = evaluate_modules_on_test_data(features, labels, directed_modules, ranks, feature_names=tfs, 
+				n_repeats=25, test_size=0.3)
 			print ("f1={}".format(mean_f1_micro, ))
 			if mean_f1_micro > best_f1:
 				print ("best f1={}".format(mean_f1_micro))
@@ -412,7 +441,13 @@ def main():
 
 	data = np.column_stack([features, labels])
 
-	forest, all_oob_samples = grow_forest(data, directed_modules, ranks)
+	forest, all_oob_samples = grow_forest(data, directed_modules, ranks, feature_names=tfs)
+
+	print ()
+	for tree in forest[:1]:
+		print (tree)
+		print ()
+
 	print ("determining feature_importances")
 	feature_importances, feature_pair_importances = determine_feature_importances(forest, all_oob_samples)
 	
@@ -420,38 +455,39 @@ def main():
 		root = tree.index
 
 		edges = [(t.parent_index, t.index) for t in tree.postorder() if t.parent_index is not None and t.index is not None]
+		edges += [(t.parent_index, -(i+1)) for i, t in enumerate(tree.postorder()) if t.is_leaf]
+
+		inner_nodes = [t.index for t in tree.postorder() if not t.is_leaf] 
+		leaves = [-(i+1) for i, t in enumerate(tree.postorder()) if t.is_leaf]
+		print (edges)
+		print (inner_nodes)
+		print (leaves)
+		raise SystemExit
 
 		# idx = [t.index for t in tree.postorder()]
 		# print (len(idx))
 		module = nx.DiGraph(edges)
 		nx.set_node_attributes(module, "original_name", {k:v["original_name"] 
 			for k, v in topology_graph.nodes(data=True)if k in module.nodes()})
-		nx.set_node_attributes(module, "rank", {n: "{:.3f}".format(ranks[n]) for n in module.nodes()})
+		# nx.set_node_attributes(module, "rank", {n: "{:.3f}".format(ranks[n]) for n in module.nodes()})
 		idx = module.nodes()
+		print (root)
+		print (edges)
+		print (len(module))
 		# module = topology_graph.subgraph(idx)
 
 		# pos = poincare_embedding[idx]
 		# plt.axis("equal")
-		nx.draw_networkx_nodes(module, pos=poincare_embedding[:,:2], node_size=feature_importances[idx]*30000)
-		nx.draw_networkx_edges(module, pos=poincare_embedding[:,:2])
-		nx.draw_networkx_labels(module, pos=poincare_embedding[:,:2], 
-			labels={n : "{}\n{:.5f}\n{:.3f}".format(module.node[n]["original_name"],
-			ranks[n],feature_importances[n]) for n in module.nodes()})#nx.get_node_attributes(module, "original_name"))
+		# pos = poincare_embedding[:,:2]
+		pos = graphviz_layout(module, prog="dot", root=root)
+		nx.draw_networkx_nodes(module, pos=pos, node_size=feature_importances[idx]*30000)
+		nx.draw_networkx_edges(module, pos=pos)
+		nx.draw_networkx_labels(module, pos=pos, 
+			labels={n : "{}\n{:.3f}".format(module.node[n]["original_name"],
+			feature_importances[n]) for n in module.nodes()})#nx.get_node_attributes(module, "original_name"))
 		plt.show()
 
-	# for m in range(num_modules):
-	# 	idx = np.where(modules == m)[0]
-	# 	module = topology_graph.subgraph(idx)
-
-	# 	# pos = poincare_embedding[idx]
-	# 	nx.draw_networkx_nodes(module, pos=poincare_embedding[:,:2], node_size=feature_importances[idx]*30000)
-	# 	nx.draw_networkx_edges(module, pos=poincare_embedding[:,:2])
-	# 	nx.draw_networkx_labels(module, pos=poincare_embedding[:,:2], 
-	# 		labels=nx.get_node_attributes(module, "original_name"))
-	# 	plt.show()
-	# 	# if len(module) < 50 and nx.is_connected(module):
-		# convert_module_to_tree(dists, poincare_embedding, module)
-
+	
 	print ("Best eps was {}, best f1={}".format(best_eps, best_f1))
 	plot_disk_embeddings(topology_graph.edges(), poincare_embedding, modules)
 

@@ -368,6 +368,8 @@ def parse_args():
 
 	parser.add_argument('--no-load', action="store_true", help='flag to terminate program if trained model exists')
 
+	parser.add_argument('--directed', action="store_true", help='flag to train on directed graph')
+
 
 	parser.add_argument('--use-generator', action="store_true", help='flag to train using a generator')
 
@@ -384,6 +386,8 @@ def configure_paths(args):
 	'''
 
 	dataset = args.dataset
+	if args.directed:
+		dataset += "_directed"
 	directory = "dim={}/seed={}/".format(args.embedding_dim, args.seed)
 
 	if args.only_lcc:
@@ -530,7 +534,6 @@ def main():
 	else:
 		raise Exception
 
-	# topology_graph.remove_edges_from(topology_graph.selfloop_edges())
 
 	if not args.evaluate_link_prediction:
 		args.evaluate_class_prediction = labels is not None
@@ -539,8 +542,8 @@ def main():
 	reconstruction_edges = topology_graph.edges()
 	non_edges = list(nx.non_edges(topology_graph))
 
-	# print (len(topology_graph), len(reconstruction_edges))
-	# raise SystemExit
+	if args.directed:
+		non_edges = list(set(non_edges) - {(v, u) for u, v in reconstruction_edges})
 
 	if args.verbose:
 		print ("determined reconstruction edges and non-edges")
@@ -550,19 +553,6 @@ def main():
 		feature_sim = cosine_similarity(features)
 		feature_sim -= np.identity(len(features))
 		feature_sim [feature_sim  < args.rho] = 0
-
-		# print (feature_sim[0].sum())
-
-		# from sklearn.preprocessing import StandardScaler
-		# features = StandardScaler().fit_transform(features)
-		# feature_sim = cosine_similarity(features)
-		# feature_sim -= np.identity(len(features))
-		# feature_sim [feature_sim  < args.rho] = 0
-
-		# print (feature_sim[0].sum())
-		# print (len(topology_graph.neighbors(0)))
-
-		# raise SystemExit
 	else:
 		feature_sim = None
 
@@ -610,7 +600,7 @@ def main():
 		
 	positive_samples, negative_samples, alias_dict =\
 		determine_positive_and_negative_samples(nodes=topology_graph.nodes(), 
-		walks=walks, context_size=args.context_size)
+		walks=walks, context_size=args.context_size, directed=args.directed)
 
 	# sp = nx.floyd_warshall_numpy(topology_graph).A
 	# print ("DONE SHORTEST PATH")
@@ -647,9 +637,9 @@ def main():
 		ExponentialMappingOptimizer(learning_rate=args.lr)
 	)
 	loss = (
-		hyperbolic_softmax_loss 
+		hyperbolic_softmax_loss()
 		if args.softmax 
-		else hyperbolic_sigmoid_loss 
+		else hyperbolic_sigmoid_loss
 		if args.sigmoid 
 		else euclidean_negative_sampling_loss
 		if args.euclidean
@@ -673,8 +663,10 @@ def main():
 		monitor = "val_loss"
 		mode = "min"
 	elif args.evaluate_class_prediction:
-		monitor = "0.1_micro"
-		mode = "max"
+		# monitor = "0.1_micro"
+		# mode = "max"
+		monitor = "val_loss"
+		mode = "min"
 	else:
 		monitor = "val_loss"#"mean_rank_reconstruction"
 		mode = "min"
@@ -781,6 +773,8 @@ def main():
 			label_percentages, f1_micros, f1_macros = evaluate_classification(embedding, labels, args)
 		else:
 			label_percentages, f1_micros, f1_macros = evaluate_classification(klein_embedding, labels, args)
+
+		print (f1_micros)
 
 		f1_path = os.path.join(args.plot_path, "epoch_{:05d}_class_prediction_f1_test.png".format(epoch))
 		plot_classification(label_percentages, f1_micros, f1_macros, f1_path)
