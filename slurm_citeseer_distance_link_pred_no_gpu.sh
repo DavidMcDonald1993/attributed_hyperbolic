@@ -1,18 +1,18 @@
 #!/bin/bash
 
-#SBATCH --job-name=noGPUCiteseerDistanceLinkPred
-#SBATCH --output=noGPUCiteseerDistanceLinkPred_%A_%a.out
-#SBATCH --error=noGPUCiteseerDistanceLinkPred_%A_%a.err
+#SBATCH --job-name=noGPUCiteseerDistanceLinkPredJP
+#SBATCH --output=noGPUCiteseerDistanceLinkPredJP_%A_%a.out
+#SBATCH --error=noGPUCiteseerDistanceLinkPredJP_%A_%a.err
 #SBATCH --array=0-29
 #SBATCH --time=3-00:00:00
 #SBATCH --ntasks=1
-#SBATCH --mem=8gb
+#SBATCH --mem=8G
 
 
 
 PROJECT_DIR=/rds/projects/2018/hesz01/attributed_hyperbolic
 # ARR=({--softmax,-r={5,3}" "-t={1,3}}" "--dim={2,3,5,32,128}" --evaluate-link-prediction "{--no-attributes,--multiply-attributes,--jump-prob=0.05})
-ARR=(--seed={0..29}" "--softmax" "--dim=3" --evaluate-link-prediction "--no-attributes)
+ARR=(--seed={0..29}" "--softmax" "--dim=3" --evaluate-link-prediction "--nump-prob=0.05)
 
 module purge; module load bluebear
 module load apps/cuda/8.0.44
