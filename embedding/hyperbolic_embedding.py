@@ -4,6 +4,7 @@ from __future__ import print_function
 import os
 import h5py
 # os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+os.environ["PYTHON_EGG_CACHE"] = "/rds/projects/2018/hesz01/attributed_hyperbolic/python-eggs"
 import multiprocessing 
 import re
 import argparse
@@ -513,11 +514,12 @@ def main():
 
 	configure_paths(args)
 
+	train = True
 	if args.no_load:
 		plots = os.listdir(args.plot_path)
 		if len(plots) > 0 and any(["test.png" in plot for plot in plots]):
-			print ("Training already completed and no-load flag is raised -- terminating")
-			raise SystemExit
+			print ("Training already completed and no-load flag is raised -- evaluating")
+			train = False
 
 	dataset = args.dataset
 	if dataset == "karate":
@@ -637,7 +639,7 @@ def main():
 		ExponentialMappingOptimizer(learning_rate=args.lr)
 	)
 	loss = (
-		hyperbolic_softmax_loss()
+		hyperbolic_softmax_loss(args.directed * 0)
 		if args.softmax 
 		else hyperbolic_sigmoid_loss
 		if args.sigmoid 
@@ -681,34 +683,36 @@ def main():
 		early_stopping
 	]
 
-	if args.use_generator:
-		print ("Training with data generator")
-		random.shuffle(positive_samples)
-		training_gen = TrainingSequence(positive_samples, negative_samples, alias_dict, args)
+	if train:
 
-		sys.stdout.flush()
+		if args.use_generator:
+			print ("Training with data generator")
+			random.shuffle(positive_samples)
+			training_gen = TrainingSequence(positive_samples, negative_samples, alias_dict, args)
 
-		model.fit_generator(training_gen, 
-			workers=args.workers, max_queue_size=25, use_multiprocessing=args.workers>0, steps_per_epoch=num_steps, 
-			epochs=args.num_epochs, initial_epoch=initial_epoch, verbose=args.verbose,
-			validation_data=[val_in, val_target],
-			callbacks=callbacks
-		)
+			sys.stdout.flush()
 
-	else:
-		print ("Training without data generator")
+			model.fit_generator(training_gen, 
+				workers=args.workers, max_queue_size=25, use_multiprocessing=args.workers>0, steps_per_epoch=num_steps, 
+				epochs=args.num_epochs, initial_epoch=initial_epoch, verbose=args.verbose,
+				validation_data=[val_in, val_target],
+				callbacks=callbacks
+			)
 
-		x = get_training_sample(np.array(positive_samples), negative_samples, args.num_negative_samples, alias_dict)
-		y = np.zeros(list(x.shape) + [1])
-		print ("determined training samples")
+		else:
+			print ("Training without data generator")
 
-		sys.stdout.flush()
+			x = get_training_sample(np.array(positive_samples), negative_samples, args.num_negative_samples, alias_dict)
+			y = np.zeros(list(x.shape) + [1])
+			print ("determined training samples")
 
-		model.fit(x, y, batch_size=args.batch_size, 
-			epochs=args.num_epochs, initial_epoch=initial_epoch, verbose=args.verbose,
-			validation_data=[val_in, val_target],
-			callbacks=callbacks
-		)
+			sys.stdout.flush()
+
+			model.fit(x, y, batch_size=args.batch_size, 
+				epochs=args.num_epochs, initial_epoch=initial_epoch, verbose=args.verbose,
+				validation_data=[val_in, val_target],
+				callbacks=callbacks
+			)
 
 	print ("Training completed -- loading best model according to {}".format(monitor))
 

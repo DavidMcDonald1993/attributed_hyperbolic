@@ -91,6 +91,9 @@ def get_training_sample(batch_positive_samples, negative_samples, num_negative_s
 
 def make_validation_data(edges, non_edge_dict, args):
 
+	random.seed(args.seed)
+	random.shuffle(edges)
+
 	edges = np.array(edges)
 	idx = np.random.choice(len(edges), size=min(len(edges), args.batch_size), replace=False,)
 	positive_samples = edges[idx]#
@@ -166,7 +169,6 @@ def determine_positive_and_negative_samples(nodes, walks, context_size, directed
 			u = walk[i]
 			counts[u] += 1	
 			for j in range(context_size):
-			# for j in range(i+1, min(len(walk), i+1+context_size)):
 				if i+j+1 >= len(walk):
 					continue
 				v = walk[i+j+1]

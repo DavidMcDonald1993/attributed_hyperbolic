@@ -106,6 +106,7 @@ def hyperbolic_softmax_loss(alpha=0):
         # exp_minus_d_uv_sq = K.exp(-K.square(d_uv))
         exp_minus_d_uv_sq = K.exp(-d_uv)
         exp_minus_d_uv_sq = K.maximum(exp_minus_d_uv_sq, K.cast(1e-45, K.floatx()))
+
         return -K.mean(K.log(exp_minus_d_uv_sq[:,0] / K.sum(exp_minus_d_uv_sq[:,0:], axis=-1))) +\
         alpha * K.mean(y_pred[:,0,-1] - y_pred[:,1,-1])
 
