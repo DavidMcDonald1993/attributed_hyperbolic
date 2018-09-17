@@ -177,11 +177,10 @@ def determine_positive_and_negative_samples(nodes, walks, context_size, directed
 				n = 1
 				# n = context_size - j
 				positive_samples.extend([(u, v)] * n)
+				all_positive_samples[u].add(v)
 				if not directed:
 					positive_samples.extend([(v, u)] * n)
-				
-				all_positive_samples[u].add(v)
-				all_positive_samples[v].add(u)
+					all_positive_samples[v].add(u)
 
  
 		if num_walk % 1000 == 0:  
@@ -202,13 +201,6 @@ def determine_positive_and_negative_samples(nodes, walks, context_size, directed
 
 	prob_dict = {n: probs[negative_samples[n]] for n in sorted(nodes)}
 	prob_dict = {n: probs / probs.sum() for n, probs in prob_dict.items()}
-	# for k, v in prob_dict.items():
-		# print (k, len(negative_samples[k]), len(v), v.sum())
-		# print (probs)
-		# print (alias_setup(probs))
-	# print (np.array(prob_dict.values()).shape)
-	# prob_dict = {n: np.ones_like(negative_samples[n], dtype=np.float) / len(negative_samples[n]) for n in prob_dict.keys()}
-	# probs = {n: counts[negative_samples[n]] / counts[negative_samples[n]].sum() for n in sorted(nodes)}
 	alias_dict = {n: alias_setup(probs) for n, probs in prob_dict.items()}
 
 	print ("PREPROCESSED NEGATIVE SAMPLE PROBS")

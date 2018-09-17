@@ -3,7 +3,7 @@ from __future__ import print_function
 
 import os
 import h5py
-# os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 os.environ["PYTHON_EGG_CACHE"] = "/rds/projects/2018/hesz01/attributed_hyperbolic/python-eggs"
 import multiprocessing 
 import re
@@ -498,9 +498,6 @@ def main():
 	args = parse_args()
 	args.num_positive_samples = 1
 
-	print ("There are {} available threads".format(multiprocessing.cpu_count()))
-	print ("Training with {} worker threads".format(args.workers))
-
 	sys.stdout.flush()
 
 	# args.only_lcc = True
@@ -544,11 +541,11 @@ def main():
 	reconstruction_edges = topology_graph.edges()
 	non_edges = list(nx.non_edges(topology_graph))
 
-	if args.directed:
-		non_edges = list(set(non_edges) - {(v, u) for u, v in reconstruction_edges})
+	# if args.directed:
+	# 	non_edges = list(set(non_edges) - {(v, u) for u, v in reconstruction_edges})
 
-	if args.verbose:
-		print ("determined reconstruction edges and non-edges")
+	# if args.verbose:
+	print ("determined reconstruction edges and non-edges")
 
 
 	if features is not None:
@@ -571,6 +568,8 @@ def main():
 		n3, e3 = len(topology_graph), len(topology_graph.edges())
 		assert n1 == n2 == n3
 		assert e1 > e2 
+		assert len(val_edges) == len(val_non_edges)
+		assert len(test_edges) == len(test_non_edges)
 
 	else:
 		train_edges = reconstruction_edges

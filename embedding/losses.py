@@ -87,6 +87,24 @@ def euclidean_negative_sampling_loss(y_true, y_pred):
 
     return - K.mean( K.log( pos_p_uv ) + K.sum( K.log( neg_p_uv ), axis=-1) )
 
+def euclidean_softmax_loss(alpha=0):
+
+    def loss(y_true, y_pred, alpha=alpha):
+
+        alpha = K.cast(alpha, K.floatx())
+
+        u_emb = y_pred[:,0]
+        samples_emb = y_pred[:,1:]
+
+        d_uv = K.sqrt(K.sum(K.square(u_emb - samples_emb)))
+
+        exp_minus_d_uv_sq = K.exp(-d_uv)
+        exp_minus_d_uv_sq = K.maximum(exp_minus_d_uv_sq, K.cast(1e-45, K.floatx())) 
+
+        return -K.mean(K.log(exp_minus_d_uv_sq[:,0] / K.sum(exp_minus_d_uv_sq[:,0:], axis=-1)))
+        
+
+    return loss
 
 def hyperbolic_softmax_loss(alpha=0):
 
@@ -103,12 +121,12 @@ def hyperbolic_softmax_loss(alpha=0):
 
 
         d_uv = tf.acosh(-inner_uv)
-        # exp_minus_d_uv_sq = K.exp(-K.square(d_uv))
+        ##+ alpha * K.mean(y_pred[:,0,-1] - y_pred[:,1,-1])
         exp_minus_d_uv_sq = K.exp(-d_uv)
-        exp_minus_d_uv_sq = K.maximum(exp_minus_d_uv_sq, K.cast(1e-45, K.floatx()))
+        exp_minus_d_uv_sq = K.maximum(exp_minus_d_uv_sq, K.cast(1e-45, K.floatx())) 
 
-        return -K.mean(K.log(exp_minus_d_uv_sq[:,0] / K.sum(exp_minus_d_uv_sq[:,0:], axis=-1))) +\
-        alpha * K.mean(y_pred[:,0,-1] - y_pred[:,1,-1])
+        return -K.mean(K.log(exp_minus_d_uv_sq[:,0] / K.sum(exp_minus_d_uv_sq[:,0:], axis=-1)))
+        
 
     return loss
 

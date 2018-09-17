@@ -34,6 +34,8 @@ class Graph():
 
 				if np.random.rand() < self.jump_prob:
 					# random jump based on attribute similarity
+					if (feature_sim[cur]==0).all():
+						break
 					next_ = np.random.choice(len(feature_sim), replace=False, p=feature_sim[cur])
 					walk.append(next_)
 
