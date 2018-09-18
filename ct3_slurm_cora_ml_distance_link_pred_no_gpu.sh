@@ -24,5 +24,5 @@ module load apps/keras/2.0.8-python-3.5.2
 
 echo starting, ${ARR[${SLURM_ARRAY_TASK_ID}]}
 python embedding/hyperbolic_embedding.py --dataset cora_ml \
---data-directory ${PROJECT_DIR}/data --no-load ${ARR[${SLURM_ARRAY_TASK_ID}]}\
+--data-directory ${PROJECT_DIR}/data --no-load ${ARR[${SLURM_ARRAY_TASK_ID}]} \
 --context-size 3 --model models_ct3 --plot plots_ct3 --logs logs_ct3
