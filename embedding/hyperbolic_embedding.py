@@ -390,8 +390,8 @@ def configure_paths(args):
 	dataset = args.dataset
 	if args.directed:
 		dataset += "_directed"
+	
 	directory = "dim={}/seed={}/".format(args.embedding_dim, args.seed)
-
 	if args.only_lcc:
 		directory += "lcc/"
 	else:
@@ -477,8 +477,6 @@ def configure_paths(args):
 			args.walk_path += "add_non_edges/"
 		else:
 			args.walk_path += "no_non_edges/"
-	# elif args.evaluate_class_prediction:
-	#   args.walk_path += "/eval_class_pred/"
 	else:
 		args.walk_path += "no_lp/"
 	if not os.path.exists(args.walk_path):
@@ -490,8 +488,24 @@ def configure_paths(args):
 	args.model_path = os.path.join(args.model_path, directory)
 	if not os.path.exists(args.model_path):
 		os.makedirs(args.model_path)
-	# args.model_path = os.path.join(args.model_path, "latest_model.h5")
 
+	args.test_results_path = os.path.join(args.test_results_path, dataset)
+	if not os.path.exists(args.test_results_path):
+		os.makedirs(args.test_results_path)
+
+	# remove seed from directoy path
+	s = directory.split("/")
+	test_results_directory = "/".join(s[:1] + s[2:])
+
+	args.test_results_path = os.path.join(args.test_results_path, test_results_directory)
+	if not os.path.exists(args.test_results_path):
+		os.makedirs(args.test_results_path)
+
+	args.test_results_filename = os.path.join(args.test_results_path, "test_results.csv")
+	args.test_results_lock_filename = os.path.join(args.test_results_path, "test_results.lock")
+
+	# touch lock file to ensure that it exists
+	touch(args.test_results_lock_filename)
 
 
 def main():
@@ -603,34 +617,6 @@ def main():
 		determine_positive_and_negative_samples(nodes=topology_graph.nodes(), 
 		walks=walks, context_size=args.context_size, directed=args.directed)
 
-	# sp = nx.floyd_warshall_numpy(topology_graph).A
-	# print ("DONE SHORTEST PATH")
-
-	# counts = {i: 0 for i in range(4)}
-
-	# for i, (u, v) in enumerate(topology_graph.edges()):
-	# 	assert (u, v) in positive_samples, (u, v)
-	# 	if i % 100 == 0:
-	# 		print ("done {}/{}".format(i, len(topology_graph.edges())))
-
-	# for i, (u, v) in enumerate(positive_samples):
-	# 	assert sp[u,v] <= args.context_size, (u, v, sp[u,v])
-	# 	counts [sp[u,v]] += 1
-	# 	if i % 1000 == 0:
-	# 		print ("done {}/{}".format(i, len(positive_samples)))
-
-	# print (counts)
-	# raise SystemExit
-
-	# for u, v_list in negative_samples.items():
-	# 	for v in v_list:
-	# 		if sp[u,v] <= args.context_size:
-	# 			print (sp[u,v])
-	# 	print ("done {}/{}".format(u, len(negative_samples)))
-
-	# print ("ok")
-	# raise SystemExit
-
 	num_nodes = len(topology_graph)
 	num_steps = int((len(positive_samples) + args.batch_size - 1) / args.batch_size)
 	model, initial_epoch = build_model(num_nodes, args)
@@ -731,13 +717,23 @@ def main():
 	
 	print ("Evaluating on test data")
 
+	test_results = dict()
+
 	(mean_rank_reconstruction, map_reconstruction, 
 		mean_roc_reconstruction) = evaluate_rank_and_MAP(dists, 
 		reconstruction_edges, non_edges)
 
+	test_results.update({"mean_rank_reconstruction": mean_rank_reconstruction, 
+			"map_reconstruction": map_reconstruction,
+			"mean_roc_reconstruction": mean_roc_reconstruction})
+
 	if args.evaluate_link_prediction:
 		(mean_rank_lp, map_lp, 
 		mean_roc_lp) = evaluate_rank_and_MAP(dists, test_edges, test_non_edges)
+
+		test_results.update({"mean_rank_lp": mean_rank_lp, 
+				"map_lp": map_lp,
+				"mean_roc_lp": mean_roc_lp})
 
 	else:
 		mean_rank_lp, map_lp, mean_roc_lp = None, None, None 
@@ -779,8 +775,16 @@ def main():
 
 		print (f1_micros)
 
+		for label_percentage, f1_micro, f1_macro in zip(label_percentages, f1_micros, f1_macros):
+				test_results.update({"{}_micro".format(label_percentage): f1_micro})
+				test_results.update({"{}_macro".format(label_percentage): f1_macro})
+
 		f1_path = os.path.join(args.plot_path, "epoch_{:05d}_class_prediction_f1_test.png".format(epoch))
 		plot_classification(label_percentages, f1_micros, f1_macros, f1_path)
+
+	print ("saving test results to: {}".format(args.test_results_filename))
+	threadsafe_save_test_results(args.test_results_lock_filename, args.test_results_filename, 
+		args.seed, test_results)
 
 
 

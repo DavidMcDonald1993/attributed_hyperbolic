@@ -334,7 +334,7 @@ class PeriodicStdoutLogger(Callback):
 
 		# if self.args.verbose:
 		print ("reconstruction")
-		print (len(self.reconstruction_edges), len(self.non_edges))
+		# print (len(self.reconstruction_edges), len(self.non_edges))
 		# (mean_rank_reconstruction, map_reconstruction, 
 		# 	mean_roc_reconstruction) = evaluate_rank_and_MAP(dists, 
 		# 	self.reconstruction_edge_dict, self.non_edge_dict)
@@ -350,7 +350,7 @@ class PeriodicStdoutLogger(Callback):
 		if self.args.evaluate_link_prediction:
 			# if self.args.verbose:
 			print ("link prediction")
-			print (len(self.val_edges), len(self.val_non_edges))
+			# print (len(self.val_edges), len(self.val_non_edges))
 			# (mean_rank_lp, map_lp, 
 			# mean_roc_lp) = evaluate_rank_and_MAP(dists, 
 			# self.val_edge_dict, self.non_edge_dict)
