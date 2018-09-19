@@ -12,7 +12,7 @@ import random
 from sklearn.metrics.pairwise import cosine_similarity
 
 import pandas as pd
-from pandas.errors import EmptyDataError
+# from pandas.errors import EmptyDataError
 
 def alias_setup(probs):
 	'''
