@@ -645,10 +645,10 @@ def main():
 
 	if args.evaluate_link_prediction:
 		# monitor = "mean_roc_reconstruction"
-		# monitor = "map_lp"
-		# mode = "max"
-		monitor = "val_loss"
-		mode = "min"
+		monitor = "map_lp"
+		mode = "max"
+		# monitor = "val_loss"
+		# mode = "min"
 	elif args.evaluate_class_prediction:
 		# monitor = "0.1_micro"
 		# mode = "max"
