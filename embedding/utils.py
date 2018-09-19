@@ -1,6 +1,7 @@
 from __future__ import print_function
 
 import os
+import fcntl
 import numpy as np
 import networkx as nx
 from node2vec_sampling import Graph 
@@ -236,3 +237,43 @@ def load_walks(G, walk_file, feature_sim, args):
 		print ("loading walks from {}".format(walk_file))
 		walks = load_walks_from_file(walk_file, args.walk_length)
 	return walks
+
+def lock_method(lock_filename):
+    ''' Use an OS lock such that a method can only be called once at a time. '''
+
+    def decorator(func):
+
+        @functools.wraps(func)
+        def lock_and_run_method(*args, **kwargs):
+
+            # Hold program if it is already running 
+            # Snippet based on
+            # http://linux.byexamples.com/archives/494/how-can-i-avoid-running-a-python-script-multiple-times-implement-file-locking/
+            fp = open(lock_filename, 'r+')
+            done = False
+            while not done:
+                try:
+                    fcntl.lockf(fp, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    done = True
+                except IOError:
+                    pass
+            return func(*args, **kwargs)
+
+        return lock_and_run_method
+
+    return decorator 
+
+def threadsafe_fn(lock_filename, fn, *args, **kwargs ):
+    lock_method(lock_filename)(fn)(*args, **kwargs)
+
+def save_test_results(filename, seed, data, ):
+    d = pd.DataFrame(index=[seed], data=data)
+    try:
+        test_df = pd.read_csv(filename, sep=",", index_col=0)
+        test_df = d.combine_first(test_df)
+    except EmptyDataError:
+        test_df = d
+    test_df.to_csv(filename, sep=",")
+
+def threadsafe_save_test_results(lock_filename, filename, seed, data):
+	threadsafe_fn(lock_filename, save_test_results, filename=filename, seed=seed, data=data)

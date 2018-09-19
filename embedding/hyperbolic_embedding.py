@@ -23,7 +23,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from sklearn.metrics.pairwise import cosine_similarity, euclidean_distances
 
 from data_utils import load_karate, load_labelled_attributed_network, load_ppi, load_g2g_datasets, load_tf_interaction, load_wordnet
-from utils import load_walks, determine_positive_and_negative_samples, convert_edgelist_to_dict, split_edges, get_training_sample, make_validation_data
+from utils import load_walks, determine_positive_and_negative_samples, convert_edgelist_to_dict, split_edges, get_training_sample, make_validation_data, threadsafe_save_test_results
 from callbacks import PeriodicStdoutLogger, hyperboloid_to_klein, hyperboloid_to_poincare_ball, hyperbolic_distance_hyperboloid_pairwise
 from losses import hyperbolic_negative_sampling_loss, hyperbolic_sigmoid_loss, hyperbolic_softmax_loss, euclidean_negative_sampling_loss
 from metrics import evaluate_rank_and_MAP, evaluate_classification
@@ -66,11 +66,6 @@ def minkowski_dot(x, y):
 	# assert len(x.shape) == 2
 	axes = len(x.shape) - 1, len(y.shape) -1
 	return K.batch_dot( x[...,:-1], y[...,:-1], axes=axes) - K.batch_dot(x[...,-1:], y[...,-1:], axes=axes)
-	# rank = x.shape[1] - 1
-	# if len(y.shape) == 2:
-	#     return K.sum(x[:,:rank] * y[:,:rank], axis=-1, keepdims=True) - x[:,rank:] * y[:,rank:]
-	# else:
-	#     return K.batch_dot( x[:,:rank], y[:,:,:rank], axes=[1,2]) - K.batch_dot(x[:,rank:], y[:,:,rank:], axes=[1, 2])
 
 
 def hyperboloid_initializer(shape, r_max=1e-3):
@@ -357,6 +352,8 @@ def parse_args():
 		help="path to save random walks (default is 'walks/)'.")
 	parser.add_argument("--model", dest="model_path", default="models/", 
 		help="path to save model after each epoch (default is 'models/)'.")
+	parser.add_argument("--test-results", dest="test_results_path", default="test_results/", 
+		help="path to save test results (default is 'test_results/)'.")
 
 	parser.add_argument('--no-gpu', action="store_true", help='flag to train on cpu')
 
@@ -380,6 +377,10 @@ def parse_args():
 
 	args = parser.parse_args()
 	return args
+
+def touch(path):
+    with open(path, 'a'):
+        os.utime(path, None)
 
 def configure_paths(args):
 	'''
@@ -500,9 +501,6 @@ def main():
 
 	sys.stdout.flush()
 
-	# args.only_lcc = True
-
-
 	assert not sum([args.multiply_attributes, args.alpha>0, args.jump_prob>0]) > 1
 
 	random.seed(args.seed)
@@ -558,6 +556,8 @@ def main():
 	if args.evaluate_link_prediction:
 		train_edges, (val_edges, val_non_edges), (test_edges, test_non_edges) = split_edges(reconstruction_edges, non_edges, args)
 		n1, e1 = len(topology_graph), len(topology_graph.edges())
+		print ("number of validation edges: {}".format(len(val_edges)))
+		print ("number of test edges: {}".format(len(test_edges)))
 		print ("removing {} edges from training set".format(len(val_edges) + len(test_edges)))
 		topology_graph.remove_edges_from(val_edges + test_edges)
 		n2, e2 = len(topology_graph), len(topology_graph.edges())

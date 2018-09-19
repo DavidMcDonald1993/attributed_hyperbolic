@@ -10,15 +10,8 @@ import keras.backend as K
 
 
 def minkowski_dot(x, y):
-    # assert len(x.shape) == 2
     axes = len(x.shape) - 1, len(y.shape) -1
-    return K.batch_dot( x[...,:-1], y[...,:-1], axes=axes) - K.batch_dot(x[...,-1:], y[...,-1:], axes=axes)
-    # rank = x.shape[1] - 1
-    # if len(y.shape) == 2:
-    #     return K.sum(x[:,:rank] * y[:,:rank], axis=-1, keepdims=True) - x[:,rank:] * y[:,rank:]
-    # else:
-    #     return K.batch_dot( x[:,:rank], y[:,:,:rank], axes=[1,2]) - K.batch_dot(x[:,rank:], y[:,:,rank:], axes=[1, 2])
-
+    return K.batch_dot(x[...,:-1], y[...,:-1], axes=axes) - K.batch_dot(x[...,-1:], y[...,-1:], axes=axes)
 
 def hyperbolic_negative_sampling_loss(r, t):
 

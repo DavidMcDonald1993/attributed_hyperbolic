@@ -27,9 +27,9 @@ def minkowski_dot_pairwise(u, v):
 	"""
 	`u` and `v` are vectors in Minkowski space.
 	"""
-	rank = u.shape[-1] - 1
-	euc_dp = u[:,:rank].dot(v[:,:rank].T)
-	return euc_dp - u[:,rank, None] * v[:,rank]
+	# rank = u.shape[-1] - 1
+	euc_dp = u[:,:-1].dot(v[:,:-1].T)
+	return euc_dp - u[:,-1, None] * v[:,-1]
 
 def hyperbolic_distance_hyperboloid_pairwise(X, Y):
 	inner_product = minkowski_dot_pairwise(X, Y)
@@ -334,6 +334,7 @@ class PeriodicStdoutLogger(Callback):
 
 		# if self.args.verbose:
 		print ("reconstruction")
+		print (len(self.reconstruction_edges), len(self.non_edges))
 		# (mean_rank_reconstruction, map_reconstruction, 
 		# 	mean_roc_reconstruction) = evaluate_rank_and_MAP(dists, 
 		# 	self.reconstruction_edge_dict, self.non_edge_dict)
@@ -349,6 +350,7 @@ class PeriodicStdoutLogger(Callback):
 		if self.args.evaluate_link_prediction:
 			# if self.args.verbose:
 			print ("link prediction")
+			print (len(self.val_edges), len(self.val_non_edges))
 			# (mean_rank_lp, map_lp, 
 			# mean_roc_lp) = evaluate_rank_and_MAP(dists, 
 			# self.val_edge_dict, self.non_edge_dict)
