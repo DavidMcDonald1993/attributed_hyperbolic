@@ -227,8 +227,12 @@ def load_tf_interaction(args, ):
 
 def load_labels(filename, label_column="Cell Line", label_of_interest="Mesoderm"):
 	label_df = pd.read_csv(filename, index_col=0)
-	labels = np.array(label_df.loc[:,label_column]==label_of_interest, dtype=np.float)
-	return labels
+	if label_of_interest is not None:
+		labels = np.array(label_df.loc[:,label_column]==label_of_interest, dtype=np.float)
+		label_map = pd.Index(["other", label_of_interest])
+	else:
+		labels, label_map = pd.factorize(label_df[label_column])
+	return labels, label_map
 
 
 def parse_model_filename(args):

@@ -98,8 +98,8 @@ def make_validation_data(edges, non_edge_dict, args):
 
 	random.seed(args.seed)
 	random.shuffle(edges)
-
-	edges = np.array(edges)
+	if not isinstance(edges, np.ndarray):
+		edges = np.array(edges)
 	idx = np.random.choice(len(edges), size=min(len(edges), args.batch_size), replace=False,)
 	positive_samples = edges[idx]#
 	# non_edge_dict = convert_edgelist_to_dict(non_edges)

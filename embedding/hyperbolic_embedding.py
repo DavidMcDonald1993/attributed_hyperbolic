@@ -636,24 +636,27 @@ def main():
 	model.compile(optimizer=optimizer, loss=loss)
 	model.summary()
 
-	non_edge_dict = convert_edgelist_to_dict(non_edges)
-	if args.verbose:
-		print ("determined true non edges")
-	val_in, val_target = make_validation_data(reconstruction_edges, non_edge_dict, args)
-	if args.verbose:
-		print ("determined validation data")
+	if args.evaluate_link_prediction:
+		val_data = make_validation_data(val_edges, negative_samples, args)
+	else:
+		val_data = None
+
+	# non_edge_dict = convert_edgelist_to_dict(non_edges)
+	# print ("determined true non edges")
+	# val_in, val_target = make_validation_data(reconstruction_edges, non_edge_dict, args)
+	print ("determined validation data")
 
 	if args.evaluate_link_prediction:
 		# monitor = "mean_roc_reconstruction"
-		monitor = "map_lp"
-		mode = "max"
-		# monitor = "val_loss"
-		# mode = "min"
-	elif args.evaluate_class_prediction:
-		# monitor = "0.1_micro"
+		# monitor = "map_lp"
 		# mode = "max"
 		monitor = "val_loss"
 		mode = "min"
+	elif args.evaluate_class_prediction:
+		monitor = "0.1_micro"
+		mode = "max"
+		# monitor = "val_loss"
+		# mode = "min"
 	else:
 		monitor = "val_loss"#"mean_rank_reconstruction"
 		mode = "min"
@@ -680,7 +683,7 @@ def main():
 			model.fit_generator(training_gen, 
 				workers=args.workers, max_queue_size=25, use_multiprocessing=args.workers>0, steps_per_epoch=num_steps, 
 				epochs=args.num_epochs, initial_epoch=initial_epoch, verbose=args.verbose,
-				validation_data=[val_in, val_target],
+				validation_data=val_data,
 				callbacks=callbacks
 			)
 
@@ -695,7 +698,7 @@ def main():
 
 			model.fit(x, y, batch_size=args.batch_size, 
 				epochs=args.num_epochs, initial_epoch=initial_epoch, verbose=args.verbose,
-				validation_data=[val_in, val_target],
+				validation_data=val_data,
 				callbacks=callbacks
 			)
 
@@ -708,6 +711,12 @@ def main():
 	print ("Determined best model filename: {}".format(model_file))
 	embedding = load_embedding(model_file)
 	print (embedding)
+
+	print ("removing all other saved models")
+	for saved_model in saved_models[1:]:
+		old_model_path = os.path.join(self.args.model_path, saved_model)
+		print ("removing {}".format(old_model_path))
+		os.remove(old_model_path)
 
 	# hyperboloid_embedding = model.layers[-1].get_weights()[0]
 	if args.euclidean:
@@ -785,8 +794,6 @@ def main():
 	print ("saving test results to: {}".format(args.test_results_filename))
 	threadsafe_save_test_results(args.test_results_lock_filename, args.test_results_filename, 
 		args.seed, test_results)
-
-
 
 if __name__ == "__main__":
 	main()
