@@ -94,32 +94,29 @@ def get_training_sample(batch_positive_samples, negative_samples, num_negative_s
 	return batch_nodes
 
 
-def make_validation_data(edges, non_edge_dict, args):
+def make_validation_data(val_edges, val_non_edges, non_edge_dict, args):
 
-	# random.seed(args.seed)
-	# random.shuffle(edges)
-	if not isinstance(edges, np.ndarray):
-		edges = np.array(edges)
-	idx = np.arange(len(edges))
-	# idx = np.random.choice(len(edges), size=min(len(edges), args.batch_size), replace=False,)
-	positive_samples = edges[idx]#
-	# non_edge_dict = convert_edgelist_to_dict(non_edges)
+	val_edges = val_edges + [(v, u) for u, v in val_edges]
+
+	if not isinstance(val_edges, np.ndarray):
+		val_edges = np.array(val_edges)
+	idx = np.arange(len(val_edges))
+	positive_samples = val_edges[idx]#
+
+
+	# val_non_edge_dict = convert_edgelist_to_dict(val_non_edges)
+	# for l in val_non_edge_dict.values():
+	# 	print (len(l))
+	# print (len(val_non_edge_dict))
+	# raise SystemExit
+
 	negative_samples = np.array([
 		np.random.choice(non_edge_dict[u], size=args.num_negative_samples, replace=True,)
 		for u in positive_samples[:,0]
 	])
 	x = np.append(positive_samples, negative_samples, axis=-1)
-	# x = get_training_sample(positive_samples, 
-	# 	non_edge_dict, args.num_negative_samples, probs=None)
-	# y = np.zeros(list(x.shape)+[1], dtype=np.int64)
 	y = np.zeros((len(x), args.num_positive_samples + args.num_negative_samples, 1))
 	y[:,0] = 1
-	# for u, v, _negative_samples in zip(x[:,0], x[:,1], x[:,2:]):
-	# 	print (u, v)
-	# 	assert v not in _negative_samples
-	# print ("done")
-	# print (edges[-5:])
-	# raise SystemExit
 
 	return x, y
 

@@ -108,7 +108,7 @@ def hyperbolic_softmax_loss(alpha=0):
         ##+ alpha * K.mean(y_pred[:,0,-1] - y_pred[:,1,-1])
         # print (y_true.shape, d_uv.shape)
         # raise SystemExit
-        return K.mean(tf.nn.softmax_cross_entropy_with_logits_v2(labels=K.stop_gradient(y_true[...,0]), logits=-d_uv))
+        return K.mean(tf.nn.softmax_cross_entropy_with_logits(labels=K.stop_gradient(y_true[...,0]), logits=-d_uv))
         # exp_minus_d_uv_sq = K.exp(-d_uv)
         # exp_minus_d_uv_sq = K.maximum(exp_minus_d_uv_sq, K.cast(1e-45, K.floatx())) 
 

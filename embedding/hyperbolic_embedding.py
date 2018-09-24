@@ -443,13 +443,6 @@ def configure_paths(args):
 		os.makedirs(args.log_path)
 	args.log_path += "{}.csv".format(dataset)
 
-	# args.board_path = os.path.join(args.board_path, dataset)
-	# if not os.path.exists(args.board_path):
-	#   os.makedirs(args.board_path)
-	# args.board_path = os.path.join(args.board_path, directory)
-	# if not os.path.exists(args.board_path):
-	#   os.makedirs(args.board_path)
-
 	args.walk_path = os.path.join(args.walk_path, dataset)
 	if not os.path.exists(args.walk_path):
 		os.makedirs(args.walk_path)
@@ -539,9 +532,6 @@ def main():
 	# original edges for reconstruction
 	reconstruction_edges = topology_graph.edges()
 	non_edges = list(nx.non_edges(topology_graph))
-
-	# if args.directed:
-	# 	non_edges = list(set(non_edges) - {(v, u) for u, v in reconstruction_edges})
 
 	# if args.verbose:
 	print ("determined reconstruction edges and non-edges")
@@ -640,7 +630,7 @@ def main():
 	model.summary()
 
 	if args.evaluate_link_prediction:
-		val_data = make_validation_data(val_edges, negative_samples, args)
+		val_data = make_validation_data(val_edges, val_non_edges, negative_samples, args)
 	else:
 		val_data = None
 
@@ -720,11 +710,11 @@ def main():
 	embedding = load_embedding(model_file)
 	print (embedding)
 
-	print ("removing all other saved models")
-	for saved_model in saved_models[1:]:
-		old_model_path = os.path.join(args.model_path, saved_model)
-		print ("removing {}".format(old_model_path))
-		os.remove(old_model_path)
+	# print ("removing all other saved models")
+	# for saved_model in saved_models[1:]:
+	# 	old_model_path = os.path.join(args.model_path, saved_model)
+	# 	print ("removing {}".format(old_model_path))
+	# 	os.remove(old_model_path)
 
 	if args.euclidean:
 		dists = euclidean_distances(embedding)
