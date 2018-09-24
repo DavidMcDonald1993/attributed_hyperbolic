@@ -323,14 +323,19 @@ class PeriodicStdoutLogger(Callback):
 
 		hyperboloid_embedding = self.model.layers[-1].get_weights()[0]
 		# print (hyperboloid_embedding)
+
 		# print (minkowski_dot_np(hyperboloid_embedding, hyperboloid_embedding))
 
 		if self.args.euclidean:
 			dists = euclidean_distances(hyperboloid_embedding)
 		else:
 			dists = hyperbolic_distance_hyperboloid_pairwise(hyperboloid_embedding, hyperboloid_embedding)
-
+		# print (dists)
 		# print minkowski_dot_np(hyperboloid_embedding, hyperboloid_embedding)
+
+		# grads = self.get_gradients()
+
+		# print (grads[0].values.eval())
 
 		# if self.args.verbose:
 		print ("reconstruction")
@@ -384,6 +389,7 @@ class PeriodicStdoutLogger(Callback):
 			for label_percentage, f1_micro, f1_macro in zip(label_percentages, f1_micros, f1_macros):
 				logs.update({"{}_micro".format(label_percentage): f1_micro})
 				logs.update({"{}_macro".format(label_percentage): f1_macro})
+			logs.update({"micro_sum" : np.sum(f1_micros)})
 
 
 
@@ -438,3 +444,20 @@ class PeriodicStdoutLogger(Callback):
 		filename = os.path.join(self.args.model_path, "{:05d}.h5".format(self.epoch))
 		print("saving model to {}".format(filename))
 		self.model.save_weights(filename)
+
+	def get_gradients(self):
+	    """Return the gradient of every trainable weight in model
+
+	    Parameters
+	    -----------
+	    model : a keras model instance
+
+	    First, find all tensors which are trainable in the model. 
+	    Next, get the gradients of the loss with respect to the weights.
+
+	    """
+	    model = self.model
+	    weights = model.trainable_weights
+	    optimizer = model.optimizer
+
+	    return optimizer.get_gradients(model.total_loss, weights)

@@ -8,10 +8,6 @@ from utils import get_training_sample
 
 from keras.utils import Sequence
 
-# import threading
-
-# from sklearn.preprocessing import LabelBinarizer
-
 class TrainingSequence(Sequence):
 
 	def __init__(self, positive_samples, negative_samples, alias_dict, args):
@@ -64,7 +60,9 @@ class TrainingSequence(Sequence):
 		training_sample = self.get_training_sample(batch_positive_samples, )
 		# training_sample = self.binarizer[training_sample]
 		# print training_sample.shape
-		return training_sample, np.zeros(list(training_sample.shape)+[1], dtype=np.int64)
+		target = np.zeros((training_sample.shape[0], training_sample.shape[1]-1, 1 ))
+		target[:,0] = 1
+		return training_sample, target
 
 	def on_epoch_end(self):
 		random.shuffle(self.positive_samples)
@@ -96,27 +94,27 @@ class TrainingSequence(Sequence):
 # 	return g
 
 # @threadsafe_generator
-def training_generator(positive_samples, negative_samples, alias_dict,
-	args,):
+# def training_generator(positive_samples, negative_samples, alias_dict,
+# 	args,):
 	
-	random.seed(args.seed)
+# 	random.seed(args.seed)
 
-	batch_size = args.batch_size
-	num_negative_samples = args.num_negative_samples
-	n = len(negative_samples)
-	num_steps = int((len(positive_samples) + batch_size - 1 )/ batch_size)
-	# I = sp.sparse.csr_matrix(sp.sparse.identity(n))
-	# I = np.identity(n)
+# 	batch_size = args.batch_size
+# 	num_negative_samples = args.num_negative_samples
+# 	n = len(negative_samples)
+# 	num_steps = int((len(positive_samples) + batch_size - 1 )/ batch_size)
+# 	# I = sp.sparse.csr_matrix(sp.sparse.identity(n))
+# 	# I = np.identity(n)
 
-	while True:
+# 	while True:
 
-		random.shuffle(positive_samples)
+# 		random.shuffle(positive_samples)
 
-		for step in range(num_steps):
+# 		for step in range(num_steps):
 
-			batch_positive_samples = np.array(
-				positive_samples[step * batch_size : (step + 1) * batch_size]).astype(np.int64)
-			training_sample = get_training_sample(batch_positive_samples, 
-												  negative_samples, num_negative_samples, alias_dict)
-			# training_sample = I[training_sample.flatten()].reshape(list(training_sample.shape) + [-1])
-			yield training_sample, np.zeros(list(training_sample.shape)+[1], dtype=np.int64)
+# 			batch_positive_samples = np.array(
+# 				positive_samples[step * batch_size : (step + 1) * batch_size]).astype(np.int64)
+# 			training_sample = get_training_sample(batch_positive_samples, 
+# 												  negative_samples, num_negative_samples, alias_dict)
+# 			# training_sample = I[training_sample.flatten()].reshape(list(training_sample.shape) + [-1])
+# 			yield training_sample, np.zeros(list(training_sample.shape)+[1], dtype=np.int64)

@@ -3,12 +3,6 @@ import numpy as np
 import tensorflow as tf 
 import keras.backend as K
 
-
-# max_norm = np.nextafter(1, 0, dtype=K.floatx())
-# max_ = np.finfo(K.floatx()).max
-# min_norm = 1e-7
-
-
 def minkowski_dot(x, y):
     axes = len(x.shape) - 1, len(y.shape) -1
     return K.batch_dot(x[...,:-1], y[...,:-1], axes=axes) - K.batch_dot(x[...,-1:], y[...,-1:], axes=axes)
@@ -95,7 +89,6 @@ def euclidean_softmax_loss(alpha=0):
         exp_minus_d_uv_sq = K.maximum(exp_minus_d_uv_sq, K.cast(1e-45, K.floatx())) 
 
         return -K.mean(K.log(exp_minus_d_uv_sq[:,0] / K.sum(exp_minus_d_uv_sq[:,0:], axis=-1)))
-        
 
     return loss
 
@@ -110,15 +103,16 @@ def hyperbolic_softmax_loss(alpha=0):
         
         inner_uv = minkowski_dot(u_emb, samples_emb)
         inner_uv = K.minimum(inner_uv, -(1+K.epsilon()))
-        # inner_uv = K.minimum(inner_uv, K.cast(-1., K.floatx()))
-
 
         d_uv = tf.acosh(-inner_uv)
         ##+ alpha * K.mean(y_pred[:,0,-1] - y_pred[:,1,-1])
-        exp_minus_d_uv_sq = K.exp(-d_uv)
-        exp_minus_d_uv_sq = K.maximum(exp_minus_d_uv_sq, K.cast(1e-45, K.floatx())) 
+        # print (y_true.shape, d_uv.shape)
+        # raise SystemExit
+        return K.mean(tf.nn.softmax_cross_entropy_with_logits_v2(labels=K.stop_gradient(y_true[...,0]), logits=-d_uv))
+        # exp_minus_d_uv_sq = K.exp(-d_uv)
+        # exp_minus_d_uv_sq = K.maximum(exp_minus_d_uv_sq, K.cast(1e-45, K.floatx())) 
 
-        return -K.mean(K.log(exp_minus_d_uv_sq[:,0] / K.sum(exp_minus_d_uv_sq[:,0:], axis=-1)))
+        # return -K.mean(K.log(exp_minus_d_uv_sq[:,0] / K.sum(exp_minus_d_uv_sq, axis=-1)))
         
 
     return loss

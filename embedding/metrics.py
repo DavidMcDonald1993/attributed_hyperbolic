@@ -21,11 +21,6 @@ def evaluate_rank_and_MAP(dists, edgelist, non_edgelist):
 	edge_dists = dists[edgelist[:,0], edgelist[:,1]]
 	non_edge_dists = dists[non_edgelist[:,0], non_edgelist[:,1]]
 
-	# print (edgelist[:5])
-	# print (edge_dists[:5])
-	# print (non_edgelist[:5])
-	# print (non_edge_dists[:5])
-
 
 	labels = np.append(np.ones_like(edge_dists), np.zeros_like(non_edge_dists))
 	scores = -np.append(edge_dists, non_edge_dists)

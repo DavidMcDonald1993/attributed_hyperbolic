@@ -28,7 +28,7 @@ from callbacks import PeriodicStdoutLogger, hyperboloid_to_klein, hyperboloid_to
 from losses import hyperbolic_negative_sampling_loss, hyperbolic_sigmoid_loss, hyperbolic_softmax_loss, euclidean_negative_sampling_loss
 from metrics import evaluate_rank_and_MAP, evaluate_classification
 from callbacks import plot_disk_embeddings, plot_euclidean_embedding, plot_roc, plot_classification, plot_precisions_recalls
-from generators import training_generator, TrainingSequence
+from generators import TrainingSequence
 
 from keras.layers import Input, Layer, Dense, Embedding
 from keras.models import Model
@@ -144,6 +144,27 @@ class ExponentialMappingOptimizer(optimizer.Optimizer):
 		
 		return tf.assign(var, exp_map)
 		
+	def _apply_sparse(self, grad, var):
+			# assert False
+			indices = grad.indices
+			values = grad.values
+			# dense_shape = grad.dense_shape
+			# p = tf.nn.embedding_lookup(var, indices)
+			p = tf.gather(var, indices, name="gather_apply_sparse")
+
+			lr_t = math_ops.cast(self._lr_t, var.dtype.base_dtype)
+			spacial_grad = values[:,:-1]
+			t_grad = -values[:,-1:]
+
+			ambient_grad = tf.concat([spacial_grad, t_grad], axis=-1, name="optimizer_concat")
+			tangent_grad = self.project_onto_tangent_space(p, ambient_grad)
+			# exp_map = ambient_grad
+			exp_map = self.exponential_mapping(p, - lr_t * tangent_grad)
+
+			out = tf.scatter_update(ref=var, updates=exp_map, indices=indices, name="scatter_update")
+
+			return out
+	
 	def project_onto_tangent_space(self, hyperboloid_point, minkowski_tangent):
 		tang = minkowski_tangent + minkowski_dot(hyperboloid_point, minkowski_tangent) * hyperboloid_point
 		return tang
@@ -188,28 +209,7 @@ class ExponentialMappingOptimizer(optimizer.Optimizer):
 
 		return exp_map
 
-	def _apply_sparse(self, grad, var):
-		# assert False
-		indices = grad.indices
-		values = grad.values
-		# dense_shape = grad.dense_shape
-		# p = tf.nn.embedding_lookup(var, indices)
-		p = tf.gather(var, indices, name="gather_apply_sparse")
-
-		lr_t = math_ops.cast(self._lr_t, var.dtype.base_dtype)
-		spacial_grad = values[:,:-1]
-		t_grad = -values[:,-1:]
-
-		ambient_grad = tf.concat([spacial_grad, t_grad], axis=-1, name="optimizer_concat")
-		tangent_grad = self.project_onto_tangent_space(p, ambient_grad)
-		# exp_map = ambient_grad
-		exp_map = self.exponential_mapping(p, - lr_t * tangent_grad)
-
-		out = tf.scatter_update(ref=var, updates=exp_map, indices=indices, name="scatter_update")
-
-		# return control_flow_ops.group(out, name="grouping")
-		return out
-		# return tf.assign(var, var)
+	
 
 def build_model(num_nodes, args):
 
@@ -219,23 +219,13 @@ def build_model(num_nodes, args):
 			embeddings_regularizer=None, name="embedding_layer")(x)
 	else:
 		y = EmbeddingLayer(num_nodes, args.embedding_dim, name="embedding_layer")(x)
-	# y = Dense(args.embedding_dim, use_bias=False, activation=None, 
-	#   kernel_initializer=hyperboloid_initializer, name="embedding_layer")(x)
 
 	model = Model(x, y)
-
-
-	# if os.path.exists(args.model_path):
-	#   print ("Loading model from file: {}".format(args.model_path))
-	#   model.load_weights(args.model_path)
 
 	initial_epoch = 0
 
 	saved_models = sorted([f for f in os.listdir(args.model_path) 
 		if re.match(r"^[0-9][0-9][0-9][0-9]*", f)])
-	# initial_epoch = len(saved_models)
-
-	# print (model.layers[-1].get_weights()[0])
 
 	if len(saved_models) > 0:
 
@@ -408,7 +398,6 @@ def configure_paths(args):
 	else: 
 		directory += "no_lp/"
 
-
 	if args.softmax:
 		directory += "softmax_loss/"
 	elif args.sigmoid:
@@ -418,8 +407,6 @@ def configure_paths(args):
 	else:
 		directory += "hyperbolic_distance_loss/r={}_t={}/".format(args.r, args.t)
 
-
-	
 	if args.multiply_attributes:
 		directory += "multiply_attributes/"
 	elif args.alpha>0:
@@ -617,6 +604,22 @@ def main():
 		determine_positive_and_negative_samples(nodes=topology_graph.nodes(), 
 		walks=walks, context_size=args.context_size, directed=args.directed)
 
+	# c = 0
+	# for edge in val_edges:
+	# 	if edge in positive_samples:
+	# 		c += 1
+	# print ("kept edges {}/{}".format(c, len(val_edges)))
+
+	# c = 0
+
+	# for u, v in val_non_edges:
+	# 	if v in negative_samples[u]:
+	# 		c += 1
+	# print ("kept edges {}/{}".format(c, len(val_non_edges)))
+
+
+	# raise SystemExit
+
 	num_nodes = len(topology_graph)
 	num_steps = int((len(positive_samples) + args.batch_size - 1) / args.batch_size)
 	model, initial_epoch = build_model(num_nodes, args)
@@ -651,14 +654,15 @@ def main():
 		# monitor = "map_lp"
 		# mode = "max"
 		monitor = "val_loss"
+		# monitor = "loss"
 		mode = "min"
 	elif args.evaluate_class_prediction:
-		monitor = "0.1_micro"
+		monitor = "micro_sum"
 		mode = "max"
 		# monitor = "val_loss"
 		# mode = "min"
 	else:
-		monitor = "val_loss"#"mean_rank_reconstruction"
+		monitor = "val_loss"
 		mode = "min"
 	early_stopping = EarlyStopping(monitor=monitor, mode=mode, patience=args.patience, verbose=1)
 	logger = PeriodicStdoutLogger(reconstruction_edges, non_edges, val_edges, val_non_edges, labels, label_info,
@@ -681,7 +685,9 @@ def main():
 			sys.stdout.flush()
 
 			model.fit_generator(training_gen, 
-				workers=args.workers, max_queue_size=25, use_multiprocessing=args.workers>0, steps_per_epoch=num_steps, 
+				workers=args.workers, max_queue_size=25, 
+				use_multiprocessing=args.workers>0, 
+				steps_per_epoch=num_steps, 
 				epochs=args.num_epochs, initial_epoch=initial_epoch, verbose=args.verbose,
 				validation_data=val_data,
 				callbacks=callbacks
@@ -691,7 +697,9 @@ def main():
 			print ("Training without data generator")
 
 			x = get_training_sample(np.array(positive_samples), negative_samples, args.num_negative_samples, alias_dict)
-			y = np.zeros(list(x.shape) + [1])
+			# y = np.zeros(list(x.shape) + [1])
+			y = np.zeros((len(x), args.num_positive_samples + args.num_negative_samples, 1))
+			y[:,0] = 1
 			print ("determined training samples")
 
 			sys.stdout.flush()
@@ -714,11 +722,10 @@ def main():
 
 	print ("removing all other saved models")
 	for saved_model in saved_models[1:]:
-		old_model_path = os.path.join(self.args.model_path, saved_model)
+		old_model_path = os.path.join(args.model_path, saved_model)
 		print ("removing {}".format(old_model_path))
 		os.remove(old_model_path)
 
-	# hyperboloid_embedding = model.layers[-1].get_weights()[0]
 	if args.euclidean:
 		dists = euclidean_distances(embedding)
 	else:
