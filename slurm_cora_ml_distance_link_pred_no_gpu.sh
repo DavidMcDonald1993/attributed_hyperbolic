@@ -24,6 +24,6 @@ module load apps/keras/2.0.8-python-3.5.2
 
 echo "staring dataset=cora_ml ct1 "${ARR[${SLURM_ARRAY_TASK_ID}]}
 python embedding/hyperbolic_embedding.py --dataset cora_ml \
---data-directory ${PROJECT_DIR}/data --patience 100 --no-load ${ARR[${SLURM_ARRAY_TASK_ID}]} \
+--data-directory ${PROJECT_DIR}/data --patience 1000 --lr .1 -e 1000 --no-load ${ARR[${SLURM_ARRAY_TASK_ID}]} \
 --context-size 1 
 echo "completed dataset=cora_ml ct1"${ARR[${SLURM_ARRAY_TASK_ID}]}

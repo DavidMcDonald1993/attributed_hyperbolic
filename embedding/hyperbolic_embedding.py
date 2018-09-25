@@ -603,7 +603,7 @@ def main():
 	# c = 0
 
 	# for u, v in val_non_edges:
-	# 	if v in negative_samples[u]:
+	# 	if v in negative_samples[u] and u in negative_samples[v]:
 	# 		c += 1
 	# print ("kept edges {}/{}".format(c, len(val_non_edges)))
 
@@ -662,7 +662,9 @@ def main():
 		TerminateOnNaN(), 
 		logger,
 		CSVLogger(args.log_path, append=True), 
-		early_stopping
+		early_stopping,
+		ModelCheckpoint(os.path.join(args.model_path, "best_model.h5"), monitor=monitor, mode=mode, 
+			save_best_only=True, save_weights_only=True)
 	]
 
 	if train:
@@ -702,9 +704,10 @@ def main():
 
 	print ("Training completed -- loading best model according to {}".format(monitor))
 
-	saved_models = sorted([f for f in os.listdir(args.model_path) 
-		if re.match(r"^[0-9][0-9][0-9][0-9]*", f)])
-	model_file = os.path.join(args.model_path, saved_models[0])
+	# saved_models = sorted([f for f in os.listdir(args.model_path) 
+	# 	if re.match(r"^[0-9][0-9][0-9][0-9]*", f)])
+	# model_file = os.path.join(args.model_path, saved_models[0])
+	model_file = os.path.join(args.model_path, "best_model.h5")
 
 	print ("Determined best model filename: {}".format(model_file))
 	embedding = load_embedding(model_file)

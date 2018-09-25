@@ -110,11 +110,23 @@ def make_validation_data(val_edges, val_non_edges, non_edge_dict, args):
 	# print (len(val_non_edge_dict))
 	# raise SystemExit
 
+	# for u in positive_samples[:,0]:
+	# 	print (np.random.choice(non_edge_dict[u], size=args.num_negative_samples, replace=True,))
+	# raise SystemExit
+
 	negative_samples = np.array([
 		np.random.choice(non_edge_dict[u], size=args.num_negative_samples, replace=True,)
 		for u in positive_samples[:,0]
 	])
+
 	x = np.append(positive_samples, negative_samples, axis=-1)
+	# print (x.shape)
+	# c = 0
+	# for u, v, neg_list in zip(x[:,0], x[:,1], x[:,2:]):
+	# 	if v in neg_list:
+	# 		c += 1
+	# print ("{}/{}".format(c, x.shape[0]))
+	# raise SystemExit
 	y = np.zeros((len(x), args.num_positive_samples + args.num_negative_samples, 1))
 	y[:,0] = 1
 
