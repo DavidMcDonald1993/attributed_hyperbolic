@@ -15,7 +15,7 @@ from sklearn.metrics import roc_curve, roc_auc_score, precision_recall_curve
 from keras.callbacks import Callback
 from utils import convert_edgelist_to_dict
 
-from metrics import evaluate_rank_and_MAP, evaluate_classification
+from metrics import evaluate_rank_and_MAP, evaluate_rank_and_MAP_fb, evaluate_classification
 
 
 # def minkowski_dot_np(x, y):
@@ -299,13 +299,13 @@ class PeriodicStdoutLogger(Callback):
 		epoch, n, args):
 		self.reconstruction_edges = reconstruction_edges
 		self.non_edges = non_edges
+		self.reconstruction_edge_dict = convert_edgelist_to_dict(reconstruction_edges)
+		self.non_edge_dict = convert_edgelist_to_dict(non_edges)
 
-		# self.reconstruction_edge_dict = convert_edgelist_to_dict(reconstruction_edges)
 		self.val_edges = val_edges
 		self.val_non_edges = val_non_edges
-		# self.val_edge_dict = convert_edgelist_to_dict(val_edges)
-		# self.non_edge_dict = convert_edgelist_to_dict(non_edges)
-		# self.non_edge_dict = non_edge_dict
+		self.val_edge_dict = convert_edgelist_to_dict(val_edges)
+		# self.val_non_edge_dict = convert_edgelist_to_dict(val_non_edges)
 		self.labels = labels
 		self.label_info = label_info
 		self.epoch = epoch
@@ -330,19 +330,11 @@ class PeriodicStdoutLogger(Callback):
 			dists = euclidean_distances(hyperboloid_embedding)
 		else:
 			dists = hyperbolic_distance_hyperboloid_pairwise(hyperboloid_embedding, hyperboloid_embedding)
-		# print (dists)
+		print (dists)
 		# print minkowski_dot_np(hyperboloid_embedding, hyperboloid_embedding)
-
-		# grads = self.get_gradients()
-
-		# print (grads[0].values.eval())
 
 		# if self.args.verbose:
 		print ("reconstruction")
-		# print (len(self.reconstruction_edges), len(self.non_edges))
-		# (mean_rank_reconstruction, map_reconstruction, 
-		# 	mean_roc_reconstruction) = evaluate_rank_and_MAP(dists, 
-		# 	self.reconstruction_edge_dict, self.non_edge_dict)
 		(mean_rank_reconstruction, map_reconstruction, 
 			mean_roc_reconstruction) = evaluate_rank_and_MAP(dists, 
 			self.reconstruction_edges, self.non_edges)
@@ -351,15 +343,19 @@ class PeriodicStdoutLogger(Callback):
 			"map_reconstruction": map_reconstruction,
 			"mean_roc_reconstruction": mean_roc_reconstruction})
 
+		print ("reconstruction fb")
+		(mean_rank_reconstruction_fb, map_reconstruction_fb, 
+			mean_roc_reconstruction_fb) = evaluate_rank_and_MAP_fb(dists, 
+			self.reconstruction_edge_dict, self.non_edge_dict)
+
+		logs.update({"mean_rank_reconstruction_fb": mean_rank_reconstruction_fb, 
+			"map_reconstruction_fb": map_reconstruction_fb,
+			"mean_roc_reconstruction_fb": mean_roc_reconstruction_fb})
+
 
 		if self.args.evaluate_link_prediction:
 			# if self.args.verbose:
 			print ("link prediction")
-			# print (len(self.val_edges), len(self.val_non_edges))
-			# (mean_rank_lp, map_lp, 
-			# mean_roc_lp) = evaluate_rank_and_MAP(dists, 
-			# self.val_edge_dict, self.non_edge_dict)
-
 			(mean_rank_lp, map_lp, 
 			mean_roc_lp) = evaluate_rank_and_MAP(dists, 
 			self.val_edges, self.val_non_edges)
@@ -367,6 +363,15 @@ class PeriodicStdoutLogger(Callback):
 			logs.update({"mean_rank_lp": mean_rank_lp, 
 				"map_lp": map_lp,
 				"mean_roc_lp": mean_roc_lp})
+
+			print ("link prediction fb")
+			(mean_rank_lp_fb, map_lp_fb, 
+			mean_roc_lp_fb) = evaluate_rank_and_MAP_fb(dists, 
+			self.val_edge_dict, self.non_edge_dict)
+
+			logs.update({"mean_rank_lp_fb": mean_rank_lp_fb, 
+				"map_lp_fb": map_lp_fb,
+				"mean_roc_lp_fb": mean_roc_lp_fb})
 		else:
 
 			mean_rank_lp, map_lp, mean_roc_lp = None, None, None

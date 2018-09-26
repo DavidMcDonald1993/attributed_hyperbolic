@@ -46,37 +46,40 @@ def evaluate_rank_and_MAP_fb(dists, edge_dict, non_edge_dict):
 	roc_auc_scores = []
 	
 	for u, neighbours in edge_dict.items():
-		# _dists = dists[u, neighbours + non_edge_dict[u]]
-		# _labels = np.append(np.ones(len(neighbours)), np.zeros(len(non_edge_dict[u])))
-		_dists = dists[u]
-		_dists[u] = 1e+12
-		_labels = np.zeros(embedding.shape[0])
-		_dists_masked = _dists.copy()
-		_ranks = []
-		for v in v_set:
-			_labels[v] = 1
-			_dists_masked[v] = np.Inf
+		# print (neighbours)
+		# print (non_edge_dict[u])
+		# raise SystemExit
+		_dists = dists[u, neighbours + non_edge_dict[u]]
+		_labels = np.append(np.ones(len(neighbours)), np.zeros(len(non_edge_dict[u])))
+		# _dists = dists[u]
+		# _dists[u] = 1e+12
+		# _labels = np.zeros(dists.shape[0])
+		# _dists_masked = _dists.copy()
+		# _ranks = []
+		# for v in neighbours:
+		# 	_labels[v] = 1
+		# 	_dists_masked[v] = np.Inf
 		ap_scores.append(average_precision_score(_labels, -_dists))
 		roc_auc_scores.append(roc_auc_score(_labels, -_dists))
 
-		# neighbour_dists = dists[u, neighbours]
-		# non_neighbour_dists = dists[u, non_edge_dict[u]]
-		# idx = non_neighbour_dists.argsort()
-		# _ranks = np.searchsorted(non_neighbour_dists, neighbour_dists, sorter=idx) + 1
+		neighbour_dists = dists[u, neighbours]
+		non_neighbour_dists = dists[u, non_edge_dict[u]]
+		idx = non_neighbour_dists.argsort()
+		_ranks = np.searchsorted(non_neighbour_dists, neighbour_dists, sorter=idx) + 1
 
-		_ranks = []
-		_dists_masked = _dists.copy()
-		_dists_masked[:len(neighbours)] = np.inf
+		# _ranks = []
+		# _dists_masked = _dists.copy()
+		# _dists_masked[:len(neighbours)] = np.inf
 
-		for v in neighbours:
-			d = _dists_masked.copy()
-			d[v] = _dists[v]
-			r = np.argsort(d)
-			_ranks.append(np.where(r==v)[0][0] + 1)
+		# for v in neighbours:
+		# 	d = _dists_masked.copy()
+		# 	d[v] = _dists[v]
+		# 	r = np.argsort(d)
+		# 	_ranks.append(np.where(r==v)[0][0] + 1)
 
 		ranks.append(np.mean(_ranks))
-	print ("MEAN RANK=", np.mean(ranks), "MEAN AP=", np.mean(ap_scores), 
-		"MEAN ROC AUC=", np.mean(roc_auc_scores))
+	print ("MEAN RANK =", np.mean(ranks), "MEAN AP =", np.mean(ap_scores), 
+		"MEAN ROC AUC =", np.mean(roc_auc_scores))
 	return np.mean(ranks), np.mean(ap_scores), np.mean(roc_auc_scores)
 
 def evaluate_classification(klein_embedding, labels, args,

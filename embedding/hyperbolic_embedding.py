@@ -22,7 +22,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from sklearn.metrics.pairwise import cosine_similarity, euclidean_distances
 
-from data_utils import load_karate, load_labelled_attributed_network, load_ppi, load_g2g_datasets, load_tf_interaction, load_wordnet
+from data_utils import load_karate, load_labelled_attributed_network, load_ppi, load_g2g_datasets, load_tf_interaction, load_wordnet, load_collaboration_network
 from utils import load_walks, determine_positive_and_negative_samples, convert_edgelist_to_dict, split_edges, get_training_sample, make_validation_data, threadsafe_save_test_results
 from callbacks import PeriodicStdoutLogger, hyperboloid_to_klein, hyperboloid_to_poincare_ball, hyperbolic_distance_hyperboloid_pairwise
 from losses import hyperbolic_negative_sampling_loss, hyperbolic_sigmoid_loss, hyperbolic_softmax_loss, euclidean_negative_sampling_loss
@@ -165,8 +165,8 @@ class ExponentialMappingOptimizer(optimizer.Optimizer):
 
 			return out
 	
-	def project_onto_tangent_space(self, hyperboloid_point, minkowski_tangent):
-		tang = minkowski_tangent + minkowski_dot(hyperboloid_point, minkowski_tangent) * hyperboloid_point
+	def project_onto_tangent_space(self, hyperboloid_point, minkowski_ambient):
+		tang = minkowski_ambient + minkowski_dot(hyperboloid_point, minkowski_ambient) * hyperboloid_point
 		return tang
    
 	def exponential_mapping( self, p, x, ):
@@ -254,9 +254,9 @@ def parse_args():
 	parser.add_argument("--data-directory", dest="data_directory", type=str, default="/data/",
 		help="The directory containing data files (default is '/data/').")
 
-	parser.add_argument("--dataset", dest="dataset", type=str, default="karate",
+	parser.add_argument("--dataset", dest="dataset", type=str, default="cora_ml",
 		help="The dataset to load. Must be one of [wordnet, cora, citeseer, pubmed,\
-		AstroPh, CondMat, GrQc, HepPh, karate]. (Default is karate)")
+		AstroPh, CondMat, GrQc, HepPh, karate]. (Default is cora_ml)")
 
 	parser.add_argument("--seed", dest="seed", type=int, default=0,
 		help="Random seed (default is 0).")
@@ -516,6 +516,8 @@ def main():
 	elif dataset in ["cora", "cora_ml", "pubmed", "citeseer"]:
 		# topology_graph, features, labels = load_labelled_attributed_network(dataset, args)
 		topology_graph, features, labels, label_info = load_g2g_datasets(dataset, args)
+	elif dataset in ["AstroPh", "CondMat", "GrQc", "HepPh"]:
+		topology_graph, features, labels, label_info = load_collaboration_network(args)
 	elif dataset == "ppi":
 		topology_graph, features, labels = load_ppi(args)
 	elif dataset == "tf_interaction":
@@ -625,12 +627,11 @@ def main():
 		if args.euclidean
 		else hyperbolic_negative_sampling_loss(r=args.r, t=args.t)
 	)
-	# optimizer=tf.train.GradientDescentOptimizer(0.05)
 	model.compile(optimizer=optimizer, loss=loss)
 	model.summary()
 
 	if args.evaluate_link_prediction:
-		val_data = make_validation_data(val_edges, val_non_edges, negative_samples, args)
+		val_data = make_validation_data(val_edges, val_non_edges, negative_samples, alias_dict, args)
 	else:
 		val_data = None
 
@@ -641,19 +642,19 @@ def main():
 
 	if args.evaluate_link_prediction:
 		# monitor = "mean_roc_reconstruction"
-		# monitor = "map_lp"
-		# mode = "max"
-		monitor = "val_loss"
+		monitor = "map_lp"
+		mode = "max"
+		# monitor = "val_loss"
 		# monitor = "loss"
-		mode = "min"
+		# mode = "min"
 	elif args.evaluate_class_prediction:
 		monitor = "micro_sum"
 		mode = "max"
 		# monitor = "val_loss"
 		# mode = "min"
 	else:
-		monitor = "val_loss"
-		mode = "min"
+		monitor = "map_reconstruction"
+		mode = "max"
 	early_stopping = EarlyStopping(monitor=monitor, mode=mode, patience=args.patience, verbose=1)
 	logger = PeriodicStdoutLogger(reconstruction_edges, non_edges, val_edges, val_non_edges, labels, label_info,
 				n=args.plot_freq, epoch=initial_epoch, args=args) 
@@ -689,7 +690,7 @@ def main():
 			print ("Training without data generator")
 
 			x = get_training_sample(np.array(positive_samples), negative_samples, args.num_negative_samples, alias_dict)
-			# y = np.zeros(list(x.shape) + [1])
+			# y = np.zeros(len(x))
 			y = np.zeros((len(x), args.num_positive_samples + args.num_negative_samples, 1))
 			y[:,0] = 1
 			print ("determined training samples")

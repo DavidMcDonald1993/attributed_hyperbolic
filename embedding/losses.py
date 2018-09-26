@@ -94,9 +94,13 @@ def euclidean_softmax_loss(alpha=0):
 
 def hyperbolic_softmax_loss(alpha=0):
 
+    def acosh(x):
+        return K.log(x + K.sqrt(K.square(x) - 1))
+
     def loss(y_true, y_pred, alpha=alpha):
 
-        alpha = K.cast(alpha, K.floatx())
+
+        # alpha = K.cast(alpha, K.floatx())
 
         u_emb = y_pred[:,0]
         samples_emb = y_pred[:,1:]
@@ -104,14 +108,11 @@ def hyperbolic_softmax_loss(alpha=0):
         inner_uv = minkowski_dot(u_emb, samples_emb)
         inner_uv = K.minimum(inner_uv, -(1+K.epsilon()))
 
-        d_uv = tf.acosh(-inner_uv)
-        ##+ alpha * K.mean(y_pred[:,0,-1] - y_pred[:,1,-1])
-        # print (y_true.shape, d_uv.shape)
-        # raise SystemExit
-        return K.mean(tf.nn.softmax_cross_entropy_with_logits(labels=K.stop_gradient(y_true[...,0]), logits=-d_uv))
+        minus_d_uv = - acosh(-inner_uv)# ** 2
+        # minus_d_uv -= K.stop_gradient(K.max(minus_d_uv, axis=-1, keepdims=True))
+        return K.mean(tf.nn.softmax_cross_entropy_with_logits(labels=y_true[...,0], logits=minus_d_uv))
         # exp_minus_d_uv_sq = K.exp(-d_uv)
         # exp_minus_d_uv_sq = K.maximum(exp_minus_d_uv_sq, K.cast(1e-45, K.floatx())) 
-
         # return -K.mean(K.log(exp_minus_d_uv_sq[:,0] / K.sum(exp_minus_d_uv_sq, axis=-1)))
         
 

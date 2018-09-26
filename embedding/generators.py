@@ -60,6 +60,7 @@ class TrainingSequence(Sequence):
 		training_sample = self.get_training_sample(batch_positive_samples, )
 		# training_sample = self.binarizer[training_sample]
 		# print training_sample.shape
+		# target = np.zeros(len(training_sample))
 		target = np.zeros((training_sample.shape[0], training_sample.shape[1]-1, 1 ))
 		target[:,0] = 1
 		return training_sample, target

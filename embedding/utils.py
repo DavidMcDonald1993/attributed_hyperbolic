@@ -61,21 +61,28 @@ def alias_draw(J, q, size=1):
 def convert_edgelist_to_dict(edgelist, undirected=True, self_edges=False):
 	if edgelist is None:
 		return None
-	sorts = [lambda x: sorted(x)]
-	if undirected:
-		sorts.append(lambda x: sorted(x, reverse=True))
-	edges = (sort(edge) for edge in edgelist for sort in sorts)
+	# sorts = [lambda x: sorted(x)]
+	# if undirected:
+	# 	sorts.append(lambda x: sorted(x, reverse=True))
+	# edges = (sort(edge) for edge in edgelist for sort in sorts)
+	edges = edgelist
 	edge_dict = {}
 	for u, v in edges:
 		if self_edges:
-			default = [u]#set(u)
+			default = set(u)
 		else:
-			default = []#set()
-		edge_dict.setdefault(u, default).append(v)
+			default = set()
+		edge_dict.setdefault(u, default).add(v)
+		if undirected:
+			edge_dict.setdefault(v, default).add(u)
+
 	# for u, v in edgelist:
 	# 	assert v in edge_dict[u]
 	# 	if undirected:
 	# 		assert u in edge_dict[v]
+	# raise SystemExit
+	edge_dict = {k: list(v) for k, v in edge_dict.items()}
+
 	return edge_dict
 
 def get_training_sample(batch_positive_samples, negative_samples, num_negative_samples, alias_dict):
@@ -94,7 +101,7 @@ def get_training_sample(batch_positive_samples, negative_samples, num_negative_s
 	return batch_nodes
 
 
-def make_validation_data(val_edges, val_non_edges, non_edge_dict, args):
+def make_validation_data(val_edges, val_non_edges, negative_samples, alias_dict, args):
 
 	val_edges = val_edges + [(v, u) for u, v in val_edges]
 
@@ -103,30 +110,18 @@ def make_validation_data(val_edges, val_non_edges, non_edge_dict, args):
 	idx = np.arange(len(val_edges))
 	positive_samples = val_edges[idx]#
 
-
-	# val_non_edge_dict = convert_edgelist_to_dict(val_non_edges)
-	# for l in val_non_edge_dict.values():
-	# 	print (len(l))
-	# print (len(val_non_edge_dict))
-	# raise SystemExit
-
 	# for u in positive_samples[:,0]:
-	# 	print (np.random.choice(non_edge_dict[u], size=args.num_negative_samples, replace=True,))
+	# 	print (negative_samples[u][alias_draw(alias_dict[u][0], 
+	# 		alias_dict[u][1], args.num_negative_samples)])
 	# raise SystemExit
 
-	negative_samples = np.array([
-		np.random.choice(non_edge_dict[u], size=args.num_negative_samples, replace=True,)
+	val_negative_samples = np.array([
+		# np.random.choice(non_edge_dict[u], size=args.num_negative_samples, replace=True,)
+		negative_samples[u][alias_draw(alias_dict[u][0], alias_dict[u][1], args.num_negative_samples)]
 		for u in positive_samples[:,0]
 	])
 
-	x = np.append(positive_samples, negative_samples, axis=-1)
-	# print (x.shape)
-	# c = 0
-	# for u, v, neg_list in zip(x[:,0], x[:,1], x[:,2:]):
-	# 	if v in neg_list:
-	# 		c += 1
-	# print ("{}/{}".format(c, x.shape[0]))
-	# raise SystemExit
+	x = np.append(positive_samples, val_negative_samples, axis=-1)
 	y = np.zeros((len(x), args.num_positive_samples + args.num_negative_samples, 1))
 	y[:,0] = 1
 

@@ -188,7 +188,7 @@ def load_tf_interaction(args, normalize=True):
 	topology_graph = nx.from_pandas_dataframe(interaction_df, "Gene 1 Symbol", "Gene 2 Symbol")
 
 	features_df = pd.read_csv(os.path.join(_dir, "NIHMS177825-supplement-06-2.csv"), 
-        sep=",", skiprows=1, index_col="Symbol", ).iloc[:,2:]
+		sep=",", skiprows=1, index_col="Symbol", ).iloc[:,2:]
 
 	# remove nodes with no expression data
 	for n in topology_graph.nodes():
@@ -285,16 +285,34 @@ def load_ppi(args, normalize=True,):
 
 def load_wordnet(args):
 
-    '''
-    testing link prediciton / reconstruction / lexical entailment
-    '''
+	'''
+	testing link prediciton / reconstruction / lexical entailment
+	'''
 
-    topology_graph = nx.read_edgelist(os.path.join(args.data_directory, "wordnet/noun_closure.tsv", ))
-    topology_graph = nx.convert_node_labels_to_integers(topology_graph, label_attribute="original_name")
-    nx.set_edge_attributes(topology_graph, name="weight", values=1)
+	topology_graph = nx.read_edgelist(os.path.join(args.data_directory, "wordnet/noun_closure.tsv", ))
+	topology_graph = nx.convert_node_labels_to_integers(topology_graph, label_attribute="original_name")
+	nx.set_edge_attributes(topology_graph, name="weight", values=1)
 
-    features = None
-    labels = None
-    label_info = None
-    
-    return topology_graph, features, labels, label_info
+	features = None
+	labels = None
+	label_info = None
+	
+	return topology_graph, features, labels, label_info
+
+def load_collaboration_network(args):
+	'''
+	'''
+	dataset_str = args.dataset
+	assert dataset_str in ["AstroPh", "CondMat", "GrQc", "HepPh"], "dataset string is not valid"
+
+	topology_graph = nx.read_edgelist(os.path.join(args.data_directory, "collaboration_networks/ca-{}.txt.gz".format(dataset_str)))
+	topology_graph = nx.convert_node_labels_to_integers(topology_graph, label_attribute="original_name")
+	nx.set_edge_attributes(topology_graph, name="weight", values=1)
+
+	features = None
+	labels = None
+	label_info = None
+	
+	return topology_graph, features, labels, label_info
+
+	
