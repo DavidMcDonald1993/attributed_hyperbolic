@@ -26,7 +26,7 @@ from data_utils import load_karate, load_labelled_attributed_network, load_ppi, 
 from utils import load_walks, determine_positive_and_negative_samples, convert_edgelist_to_dict, split_edges, get_training_sample, make_validation_data, threadsafe_save_test_results
 from callbacks import PeriodicStdoutLogger, hyperboloid_to_klein, hyperboloid_to_poincare_ball, hyperbolic_distance_hyperboloid_pairwise
 from losses import hyperbolic_negative_sampling_loss, hyperbolic_sigmoid_loss, hyperbolic_softmax_loss, euclidean_negative_sampling_loss
-from metrics import evaluate_rank_and_MAP, evaluate_classification
+from metrics import evaluate_rank_and_MAP, evaluate_rank_and_MAP_fb, evaluate_classification
 from callbacks import plot_disk_embeddings, plot_euclidean_embedding, plot_roc, plot_classification, plot_precisions_recalls
 from generators import TrainingSequence
 
@@ -727,6 +727,10 @@ def main():
 	
 	print ("Evaluating on test data")
 
+	reconstruction_edge_dict = convert_edgelist_to_dict(reconstruction_edges)
+	non_edge_dict = convert_edgelist_to_dict(non_edges)
+	test_edge_dict = convert_edgelist_to_dict(test_edges)
+
 	test_results = dict()
 
 	(mean_rank_reconstruction, map_reconstruction, 
@@ -737,6 +741,14 @@ def main():
 			"map_reconstruction": map_reconstruction,
 			"mean_roc_reconstruction": mean_roc_reconstruction})
 
+	(mean_rank_reconstruction_fb, map_reconstruction_fb, 
+		mean_roc_reconstruction_fb) = evaluate_rank_and_MAP_fb(dists, 
+		reconstruction_edge_dict, non_edge_dict)
+
+	test_results.update({"mean_rank_reconstruction_fb": mean_rank_reconstruction_fb, 
+			"map_reconstruction_fb": map_reconstruction_fb,
+			"mean_roc_reconstruction_fb": mean_roc_reconstruction_fb})
+
 	if args.evaluate_link_prediction:
 		(mean_rank_lp, map_lp, 
 		mean_roc_lp) = evaluate_rank_and_MAP(dists, test_edges, test_non_edges)
@@ -744,6 +756,13 @@ def main():
 		test_results.update({"mean_rank_lp": mean_rank_lp, 
 				"map_lp": map_lp,
 				"mean_roc_lp": mean_roc_lp})
+
+		(mean_rank_lp_fb, map_lp_fb, 
+		mean_roc_lp_fb) = evaluate_rank_and_MAP_fb(dists, test_edge_dict, non_edge_dict)
+
+		test_results.update({"mean_rank_lp_fb": mean_rank_lp_fb, 
+				"map_lp_fb": map_lp_fb,
+				"mean_roc_lp_fb": mean_roc_lp_fb})
 
 	else:
 		mean_rank_lp, map_lp, mean_roc_lp = None, None, None 

@@ -3,7 +3,7 @@
 #SBATCH --job-name=noGPUCoraMLDistanceLinkPred
 #SBATCH --output=noGPUCoraMLDistanceLinkPred_%A_%a.out
 #SBATCH --error=noGPUCoraMLDistanceLinkPred_%A_%a.err
-#SBATCH --array=0-29
+#SBATCH --array=0-119
 #SBATCH --time=3-00:00:00
 #SBATCH --ntasks=1
 #SBATCH --mem=8G
@@ -11,7 +11,7 @@
 
 PROJECT_DIR=/rds/projects/2018/hesz01/attributed_hyperbolic
 # ARR=(--dim={3,5,10,32}" "--seed={0..29}" "--softmax" "--evaluate-link-prediction" "--{no-attributes,jump-prob={0.05,0.1}})
-ARR=(--dataset={cora_ml,GrQc}" "--seed={0..29}" "--softmax" "--dim=5" --evaluate-link-prediction "--no-attributes)
+ARR=(--dataset={cora_ml,GrQc}" "--seed={0..29}" "--softmax" "--dim={5,10}" --evaluate-link-prediction "--no-attributes)
 
 
 module purge; module load bluebear
