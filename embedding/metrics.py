@@ -9,6 +9,30 @@ from sklearn.linear_model import LogisticRegressionCV
 from sklearn.multiclass import OneVsRestClassifier
 from sklearn.model_selection import StratifiedShuffleSplit
 
+def evaluate_direction(embedding, directed_edges, non_edges):
+
+	if not isinstance(directed_edges, np.ndarray):
+		directed_edges = np.array(directed_edges)
+
+	if not isinstance(non_edges, np.ndarray):
+		non_edges = np.array(non_edges)
+
+	labels = np.append(np.ones(len(directed_edges)), np.zeros(len(non_edges)))
+	ranks = embedding[:,-1]
+
+	direction_predictions = ranks[directed_edges[:,0]] > ranks[directed_edges[:,1]]
+	non_edge_predictions = ranks[non_edges[:,0]] > ranks[non_edges[:,1]]
+
+	scores = np.append(direction_predictions, non_edge_predictions)
+
+	ap_score = average_precision_score(labels, scores) # macro by default
+	auc_score = roc_auc_score(labels, scores)
+
+	print ("AP =", ap_score, 
+		"ROC AUC =", auc_score)
+	
+	return ap_score, auc_score
+
 def evaluate_rank_and_MAP(dists, edgelist, non_edgelist):
 	assert not isinstance(edgelist, dict)
 

@@ -122,9 +122,12 @@ class EmbeddingLayer(Layer):
 
 class ExponentialMappingOptimizer(optimizer.Optimizer):
 	
-	def __init__(self, learning_rate=0.001, use_locking=False, name="ExponentialMappingOptimizer"):
+	def __init__(self, learning_rate=0.001, use_locking=False, name="ExponentialMappingOptimizer", burnin=10):
 		super(ExponentialMappingOptimizer, self).__init__(use_locking, name)
 		self._lr = learning_rate
+		self.burnin = burnin
+        # with K.name_scope(self.__class__.__name__):
+		self.iterations = K.variable(0, dtype='int64', name='iterations')
 
 	def _prepare(self):
 		self._lr_t = ops.convert_to_tensor(self._lr, name="learning_rate", dtype=K.floatx())
@@ -145,25 +148,29 @@ class ExponentialMappingOptimizer(optimizer.Optimizer):
 		return tf.assign(var, exp_map)
 		
 	def _apply_sparse(self, grad, var):
-			# assert False
-			indices = grad.indices
-			values = grad.values
-			# dense_shape = grad.dense_shape
-			# p = tf.nn.embedding_lookup(var, indices)
-			p = tf.gather(var, indices, name="gather_apply_sparse")
 
-			lr_t = math_ops.cast(self._lr_t, var.dtype.base_dtype)
-			spacial_grad = values[:,:-1]
-			t_grad = -values[:,-1:]
+		# print (self.__dict__)
+		# raise SystemExit
 
-			ambient_grad = tf.concat([spacial_grad, t_grad], axis=-1, name="optimizer_concat")
-			tangent_grad = self.project_onto_tangent_space(p, ambient_grad)
-			# exp_map = ambient_grad
-			exp_map = self.exponential_mapping(p, - lr_t * tangent_grad)
+		# assert False
+		indices = grad.indices
+		values = grad.values
+		# dense_shape = grad.dense_shape
+		# p = tf.nn.embedding_lookup(var, indices)
+		p = tf.gather(var, indices, name="gather_apply_sparse")
 
-			out = tf.scatter_update(ref=var, updates=exp_map, indices=indices, name="scatter_update")
+		lr_t = math_ops.cast(self._lr_t, var.dtype.base_dtype)
+		spacial_grad = values[:,:-1]
+		t_grad = -values[:,-1:]
 
-			return out
+		ambient_grad = tf.concat([spacial_grad, t_grad], axis=-1, name="optimizer_concat")
+		tangent_grad = self.project_onto_tangent_space(p, ambient_grad)
+		# exp_map = ambient_grad
+		exp_map = self.exponential_mapping(p, - lr_t * tangent_grad)
+
+		out = tf.scatter_update(ref=var, updates=exp_map, indices=indices, name="scatter_update")
+
+		return out
 	
 	def project_onto_tangent_space(self, hyperboloid_point, minkowski_ambient):
 		tang = minkowski_ambient + minkowski_dot(hyperboloid_point, minkowski_ambient) * hyperboloid_point
@@ -671,7 +678,7 @@ def main():
 	if train:
 
 		if args.use_generator:
-			print ("Training with data generator")
+			print ("Training with data generator with {} worker threads".format(args.workers))
 			random.shuffle(positive_samples)
 			training_gen = TrainingSequence(positive_samples, negative_samples, alias_dict, args)
 
