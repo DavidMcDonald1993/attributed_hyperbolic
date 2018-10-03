@@ -162,7 +162,7 @@ class Graph():
 
 			self.alias_edges = alias_edges
 		else:
-			print ("p and q are 1, skipping preprocssing edges")
+			print ("p and q are 1, skipping preprocessing edges")
 
 		print ("DONE edges")
 
