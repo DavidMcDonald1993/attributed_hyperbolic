@@ -3,7 +3,7 @@ from __future__ import print_function
 
 import os
 import h5py
-os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+# os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 os.environ["PYTHON_EGG_CACHE"] = "/rds/projects/2018/hesz01/attributed_hyperbolic/python-eggs"
 import multiprocessing 
 import re
@@ -122,12 +122,13 @@ class EmbeddingLayer(Layer):
 
 class ExponentialMappingOptimizer(optimizer.Optimizer):
 	
-	def __init__(self, learning_rate=0.001, use_locking=False, name="ExponentialMappingOptimizer", burnin=10):
+	def __init__(self, learning_rate=0.001, use_locking=False, name="ExponentialMappingOptimizer", burnin=10, max_norm=1e-3):
 		super(ExponentialMappingOptimizer, self).__init__(use_locking, name)
 		self._lr = learning_rate
 		self.burnin = burnin
         # with K.name_scope(self.__class__.__name__):
 		self.iterations = K.variable(0, dtype='int64', name='iterations')
+		self.max_norm = max_norm
 
 	def _prepare(self):
 		self._lr_t = ops.convert_to_tensor(self._lr, name="learning_rate", dtype=K.floatx())
@@ -203,7 +204,7 @@ class ExponentialMappingOptimizer(optimizer.Optimizer):
 		# z = x / norm_x
 		z = x / K.maximum(norm_x, K.epsilon())
 
-		# norm_x = K.minimum(norm_x, .01)
+		norm_x = K.minimum(norm_x, self.max_norm)
 
 		exp_map = tf.cosh(norm_x) * y + tf.sinh(norm_x) * z
 		#####################################################
@@ -542,9 +543,7 @@ def main():
 	reconstruction_edges = topology_graph.edges()
 	non_edges = list(nx.non_edges(topology_graph))
 
-	# if args.verbose:
 	print ("determined reconstruction edges and non-edges")
-
 
 	if features is not None:
 		feature_sim = cosine_similarity(features)

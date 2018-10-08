@@ -73,8 +73,9 @@ def evaluate_rank_and_MAP_fb(dists, edge_dict, non_edge_dict):
 		# print (neighbours)
 		# print (non_edge_dict[u])
 		# raise SystemExit
-		_dists = dists[u, neighbours + non_edge_dict[u]]
-		_labels = np.append(np.ones(len(neighbours)), np.zeros(len(non_edge_dict[u])))
+		non_neighbours = non_edge_dict[u]
+		_dists = dists[u, neighbours + non_neighbours]
+		_labels = np.append(np.ones(len(neighbours)), np.zeros(len(non_neighbours)))
 		# _dists = dists[u]
 		# _dists[u] = 1e+12
 		# _labels = np.zeros(dists.shape[0])
@@ -87,7 +88,7 @@ def evaluate_rank_and_MAP_fb(dists, edge_dict, non_edge_dict):
 		roc_auc_scores.append(roc_auc_score(_labels, -_dists))
 
 		neighbour_dists = dists[u, neighbours]
-		non_neighbour_dists = dists[u, non_edge_dict[u]]
+		non_neighbour_dists = dists[u, non_neighbours]
 		idx = non_neighbour_dists.argsort()
 		_ranks = np.searchsorted(non_neighbour_dists, neighbour_dists, sorter=idx) + 1
 

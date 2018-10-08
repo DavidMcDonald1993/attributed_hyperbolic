@@ -99,7 +99,6 @@ def hyperbolic_softmax_loss(alpha=0):
 
     def loss(y_true, y_pred, alpha=alpha):
 
-
         # alpha = K.cast(alpha, K.floatx())
 
         u_emb = y_pred[:,0]
@@ -108,8 +107,8 @@ def hyperbolic_softmax_loss(alpha=0):
         inner_uv = minkowski_dot(u_emb, samples_emb)
         inner_uv = K.minimum(inner_uv, -(1+K.epsilon())) # clip to avoid nan
 
-        # minus_d_uv = -K.square(acosh(-inner_uv))
-        minus_d_uv = -acosh(-inner_uv)
+        # minus_d_uv = -K.square(acosh(-inner_uv)) #/ 10.
+        minus_d_uv = -acosh(-inner_uv)# / 10.
 
         # minus_d_uv -= K.stop_gradient(K.max(minus_d_uv, axis=-1, keepdims=True))
         return K.mean(tf.nn.softmax_cross_entropy_with_logits(labels=y_true[...,0], logits=minus_d_uv))
