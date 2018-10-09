@@ -3,7 +3,7 @@ from __future__ import print_function
 
 import os
 import h5py
-# os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 os.environ["PYTHON_EGG_CACHE"] = "/rds/projects/2018/hesz01/attributed_hyperbolic/python-eggs"
 import multiprocessing 
 import re
@@ -593,6 +593,19 @@ def main():
 	walk_file += "_num_walks={}-walk_len={}-p={}-q={}.walk".format(args.num_walks, 
 				args.walk_length, args.p, args.q)
 
+	# print (nx.number_connected_components(g))
+	# print (len(nx.isolates(g)))
+	# c = 0 
+	# l = nx.isolates(g)
+
+	# for u, v in val_edges :
+	# 	if u in l or v in l:
+	# 		c += 1
+
+	# print ("{}/{}".format(c, len(val_edges )))
+
+	# raise SystemExit
+
 	walks = load_walks(g, walk_file, feature_sim, args)
 
 	if args.just_walks:
@@ -602,6 +615,8 @@ def main():
 		determine_positive_and_negative_samples(nodes=topology_graph.nodes(), 
 		walks=walks, context_size=args.context_size, directed=args.directed)
 
+	# for edge in val_edges + val_non_edges:
+	# 	assert edge not in g.edges()
 	# c = 0
 	# for edge in val_edges:
 	# 	if edge in positive_samples:

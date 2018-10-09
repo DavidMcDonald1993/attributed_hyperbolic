@@ -312,7 +312,12 @@ def load_collaboration_network(args):
 	features = None
 	labels = None
 	label_info = None
-	
+
+	if args.only_lcc:
+		topology_graph = max(nx.connected_component_subgraphs(topology_graph), key=len)
+		topology_graph = nx.convert_node_labels_to_integers(topology_graph, label_attribute="original_name")
+		nx.set_edge_attributes(G=topology_graph, name="weight", values=1.)
+
 	return topology_graph, features, labels, label_info
 
 	

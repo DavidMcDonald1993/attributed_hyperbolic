@@ -61,20 +61,17 @@ def alias_draw(J, q, size=1):
 def convert_edgelist_to_dict(edgelist, undirected=True, self_edges=False):
 	if edgelist is None:
 		return None
-	# sorts = [lambda x: sorted(x)]
-	# if undirected:
-	# 	sorts.append(lambda x: sorted(x, reverse=True))
-	# edges = (sort(edge) for edge in edgelist for sort in sorts)
-	edges = edgelist
+	if undirected:
+		edgelist += [(v, u) for u, v in edgelist]
 	edge_dict = {}
-	for u, v in edges:
+	for u, v in edgelist:
 		if self_edges:
 			default = set(u)
 		else:
 			default = set()
 		edge_dict.setdefault(u, default).add(v)
-		if undirected:
-			edge_dict.setdefault(v, default).add(u)
+		# if undirected:
+		# 	edge_dict.setdefault(v, default).add(u)
 
 	# for u, v in edgelist:
 	# 	assert v in edge_dict[u]
@@ -87,6 +84,8 @@ def convert_edgelist_to_dict(edgelist, undirected=True, self_edges=False):
 
 def get_training_sample(batch_positive_samples, negative_samples, num_negative_samples, alias_dict):
 
+	# print ((np.bincount(batch_positive_samples.flatten())==0).sum())
+
 	input_nodes = batch_positive_samples[:,0]
 
 	batch_negative_samples = np.array([
@@ -97,6 +96,8 @@ def get_training_sample(batch_positive_samples, negative_samples, num_negative_s
 		negative_samples[u][alias_draw(alias_dict[u][0], alias_dict[u][1], num_negative_samples)]
 		for u in input_nodes
 	], dtype=np.int64)
+	# print((np.bincount(batch_negative_samples.flatten())==0).sum())
+	# raise SystemExit
 	batch_nodes = np.append(batch_positive_samples, batch_negative_samples, axis=1)
 	return batch_nodes
 
@@ -207,9 +208,11 @@ def determine_positive_and_negative_samples(nodes, walks, context_size, directed
 		
 
 	negative_samples = {n: np.array(sorted(nodes.difference(all_positive_samples[n]))) for n in sorted(nodes)}
-	for u in negative_samples:
-		assert u not in negative_samples[u], "u should not be in negative samples"
-		assert len(negative_samples[u]) > 0, "node {} does not have any negative samples".format(u)
+	for u, neg_samples in negative_samples.items():
+		assert u not in neg_samples, "u should not be in negative samples"
+		assert len(neg_samples) > 0, "node {} does not have any negative samples".format(u)
+		# for v in neg_samples:
+		# 	assert (u, v) not in positive_samples and (v, u) not in positive_samples
 
 	print ("DETERMINED POSITIVE AND NEGATIVE SAMPLES")
 	print ("found {} positive sample pairs".format(len(positive_samples)))
