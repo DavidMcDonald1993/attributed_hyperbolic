@@ -1,8 +1,8 @@
 #!/bin/bash
 
-#SBATCH --job-name=noGPUCoraMLDistanceLinkPred
-#SBATCH --output=noGPUCoraMLDistanceLinkPred_%A_%a.out
-#SBATCH --error=noGPUCoraMLDistanceLinkPred_%A_%a.err
+#SBATCH --job-name=noGPULinkPred
+#SBATCH --output=noGPULinkPred_%A_%a.out
+#SBATCH --error=noGPULinkPred_%A_%a.err
 #SBATCH --array=0-119
 #SBATCH --time=3-00:00:00
 #SBATCH --ntasks=1
