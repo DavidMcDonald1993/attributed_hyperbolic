@@ -187,6 +187,7 @@ def determine_positive_and_negative_samples(nodes, walks, context_size, directed
 		for i in range(len(walk)):
 			u = walk[i]
 			counts[u] += 1	
+			# positive_samples += [(u,u)]
 			for j in range(context_size):
 				if i+j+1 >= len(walk):
 					continue

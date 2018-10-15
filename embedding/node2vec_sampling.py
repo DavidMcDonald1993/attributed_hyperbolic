@@ -27,50 +27,30 @@ class Graph():
 
 		walk = [start_node]
 
-		if self.jump_prob > 0:
+		while len(walk) < walk_length:
+			cur = walk[-1]
+			# node2vec style random walk
+			cur_nbrs = sorted(G.neighbors(cur))
 
-			while len(walk) < walk_length:
-				cur = walk[-1]
+			if self.jump_prob > 0 and np.random.rand() < self.jump_prob or len(cur_nbrs) == 0:
+	 			# random jump based on attribute similarity
+	 			if (feature_sim[cur]==0).all():
+	 				break
+	 			next_ = np.random.choice(len(feature_sim), replace=False, p=feature_sim[cur])
+	 			walk.append(next_)
 
-				if np.random.rand() < self.jump_prob:
-					# random jump based on attribute similarity
-					if (feature_sim[cur]==0).all():
-						break
-					next_ = np.random.choice(len(feature_sim), replace=False, p=feature_sim[cur])
+			elif len(cur_nbrs) > 0:
+				if (self.p==1 and self.q==1) or len(walk) == 1:
+					walk.append(cur_nbrs[alias_draw(alias_nodes[cur][0], alias_nodes[cur][1])])
+				else:
+					prev = walk[-2]
+					next_ = cur_nbrs[alias_draw(alias_edges[(prev, cur)][0], 
+						alias_edges[(prev, cur)][1])]
 					walk.append(next_)
+			else:
+				break
 
-				else:
-					
-					# random walk
-					cur_nbrs = sorted(G.neighbors(cur))
-					if len(cur_nbrs) > 0:
-						next_ = np.random.choice(cur_nbrs)
-						walk.append(next_)
-					else:
-						break
-
-
-		else:
-
-			while len(walk) < walk_length:
-				cur = walk[-1]
-
-				# node2vec style random walk
-				cur_nbrs = sorted(G.neighbors(cur))
-				if len(cur_nbrs) > 0:
-					if (self.p==1 and self.q==1) or len(walk) == 1:
-						walk.append(cur_nbrs[alias_draw(alias_nodes[cur][0], alias_nodes[cur][1])])
-						# probs = self.compute_node_probs(cur)
-						# walk.append(alias_draw(probs))
-					else:
-						prev = walk[-2]
-						next_ = cur_nbrs[alias_draw(alias_edges[(prev, cur)][0], 
-							alias_edges[(prev, cur)][1])]
-						# probs = self.compute_edge_probs(prev, cur)
-						# next = alias_draw(probs)
-						walk.append(next_)
-				else:
-					break
+			
 
 		return walk
 

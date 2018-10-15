@@ -63,7 +63,6 @@ K.tensorflow_backend.set_session(tf.Session(config=config))
 
 
 def minkowski_dot(x, y):
-	# assert len(x.shape) == 2
 	axes = len(x.shape) - 1, len(y.shape) -1
 	return K.batch_dot( x[...,:-1], y[...,:-1], axes=axes) - K.batch_dot(x[...,-1:], y[...,-1:], axes=axes)
 
@@ -98,19 +97,28 @@ class EmbeddingLayer(Layer):
 	def build(self, input_shape):
 		# Create a trainable weight variable for this layer.
 		self.embedding = self.add_weight(name='embedding', 
-									  shape=(self.num_nodes, self.embedding_dim),
-									  initializer=hyperboloid_initializer,
-									  trainable=True)
+		  shape=(self.num_nodes, self.embedding_dim),
+		  initializer=hyperboloid_initializer,
+		  trainable=True)
+		# self.context_embedding = self.add_weight(name='context_embedding', 
+		#   shape=(self.num_nodes, self.embedding_dim),
+		#   initializer=hyperboloid_initializer,
+		#   trainable=True)
 
 
 		super(EmbeddingLayer, self).build(input_shape)
 
 	def call(self, x):
 		x = K.cast(x, dtype=tf.int64)
+		# u = x[:,:1]
+		# v = x[:,1:]
+		# u_embedding = tf.gather(self.embedding, u)
+		# v_embedding = tf.gather(self.context_embedding, v)
+
+		# embedding = K.concatenate([u_embedding, v_embedding], axis=1)
+
 		embedding = tf.gather(self.embedding, x, name="embedding_gather")
 		
-		# embedding = K.dot(x, self.embedding, )
-
 		return embedding
 
 	def compute_output_shape(self, input_shape):
@@ -122,7 +130,7 @@ class EmbeddingLayer(Layer):
 
 class ExponentialMappingOptimizer(optimizer.Optimizer):
 	
-	def __init__(self, learning_rate=0.001, use_locking=False, name="ExponentialMappingOptimizer", burnin=10, max_norm=1e-3):
+	def __init__(self, learning_rate=0.001, use_locking=False, name="ExponentialMappingOptimizer", burnin=10, max_norm=1e-0):
 		super(ExponentialMappingOptimizer, self).__init__(use_locking, name)
 		self._lr = learning_rate
 		self.burnin = burnin
@@ -134,10 +142,8 @@ class ExponentialMappingOptimizer(optimizer.Optimizer):
 		self._lr_t = ops.convert_to_tensor(self._lr, name="learning_rate", dtype=K.floatx())
 
 	def _apply_dense(self, grad, var):
-		# print "dense"
 		assert False
 		lr_t = math_ops.cast(self._lr_t, var.dtype.base_dtype)
-			# K.floatx())
 		spacial_grad = grad[:,:-1]
 		t_grad = -grad[:,-1:]
 		
@@ -150,13 +156,9 @@ class ExponentialMappingOptimizer(optimizer.Optimizer):
 		
 	def _apply_sparse(self, grad, var):
 
-		# print (self.__dict__)
-		# raise SystemExit
-
 		# assert False
 		indices = grad.indices
 		values = grad.values
-		# dense_shape = grad.dense_shape
 		# p = tf.nn.embedding_lookup(var, indices)
 		p = tf.gather(var, indices, name="gather_apply_sparse")
 
@@ -166,7 +168,6 @@ class ExponentialMappingOptimizer(optimizer.Optimizer):
 
 		ambient_grad = tf.concat([spacial_grad, t_grad], axis=-1, name="optimizer_concat")
 		tangent_grad = self.project_onto_tangent_space(p, ambient_grad)
-		# exp_map = ambient_grad
 		exp_map = self.exponential_mapping(p, - lr_t * tangent_grad)
 
 		out = tf.scatter_update(ref=var, updates=exp_map, indices=indices, name="scatter_update")
@@ -185,35 +186,24 @@ class ExponentialMappingOptimizer(optimizer.Optimizer):
 			return tf.concat([x, t], axis=-1)
 
 		norm_x = K.sqrt( K.maximum(K.cast(0., K.floatx()), minkowski_dot(x, x), ) )
-
-		#####################################################
-		# exp_map_p = tf.cosh(norm_x) * p
-		
-		# idx = tf.cast( tf.where(norm_x > K.cast(0., K.floatx()), )[:,0], tf.int32)
-		# non_zero_norm = tf.gather(norm_x, idx)
-		# z = tf.gather(x, idx) / non_zero_norm
-
-		# updates = tf.sinh(non_zero_norm) * z
-		# dense_shape = tf.cast( tf.shape(p), tf.int64)
-		# exp_map_x = tf.scatter_nd(indices=idx, updates=updates, shape=dense_shape)
-
-		
-		# exp_map = exp_map_p + exp_map_x    
-		###################################################
-		y = p
-		# z = x / norm_x
-		z = x / K.maximum(norm_x, K.epsilon())
-
 		norm_x = K.minimum(norm_x, self.max_norm)
+		#####################################################
+		exp_map_p = tf.cosh(norm_x) * p
+		
+		idx = tf.cast( tf.where(norm_x > K.cast(0., K.floatx()), )[:,0], tf.int64)
+		non_zero_norm = tf.gather(norm_x, idx)
+		z = tf.gather(x, idx) / non_zero_norm
 
-		exp_map = tf.cosh(norm_x) * y + tf.sinh(norm_x) * z
+		updates = tf.sinh(non_zero_norm) * z
+		dense_shape = tf.cast( tf.shape(p), tf.int64)
+		exp_map_x = tf.scatter_nd(indices=idx[:,None], updates=updates, shape=dense_shape)
+		
+		exp_map = exp_map_p + exp_map_x    
+		###################################################
+		# z = x / K.maximum(norm_x, K.epsilon()) # unit norm 
+		# exp_map = tf.cosh(norm_x) * p + tf.sinh(norm_x) * z
 		#####################################################
 		exp_map = adjust_to_hyperboloid(exp_map)
-		# idx = tf.where(tf.abs(exp_map + 1) < K.epsilon())[:,0]
-		# params = tf.gather(exp_map, idx)
-
-		# params = adjust_to_hyperboloid(params)
-		# exp_map = tf.scatter_update(ref=exp_map, updates=params, indices=idx)
 
 		return exp_map
 
@@ -275,7 +265,7 @@ def parse_args():
 		help="Steepness of logistic function (defaut is 1).")
 
 
-	parser.add_argument("--lr", dest="lr", type=float, default=5e-2,
+	parser.add_argument("--lr", dest="lr", type=float, default=3e-1,
 		help="Learning rate (default is 5e-2).")
 
 	parser.add_argument("--rho", dest="rho", type=float, default=0,
@@ -578,13 +568,16 @@ def main():
 		test_non_edges = None
 
 	if args.alpha > 0:
+		assert features is not None
 		walk_file = os.path.join(args.walk_path, "add_attributes_alpha={}".format(args.alpha))
 		g = nx.from_numpy_matrix((1 - args.alpha) * nx.adjacency_matrix(topology_graph).A + args.alpha * feature_sim)
 	elif args.multiply_attributes:
+		assert features is not None
 		walk_file = os.path.join(args.walk_path, "multiply_attributes")
 		A = nx.adjacency_matrix(topology_graph).A
 		g = nx.from_numpy_matrix(A * feature_sim)
 	elif args.jump_prob > 0:
+		assert features is not None
 		walk_file = os.path.join(args.walk_path, "jump_prob={}".format(args.jump_prob))
 		g = topology_graph
 	else:
@@ -676,6 +669,7 @@ def main():
 	else:
 		monitor = "map_reconstruction"
 		mode = "max"
+		
 	early_stopping = EarlyStopping(monitor=monitor, mode=mode, patience=args.patience, verbose=1)
 	logger = PeriodicStdoutLogger(reconstruction_edges, non_edges, val_edges, val_non_edges, labels, label_info,
 				n=args.plot_freq, epoch=initial_epoch, args=args) 

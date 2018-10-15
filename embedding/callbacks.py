@@ -18,10 +18,10 @@ from utils import convert_edgelist_to_dict
 from metrics import evaluate_rank_and_MAP, evaluate_rank_and_MAP_fb, evaluate_classification
 
 
-# def minkowski_dot_np(x, y):
-# 	assert len(x.shape) == 2
-# 	rank = x.shape[1] - 1
-# 	return np.sum(x[:,:rank] * y[:,:rank], axis=-1, keepdims=True) - x[:,rank:] * y[:,rank:]
+def minkowski_dot_np(x, y):
+	assert len(x.shape) == 2
+	rank = x.shape[1] - 1
+	return np.sum(x[:,:rank] * y[:,:rank], axis=-1, keepdims=True) - x[:,rank:] * y[:,rank:]
 
 def minkowski_dot_pairwise(u, v):
 	"""
@@ -331,7 +331,7 @@ class PeriodicStdoutLogger(Callback):
 		else:
 			dists = hyperbolic_distance_hyperboloid_pairwise(hyperboloid_embedding, hyperboloid_embedding)
 		print (dists)
-		# print minkowski_dot_np(hyperboloid_embedding, hyperboloid_embedding)
+		print (minkowski_dot_np(hyperboloid_embedding, hyperboloid_embedding))
 
 		# if self.args.verbose:
 		print ("reconstruction")
