@@ -9,10 +9,11 @@
 #SBATCH --mem=8G
 
 
-PROJECT_DIR=/rds/projects/2018/hesz01/attributed_hyperbolic
-DATA_DIR=/rds/projects/2018/hesz01/data
+# PROJECT_DIR=/rds/projects/2018/hesz01/attributed_hyperbolic
+# DATA_DIR=/rds/projects/2018/hesz01/data
+DATA_DIR=data
 
-ARR=(--dataset={cora_ml,GrQc}" "--seed={0..29}" "--softmax" "--dim={5,10}" --evaluate-link-prediction "--no-attributes)
+ARR=(--dataset=cora_ml" "--seed={0..29}" "--softmax" "--dim={5,10}" --evaluate-link-prediction "--{no-attributes,jump_prob=.1})
 
 module purge; module load bluebear
 module load apps/cuda/8.0.44
