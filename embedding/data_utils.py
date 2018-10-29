@@ -61,7 +61,6 @@ def load_g2g_datasets(dataset_str, args):
 
 		X = sp.sparse.csr_matrix((loader['attr_data'], loader['attr_indices'],
 						   loader['attr_indptr']), shape=loader['attr_shape'])
-
 		z = loader.get('labels')
 
 		graph = {
@@ -90,9 +89,9 @@ def load_g2g_datasets(dataset_str, args):
 	else:
 		create_using = nx.Graph() 
 
-	topology_graph = nx.from_scipy_sparse_matrix(A, create_using=create_using)
-	features = X.A
-	labels = z
+	topology_graph = nx.from_scipy_sparse_matrix(graph["A"], create_using=create_using)
+	features = graph["X"].A
+	labels = graph["z"]
 
 	if idx_to_class:
 		label_info = graph["idx_to_class"]
@@ -156,7 +155,7 @@ def load_labelled_attributed_network(dataset_str, args, scale=False):
 	# train_label_idx = list(range(len(y)))
 	# val_label_idx = list(range(len(y), len(y)+500))
 
-	topology_graph = nx.from_numpy_matrix(adj.toarray())
+	topology_graph = nx.from_scipy_sparse_matrix(adj)
 	topology_graph = nx.convert_node_labels_to_integers(topology_graph, label_attribute="original_name")
 	nx.set_edge_attributes(G=topology_graph, name="weight", values=1.)
 
@@ -319,5 +318,33 @@ def load_collaboration_network(args):
 		nx.set_edge_attributes(G=topology_graph, name="weight", values=1.)
 
 	return topology_graph, features, labels, label_info
+
+def load_contact(args):
+
+	data_dir = os.path.join("/home/david/Desktop")
+	topology_graph = nx.read_edgelist(os.path.join(data_dir, "contact.edgelist"), nodetype=int)
+
+	print (len(topology_graph), nx.number_connected_components(topology_graph))
+
+	features = pd.read_csv(os.path.join(data_dir, "feats.csv"), sep=",", index_col=0)
+	print (features.shape)
+	features = features.reindex(topology_graph.nodes()).values
+	labels = pd.read_csv(os.path.join(data_dir, "labels.csv"), sep=",", index_col=0).reindex(topology_graph.nodes()).values.flatten()
+
+	topology_graph = nx.convert_node_labels_to_integers(topology_graph, label_attribute="original_name")
+	nx.set_edge_attributes(topology_graph, name="weight", values=1)
+
+
+
+
+	label_info = None
+
+	if args.only_lcc:
+		topology_graph = max(nx.connected_component_subgraphs(topology_graph), key=len)
+		topology_graph = nx.convert_node_labels_to_integers(topology_graph, label_attribute="original_name")
+		nx.set_edge_attributes(G=topology_graph, name="weight", values=1.)
+
+	return topology_graph, features, labels, label_info
+
 
 	

@@ -10,13 +10,17 @@ matplotlib.use('agg')
 import matplotlib.pyplot as plt
 
 from sklearn.metrics.pairwise import euclidean_distances
-from sklearn.metrics import roc_curve, roc_auc_score, precision_recall_curve
+from sklearn.metrics import roc_curve, roc_auc_score, precision_recall_curve, average_precision_score
+from sklearn.utils.fixes import signature
 
 from keras.callbacks import Callback
 from utils import convert_edgelist_to_dict
 
-from metrics import evaluate_rank_and_MAP, evaluate_rank_and_MAP_fb, evaluate_classification
+from metrics import evaluate_rank_and_MAP, evaluate_rank_and_MAP_fb, evaluate_classification, evaluate_direction
 
+def gans_to_hyperboloid_np(x):
+	t = np.sqrt(1. + np.sum(np.square(x), axis=-1, keepdims=True))
+	return np.concatenate([x, t], axis=-1)
 
 def minkowski_dot_np(x, y):
 	assert len(x.shape) == 2
@@ -95,7 +99,7 @@ def plot_euclidean_embedding(epoch, edges, euclidean_embedding, labels, label_in
 
 def plot_disk_embeddings(epoch, edges, poincare_embedding, labels, label_info,
 	mean_rank_reconstruction, map_reconstruction, mean_roc_reconstruction,
-	mean_rank_lp, map_lp, mean_roc_lp, path):
+	mean_rank_lp, map_lp, mean_roc_lp, path,  ):
 
 	# def bit_shift(bitlist):
 	#     out = 0
@@ -142,10 +146,12 @@ def plot_disk_embeddings(epoch, edges, poincare_embedding, labels, label_info,
 	if labels is None:
 		plt.scatter(poincare_embedding[:,0], poincare_embedding[:,1], s=10, c="r", zorder=1)
 	else:
-		for c in range(num_classes):
-			idx = labels == c
-			plt.scatter(poincare_embedding[idx,0], poincare_embedding[idx,1], s=10, c=colors[c], 
-				label=label_info[c] if label_info is not None else None, zorder=1)
+		plt.scatter(poincare_embedding[:,0], poincare_embedding[:,1], s=10, c=labels, ) 
+				# label=label_info[c] if label_info is not None else None, zorder=1)
+		# for c in range(num_classes):
+		# 	idx = labels == c
+		# 	plt.scatter(poincare_embedding[idx,0], poincare_embedding[idx,1], s=10, c=colors[c], 
+		# 		label=label_info[c] if label_info is not None else None, zorder=1)
 	# plt.scatter(poincare_embedding[:,0], poincare_embedding[:,1], s=10, c=colors[labels], zorder=1)
 	plt.xlim([-1,1])
 	plt.ylim([-1,1])
@@ -196,10 +202,18 @@ def plot_precisions_recalls(dists, reconstruction_edges, non_edges, val_edges, v
 	_dists = np.append(edge_dists, non_edge_dists)
 
 	precisions, recalls, _ = precision_recall_curve(targets, -_dists)
+	ap = average_precision_score(targets, -_dists)
 
-	plt.plot(recalls, precisions, c="r")
+	step_kwargs = ({'step': 'post'}
+               if 'step' in signature(plt.fill_between).parameters else {})
 
-	legend = ["reconstruction"]
+	# plt.plot(recalls, precisions, c="r")
+	plt.step(recalls, precisions, color='r', alpha=0.2,
+         where='post', zorder=1)
+	plt.fill_between(recalls, precisions, alpha=0.2, color='r', zorder=1, **step_kwargs)
+
+
+	legend = ["reconstruction AP={}".format(ap)]
 
 	if val_edges is not None:
 		val_edges = np.array(val_edges)
@@ -212,10 +226,14 @@ def plot_precisions_recalls(dists, reconstruction_edges, non_edges, val_edges, v
 		_dists = np.append(val_edge_dists, val_non_edge_dists)
 
 		precisions, recalls, _ = precision_recall_curve(targets, -_dists)
+		ap = average_precision_score(targets, -_dists)
 
-		plt.plot(recalls, precisions, c="b")
+		# plt.plot(recalls, precisions, c="b")
+		plt.step(recalls, precisions, color='b', alpha=0.2,
+         where='post', zorder=0)
+		plt.fill_between(recalls, precisions, alpha=0.2, color='b', zorder=0, **step_kwargs)
 
-		legend += ["link prediction"]
+		legend += ["link prediction AP={}".format(ap)]
 
 
 	plt.xlabel("recall")
@@ -244,7 +262,6 @@ def plot_roc(dists, reconstruction_edges, non_edges, val_edges, val_non_edges, p
 
 	fpr, tpr, _ = roc_curve(targets, -_dists)
 	auc = roc_auc_score(targets, -_dists)
-	precisions, recalls, _ = precision_recall_curve(targets, -_dists)
 
 	plt.plot(fpr, tpr, c="r")
 
@@ -267,7 +284,6 @@ def plot_roc(dists, reconstruction_edges, non_edges, val_edges, val_non_edges, p
 
 		legend += ["link prediction AUC={}".format(auc)]
 
-	plt.plot([0,1], [0,1], c="k")
 
 	plt.xlabel("fpr")
 	plt.ylabel("tpr")
@@ -295,22 +311,28 @@ def plot_classification(label_percentages, f1_micros, f1_macros, path):
 
 class PeriodicStdoutLogger(Callback):
 
-	def __init__(self, reconstruction_edges, non_edges, val_edges, val_non_edges, labels, label_info,
+	def __init__(self, reconstruction_edges, non_edges, val_edges, 
+		val_non_edges, 
+		labels, label_info,
+		directed_edges, directed_non_edges,
 		epoch, n, args):
 		self.reconstruction_edges = reconstruction_edges
 		self.non_edges = non_edges
-		self.reconstruction_edge_dict = convert_edgelist_to_dict(reconstruction_edges)
-		self.non_edge_dict = convert_edgelist_to_dict(non_edges)
+		# self.reconstruction_edge_dict = convert_edgelist_to_dict(reconstruction_edges)
+		# self.non_edge_dict = convert_edgelist_to_dict(non_edges)
 
 		self.val_edges = val_edges
 		self.val_non_edges = val_non_edges
-		self.val_edge_dict = convert_edgelist_to_dict(val_edges)
+		# self.val_edge_dict = convert_edgelist_to_dict(val_edges)
 		# self.val_non_edge_dict = convert_edgelist_to_dict(val_non_edges)
 		self.labels = labels
 		self.label_info = label_info
+		self.directed_edges = directed_edges
+		self.directed_non_edges = directed_non_edges
 		self.epoch = epoch
 		self.n = n
 		self.args = args
+
 
 	def on_epoch_end(self, batch, logs={}):
 	
@@ -322,7 +344,18 @@ class PeriodicStdoutLogger(Callback):
 		print (s)
 
 		hyperboloid_embedding = self.model.layers[-1].get_weights()[0]
+		# hyperboloid_embedding = gans_to_hyperboloid_np(hyperboloid_embedding)
 		print (hyperboloid_embedding)
+
+		if self.args.euclidean:
+			poincare_embedding = hyperboloid_embedding
+			klein_embedding = hyperboloid_embedding
+		else:
+			poincare_embedding = hyperboloid_to_poincare_ball(hyperboloid_embedding)
+			klein_embedding = hyperboloid_to_klein(hyperboloid_embedding)
+
+			ranks = np.sqrt(np.sum(np.square(poincare_embedding), axis=-1, keepdims=False), )
+			assert (ranks < 1).all()
 
 		# print (minkowski_dot_np(hyperboloid_embedding, hyperboloid_embedding))
 
@@ -343,14 +376,14 @@ class PeriodicStdoutLogger(Callback):
 			"map_reconstruction": map_reconstruction,
 			"mean_roc_reconstruction": mean_roc_reconstruction})
 
-		print ("reconstruction fb")
-		(mean_rank_reconstruction_fb, map_reconstruction_fb, 
-			mean_roc_reconstruction_fb) = evaluate_rank_and_MAP_fb(dists, 
-			self.reconstruction_edge_dict, self.non_edge_dict)
+		# print ("reconstruction fb")
+		# (mean_rank_reconstruction_fb, map_reconstruction_fb, 
+		# 	mean_roc_reconstruction_fb) = evaluate_rank_and_MAP_fb(dists, 
+		# 	self.reconstruction_edge_dict, self.non_edge_dict)
 
-		logs.update({"mean_rank_reconstruction_fb": mean_rank_reconstruction_fb, 
-			"map_reconstruction_fb": map_reconstruction_fb,
-			"mean_roc_reconstruction_fb": mean_roc_reconstruction_fb})
+		# logs.update({"mean_rank_reconstruction_fb": mean_rank_reconstruction_fb, 
+		# 	"map_reconstruction_fb": map_reconstruction_fb,
+		# 	"mean_roc_reconstruction_fb": mean_roc_reconstruction_fb})
 
 
 		if self.args.evaluate_link_prediction:
@@ -364,27 +397,18 @@ class PeriodicStdoutLogger(Callback):
 				"map_lp": map_lp,
 				"mean_roc_lp": mean_roc_lp})
 
-			print ("link prediction fb")
-			(mean_rank_lp_fb, map_lp_fb, 
-			mean_roc_lp_fb) = evaluate_rank_and_MAP_fb(dists, 
-			self.val_edge_dict, self.non_edge_dict)
+			# print ("link prediction fb")
+			# (mean_rank_lp_fb, map_lp_fb, 
+			# mean_roc_lp_fb) = evaluate_rank_and_MAP_fb(dists, 
+			# self.val_edge_dict, self.non_edge_dict)
 
-			logs.update({"mean_rank_lp_fb": mean_rank_lp_fb, 
-				"map_lp_fb": map_lp_fb,
-				"mean_roc_lp_fb": mean_roc_lp_fb})
+			# logs.update({"mean_rank_lp_fb": mean_rank_lp_fb, 
+			# 	"map_lp_fb": map_lp_fb,
+			# 	"mean_roc_lp_fb": mean_roc_lp_fb})
 		else:
 
 			mean_rank_lp, map_lp, mean_roc_lp = None, None, None
 
-		if self.args.euclidean:
-			poincare_embedding = hyperboloid_embedding
-			klein_embedding = hyperboloid_embedding
-		else:
-			poincare_embedding = hyperboloid_to_poincare_ball(hyperboloid_embedding)
-			klein_embedding = hyperboloid_to_klein(hyperboloid_embedding)
-
-			rank = np.sqrt(np.sum(np.square(poincare_embedding), axis=-1, keepdims=False), )
-			assert (rank < 1).all()
 
 		if self.args.evaluate_class_prediction:
 			label_percentages, f1_micros, f1_macros = evaluate_classification(klein_embedding, self.labels, self.args)
@@ -396,6 +420,14 @@ class PeriodicStdoutLogger(Callback):
 				logs.update({"{}_macro".format(label_percentage): f1_macro})
 			logs.update({"micro_sum" : np.sum(f1_micros)})
 
+		if self.args.directed:
+			print ("EVALUATING DIRECTION", len(self.directed_edges), len(self.directed_non_edges))
+			directed_f1_micro, directed_f1_macro = evaluate_direction(hyperboloid_embedding, 
+				self.directed_edges,)
+			logs.update({"directed_f1_micro": directed_f1_micro, 
+				"directed_f1_macro": directed_f1_macro, })
+				# "directed_ap_score": directed_ap_score,
+				# "directed_auc_score": directed_auc_score})
 
 
 		if self.epoch % self.n == 0:
@@ -417,8 +449,6 @@ class PeriodicStdoutLogger(Callback):
 					mean_rank_reconstruction, map_reconstruction, mean_roc_reconstruction,
 					mean_rank_lp, map_lp, mean_roc_lp,
 					plot_path)
-			# else:
-			# 	print ("dim > 2, omitting plot")
 
 			roc_path = os.path.join(self.args.plot_path, "epoch_{:05d}_roc_curve.png".format(self.epoch) )
 			plot_roc(dists, self.reconstruction_edges, self.non_edges, 
@@ -450,20 +480,3 @@ class PeriodicStdoutLogger(Callback):
 		filename = os.path.join(self.args.model_path, "{:05d}.h5".format(self.epoch))
 		print("saving model to {}".format(filename))
 		self.model.save_weights(filename)
-
-	def get_gradients(self):
-	    """Return the gradient of every trainable weight in model
-
-	    Parameters
-	    -----------
-	    model : a keras model instance
-
-	    First, find all tensors which are trainable in the model. 
-	    Next, get the gradients of the loss with respect to the weights.
-
-	    """
-	    model = self.model
-	    weights = model.trainable_weights
-	    optimizer = model.optimizer
-
-	    return optimizer.get_gradients(model.total_loss, weights)

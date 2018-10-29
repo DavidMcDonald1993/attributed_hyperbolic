@@ -9,29 +9,31 @@ from sklearn.linear_model import LogisticRegressionCV
 from sklearn.multiclass import OneVsRestClassifier
 from sklearn.model_selection import StratifiedShuffleSplit
 
-def evaluate_direction(embedding, directed_edges, non_edges):
+def evaluate_direction(embedding, directed_edges, ):
 
 	if not isinstance(directed_edges, np.ndarray):
 		directed_edges = np.array(directed_edges)
 
-	if not isinstance(non_edges, np.ndarray):
-		non_edges = np.array(non_edges)
-
-	labels = np.append(np.ones(len(directed_edges)), np.zeros(len(non_edges)))
+	# if not isinstance(directed_non_edges, np.ndarray):
+	# 	directed_non_edges = np.array(directed_non_edges)
+	labels = np.ones(len(directed_edges))
 	ranks = embedding[:,-1]
 
 	direction_predictions = ranks[directed_edges[:,0]] > ranks[directed_edges[:,1]]
-	non_edge_predictions = ranks[non_edges[:,0]] > ranks[non_edges[:,1]]
+	# non_edge_predictions = ranks[directed_non_edges[:,0]] > ranks[directed_non_edges[:,1]]
 
-	scores = np.append(direction_predictions, non_edge_predictions)
+	scores = direction_predictions
+	# scores = np.append(direction_predictions, non_edge_predictions)
 
-	ap_score = average_precision_score(labels, scores) # macro by default
-	auc_score = roc_auc_score(labels, scores)
+	f1_micro = f1_score(labels, scores, average="micro")
+	f1_macro = f1_score(labels, scores, average="macro")
+	# ap_score = average_precision_score(labels, scores) # macro by default
+	# auc_score = roc_auc_score(labels, scores)
 
-	print ("AP =", ap_score, 
-		"ROC AUC =", auc_score)
+	print ("F1 micro =", f1_micro, "F1 macro =", f1_macro, ) 
+		# "AP =", ap_score, "ROC AUC =", auc_score)
 	
-	return ap_score, auc_score
+	return f1_micro, f1_macro#, ap_score, auc_score
 
 def evaluate_rank_and_MAP(dists, edgelist, non_edgelist):
 	assert not isinstance(edgelist, dict)
@@ -42,12 +44,19 @@ def evaluate_rank_and_MAP(dists, edgelist, non_edgelist):
 	if not isinstance(non_edgelist, np.ndarray):
 		non_edgelist = np.array(non_edgelist)
 
-	edge_dists = dists[edgelist[:,0], edgelist[:,1]]
-	non_edge_dists = dists[non_edgelist[:,0], non_edgelist[:,1]]
+	alpha = 0e+3
 
+	edge_dists = dists[edgelist[:,0], edgelist[:,1]]
+	edge_scores = -edge_dists
+	# edge_scores = -(1. + alpha * (poincare_ranks[edgelist[:,1]] - poincare_ranks[edgelist[:,0]])) * edge_dists ** 2
+
+	non_edge_dists = dists[non_edgelist[:,0], non_edgelist[:,1]]
+	non_edge_scores = -non_edge_dists
+	# non_edge_scores = -(1. + alpha * (poincare_ranks[non_edgelist[:,1]] - poincare_ranks[non_edgelist[:,0]])) * non_edge_dists ** 2
 
 	labels = np.append(np.ones_like(edge_dists), np.zeros_like(non_edge_dists))
-	scores = -np.append(edge_dists, non_edge_dists)
+	# scores = -np.append(edge_dists, non_edge_dists)
+	scores = np.append(edge_scores, non_edge_scores, )
 	ap_score = average_precision_score(labels, scores) # macro by default
 	auc_score = roc_auc_score(labels, scores)
 

@@ -25,6 +25,8 @@ class Graph():
 		alias_edges = self.alias_edges
 		feature_sim = self.feature_sim
 
+		jump = False
+
 		walk = [start_node]
 
 		while len(walk) < walk_length:
@@ -32,21 +34,24 @@ class Graph():
 			# node2vec style random walk
 			cur_nbrs = sorted(G.neighbors(cur))
 
-			if self.jump_prob > 0 and np.random.rand() < self.jump_prob or len(cur_nbrs) == 0:
-	 			# random jump based on attribute similarity
-	 			if (feature_sim[cur]==0).all():
-	 				break
-	 			next_ = np.random.choice(len(feature_sim), replace=False, p=feature_sim[cur])
-	 			walk.append(next_)
+			if self.jump_prob > 0 and (np.random.rand() < self.jump_prob or len(cur_nbrs) == 0):
+				# random jump based on attribute similarity
+				if (feature_sim[cur]==0).all():
+					break
+				jump = True
+				next_ = np.random.choice(len(feature_sim), replace=False, p=feature_sim[cur])
+				walk.append(next_)
 
 			elif len(cur_nbrs) > 0:
-				if (self.p==1 and self.q==1) or len(walk) == 1:
+				# if (self.p==1 and self.q==1) or len(walk) == 1: # no edge preprocessing required
+				if len(walk) == 1 or jump:
 					walk.append(cur_nbrs[alias_draw(alias_nodes[cur][0], alias_nodes[cur][1])])
 				else:
 					prev = walk[-2]
 					next_ = cur_nbrs[alias_draw(alias_edges[(prev, cur)][0], 
 						alias_edges[(prev, cur)][1])]
 					walk.append(next_)
+				jump = False
 			else:
 				break
 
@@ -120,29 +125,27 @@ class Graph():
 		# triads = {}
 		print ("DONE nodes")
 		self.alias_nodes = alias_nodes
-		
 
 		alias_edges = {}
-		self.alias_edges = {}
 
-		if self.p != 1 and self.q != 1: 
-			if is_directed:
-				for edge in G.edges():
-					alias_edges[edge] = self.get_alias_edge(edge[0], edge[1])
-			else:
-				i = 0
-				for edge in G.edges():
-					if i % 1000 == 0:
-						print ("completed edge {}/{}".format(i, 2*len(G.edges())))
-					alias_edges[edge] = self.get_alias_edge(edge[0], edge[1])
-					i += 1
-					alias_edges[(edge[1], edge[0])] = self.get_alias_edge(edge[1], edge[0])
-					i += 1
-				print ("completed edge {}/{}".format(i, 2*len(G.edges())))
-
-			self.alias_edges = alias_edges
+		# if self.p != 1 and self.q != 1: 
+		if is_directed:
+			for edge in G.edges():
+				alias_edges[edge] = self.get_alias_edge(edge[0], edge[1])
 		else:
-			print ("p and q are 1, skipping preprocessing edges")
+			i = 0
+			for edge in G.edges():
+				if i % 1000 == 0:
+					print ("completed edge {}/{}".format(i, 2*len(G.edges())))
+				alias_edges[edge] = self.get_alias_edge(edge[0], edge[1])
+				i += 1
+				alias_edges[(edge[1], edge[0])] = self.get_alias_edge(edge[1], edge[0])
+				i += 1
+			print ("completed edge {}/{}".format(i, 2*len(G.edges())))
+
+		self.alias_edges = alias_edges
+		# else:
+		# 	print ("p and q are 1, skipping preprocessing edges")
 
 		print ("DONE edges")
 
@@ -162,22 +165,22 @@ def alias_setup(probs):
 	smaller = []
 	larger = []
 	for kk, prob in enumerate(probs):
-	    q[kk] = K*prob
-	    if q[kk] < 1.0:
-	        smaller.append(kk)
-	    else:
-	        larger.append(kk)
+		q[kk] = K*prob
+		if q[kk] < 1.0:
+			smaller.append(kk)
+		else:
+			larger.append(kk)
 
 	while len(smaller) > 0 and len(larger) > 0:
-	    small = smaller.pop()
-	    large = larger.pop()
+		small = smaller.pop()
+		large = larger.pop()
 
-	    J[small] = large
-	    q[large] = q[large] + q[small] - 1.0
-	    if q[large] < 1.0:
-	        smaller.append(large)
-	    else:
-	        larger.append(large)
+		J[small] = large
+		q[large] = q[large] + q[small] - 1.0
+		if q[large] < 1.0:
+			smaller.append(large)
+		else:
+			larger.append(large)
 
 	return J, q
 
@@ -189,7 +192,7 @@ def alias_draw(J, q):
 
 	kk = int(np.floor(np.random.rand()*K))
 	if np.random.rand() < q[kk]:
-	    return kk
+		return kk
 	else:
-	    return J[kk]
+		return J[kk]
 

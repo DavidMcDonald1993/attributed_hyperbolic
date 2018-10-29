@@ -18,10 +18,17 @@ def hyperbolic_negative_sampling_loss(r, t):
         samples_emb = y_pred[:,1:]
         
         inner_uv = minkowski_dot(u_emb, samples_emb)
-        # inner_uv = K.clip(inner_uv, min_value=-np.inf, max_value=-(1+K.epsilon()))
         inner_uv = K.minimum(inner_uv, -(1+K.epsilon()))
 
         d_uv = tf.acosh(-inner_uv)
+        # d_uv_sq = K.square(d_uv)
+
+
+        r = -K.stop_gradient(tf.nn.top_k(-d_uv, k=1).values)
+        # r = K.stop_gradient(K.mean(d_uv) - 2 * K.std( d_uv))
+        # r_sq = K.stop_gradient(K.mean(d_uv_sq) - 1 * K.std( d_uv_sq))
+
+        # out_uv = (r_sq - d_uv_sq) / t
         out_uv = (K.square(r) - K.square(d_uv)) / t
         # out_uv = (r - d_uv) / t
 
@@ -97,9 +104,12 @@ def hyperbolic_softmax_loss(alpha=0):
     def acosh(x):
         return K.log(x + K.sqrt(K.square(x) - 1))
 
+    def hyperboloid_to_poincare_ball(X):
+        return X[...,:-1] / (1 + X[...,-1,None])
+
     def loss(y_true, y_pred, alpha=alpha):
 
-        # alpha = K.cast(alpha, K.floatx())
+        alpha = K.cast(1e-3, K.floatx())
 
         u_emb = y_pred[:,0]
         samples_emb = y_pred[:,1:]
@@ -108,13 +118,25 @@ def hyperbolic_softmax_loss(alpha=0):
         inner_uv = K.minimum(inner_uv, -(1+K.epsilon())) # clip to avoid nan
 
         minus_d_uv = -tf.acosh(-inner_uv)
-        # minus_d_uv = -K.square(acosh(-inner_uv)) 
+        # minus_d_uv = -K.square(tf.acosh(-inner_uv) ) 
 
-        # minus_d_uv -= K.stop_gradient(K.max(minus_d_uv, axis=-1, keepdims=True))
+        # u_emb_poincare = hyperboloid_to_poincare_ball(u_emb)
+        # samples_emb_poincare = hyperboloid_to_poincare_ball(samples_emb)
+
+        # u_rank = K.sqrt(K.sum(K.square(u_emb_poincare), axis=-1, keepdims=True))
+        # samples_rank = K.sqrt(K.sum(K.square(samples_emb_poincare), axis=-1, keepdims=False))
+
+        # u_rank = u_emb[...,-1,None]
+        # samples_rank = samples_emb[...,-1]
+
+        # d_uv_sq = K.square(tf.acosh(-inner_uv))
+        # logits = -(1. + alpha * (samples_rank - u_rank)) * d_uv_sq
+        # logits -= K.stop_gradient(K.max(logits, axis=-1, keepdims=True, ))
+
         return K.mean(tf.nn.softmax_cross_entropy_with_logits(labels=y_true[...,0], logits=minus_d_uv))
-        # exp_minus_d_uv_sq = K.exp(-d_uv)
-        # exp_minus_d_uv_sq = K.maximum(exp_minus_d_uv_sq, K.cast(1e-45, K.floatx())) 
-        # return -K.mean(K.log(exp_minus_d_uv_sq[:,0] / K.sum(exp_minus_d_uv_sq, axis=-1)))
+        # return K.mean(tf.nn.softmax_cross_entropy_with_logits(labels=y_true[...,0], logits=-d_uv_sq))
+        # return K.mean(tf.nn.softmax_cross_entropy_with_logits(labels=y_true[...,0], logits=logits))
+
         
 
     return loss

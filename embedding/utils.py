@@ -198,9 +198,9 @@ def determine_positive_and_negative_samples(nodes, walks, context_size, directed
 				# n = context_size - j
 				positive_samples.extend([(u, v)] * n)
 				all_positive_samples[u].add(v)
-				if not directed:
-					positive_samples.extend([(v, u)] * n)
-					all_positive_samples[v].add(u)
+				# if not directed:
+				positive_samples.extend([(v, u)] * n)
+				all_positive_samples[v].add(u)
 
  
 		if num_walk % 1000 == 0:  
@@ -220,6 +220,7 @@ def determine_positive_and_negative_samples(nodes, walks, context_size, directed
 
 	counts = np.array(list(counts.values())) ** 0.75
 	probs = counts #/ counts.sum()
+	# probs = np.ones_like(counts)
 
 	prob_dict = {n: probs[negative_samples[n]] for n in sorted(nodes)}
 	prob_dict = {n: probs / probs.sum() for n, probs in prob_dict.items()}
