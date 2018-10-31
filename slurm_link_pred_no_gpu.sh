@@ -26,5 +26,5 @@ module load apps/keras/2.0.8-python-3.5.2
 echo "starting "${ARR[${SLURM_ARRAY_TASK_ID}]}
 python embedding/hyperbolic_embedding.py \
 --data-directory ${DATA_DIR} --patience 1000 --lr .3 -b 512 -e 300 --no-load ${ARR[${SLURM_ARRAY_TASK_ID}]} \
---context-size 1
+--context-size 3
 echo "completed "${ARR[${SLURM_ARRAY_TASK_ID}]}
