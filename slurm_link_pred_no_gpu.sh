@@ -13,7 +13,7 @@
 # DATA_DIR=/rds/projects/2018/hesz01/data
 DATA_DIR=data
 
-ARR=(--dataset=cora_ml" "--seed={0..29}" "--softmax" "--dim={5,10}" --evaluate-link-prediction "--{no-attributes,jump_prob=.1})
+ARR=(--dataset=cora_ml" "--seed={0..29}" "--softmax" "--dim={5,10}" --evaluate-link-prediction "--{no-attributes,jump-prob=.1})
 
 module purge; module load bluebear
 module load apps/cuda/8.0.44
@@ -25,6 +25,5 @@ module load apps/keras/2.0.8-python-3.5.2
 
 echo "starting "${ARR[${SLURM_ARRAY_TASK_ID}]}
 python embedding/hyperbolic_embedding.py \
---data-directory ${DATA_DIR} --patience 1000 --lr .3 -b 512 -e 300 --no-load ${ARR[${SLURM_ARRAY_TASK_ID}]} \
---context-size 3
+--data-directory ${DATA_DIR} --patience 1000 --lr .3 -b 512 -e 300 --no-load ${ARR[${SLURM_ARRAY_TASK_ID}]} --context-size 3
 echo "completed "${ARR[${SLURM_ARRAY_TASK_ID}]}
