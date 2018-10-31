@@ -1,5 +1,14 @@
 #!/bin/bash
 
+#SBATCH --job-name=makeDirectoryStructure
+#SBATCH --output=makeDirectoryStructure.out
+#SBATCH --error=makeDirectoryStructure.err
+#SBATCH --time=01:00:00
+#SBATCH --ntasks=1
+#SBATCH --mem=8G
+
+set -e
+
 # datasets={cora_ml,citeseer,pubmed,cora}
 # dim={002,003,005,010,025,050,100}
 # seed={000..29}
