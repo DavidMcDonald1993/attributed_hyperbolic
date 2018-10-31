@@ -392,8 +392,9 @@ def configure_paths(args):
 	dataset = args.dataset
 	# if args.directed:
 	# 	dataset += "_directed"
+
+	directory = os.path.join(dataset, "dim={:03d}".format(args.embedding_dim), "seed={:03d}/".format(args.seed))
 	
-	directory = "dim={:03d}/seed={:03d}/".format(args.embedding_dim, args.seed)
 	if args.only_lcc:
 		directory += "lcc/"
 	else:
@@ -421,7 +422,7 @@ def configure_paths(args):
 
 	if args.multiply_attributes:
 		directory += "multiply_attributes/"
-	elif args.alpha>0:
+	elif args.alpha > 0:
 		directory += "add_attributes_alpha={}/".format(args.alpha, )
 	elif args.jump_prob > 0:
 		directory += "jump_prob={}/".format(args.jump_prob)
@@ -429,36 +430,21 @@ def configure_paths(args):
 		directory += "no_attributes/"
 
 
-	# if args.second_order:
-	#   directory += "second_order_sim/"
-
-
-	args.plot_path = os.path.join(args.plot_path, dataset)
-	if not os.path.exists(args.plot_path):
-		os.makedirs(args.plot_path)
 	args.plot_path = os.path.join(args.plot_path, directory)
-	if not os.path.exists(args.plot_path):
-		os.makedirs(args.plot_path)
+	assert os.path.exists(args.plot_path), args.plot_path
+		# os.makedirs(args.plot_path)
 
-	# args.embedding_path = os.path.join(args.embedding_path, dataset)
-	# if not os.path.exists(args.embedding_path):
-	#   os.makedirs(args.embedding_path)
-	# args.embedding_path = os.path.join(args.embedding_path, directory)
-	# if not os.path.exists(args.embedding_path):
-	#   os.makedirs(args.embedding_path)
-
-	args.log_path = os.path.join(args.log_path, dataset)
-	if not os.path.exists(args.log_path):
-		os.makedirs(args.log_path)
 	args.log_path = os.path.join(args.log_path, directory)
-	if not os.path.exists(args.log_path):
-		os.makedirs(args.log_path)
-	args.log_path += "{}.csv".format(dataset)
+	assert os.path.exists(args.log_path)
+		# os.makedirs(args.log_path)
+	args.log_path += "log.csv"
+	assert os.path.exists(args.log_path)
 
-	args.walk_path = os.path.join(args.walk_path, dataset)
-	if not os.path.exists(args.walk_path):
-		os.makedirs(args.walk_path)
-	args.walk_path += "/seed={:03d}/".format(args.seed)
+	args.model_path = os.path.join(args.model_path, directory)
+	if not os.path.exists(args.model_path):
+		os.makedirs(args.model_path)
+
+	args.walk_path = os.path.join(args.walk_path, dataset, "seed={:03d}/".format(args.seed))
 	if args.only_lcc:
 		args.walk_path += "lcc/"
 	else:
@@ -471,15 +457,10 @@ def configure_paths(args):
 			args.walk_path += "no_non_edges/"
 	else:
 		args.walk_path += "no_lp/"
-	if not os.path.exists(args.walk_path):
-		os.makedirs(args.walk_path)
+	assert os.path.exists(args.walk_path)
+		# os.makedirs(args.walk_path)
 
-	args.model_path = os.path.join(args.model_path, dataset)
-	if not os.path.exists(args.model_path):
-		os.makedirs(args.model_path)
-	args.model_path = os.path.join(args.model_path, directory)
-	if not os.path.exists(args.model_path):
-		os.makedirs(args.model_path)
+
 
 	args.test_results_path = os.path.join(args.test_results_path, dataset)
 	if not os.path.exists(args.test_results_path):
@@ -487,7 +468,7 @@ def configure_paths(args):
 
 	# remove seed from directoy path
 	s = directory.split("/")
-	test_results_directory = "/".join(s[:1] + s[2:])
+	test_results_directory = "/".join(s[:2] + s[3:])
 
 	args.test_results_path = os.path.join(args.test_results_path, test_results_directory)
 	if not os.path.exists(args.test_results_path):
@@ -497,7 +478,7 @@ def configure_paths(args):
 	args.test_results_lock_filename = os.path.join(args.test_results_path, "test_results.lock")
 
 	# touch lock file to ensure that it exists
-	touch(args.test_results_lock_filename)
+	# touch(args.test_results_lock_filename)
 
 
 def main():
@@ -505,8 +486,6 @@ def main():
 	args = parse_args()
 	args.num_positive_samples = 1
 	args.softmax = True
-
-	configure_paths(args)
 	# args.seed = 0
 
 	assert not sum([args.multiply_attributes, args.alpha>0, args.jump_prob>0]) > 1
@@ -514,14 +493,6 @@ def main():
 	random.seed(args.seed)
 	np.random.seed(args.seed)
 	tf.set_random_seed(args.seed)
-
-
-	train = True
-	if args.no_load:
-		plots = os.listdir(args.plot_path)
-		if len(plots) > 0 and any(["test.png" in plot for plot in plots]):
-			print ("Training already completed and no-load flag is raised -- evaluating")
-			train = False
 
 	dataset = args.dataset
 	if not args.evaluate_link_prediction and dataset in ["cora", "cora_ml", "pubmed", "citeseer"]:
@@ -551,6 +522,15 @@ def main():
 	if not args.evaluate_link_prediction:
 		args.evaluate_class_prediction = labels is not None
 		# args.directed = True
+
+	configure_paths(args)
+
+	train = True
+	if args.no_load:
+		plots = os.listdir(args.plot_path)
+		if len(plots) > 0 and any(["test.png" in plot for plot in plots]):
+			print ("Training already completed and no-load flag is raised -- evaluating")
+			train = False
 
 	if args.directed:
 		directed_edges = list(set(topology_graph.edges()) - {edge[::-1] for edge in topology_graph.edges()})
