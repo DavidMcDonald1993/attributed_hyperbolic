@@ -11,7 +11,7 @@
 
 # PROJECT_DIR=/rds/projects/2018/hesz01/attributed_hyperbolic
 # DATA_DIR=/rds/projects/2018/hesz01/data
-DATA_DIR=data
+DATA_DIR="/rds/homes/d/dxm237/data"
 
 ARR=(--dataset=cora_ml" "--seed={0..29}" "--softmax" "--dim={5,10}" --evaluate-link-prediction "--{no-attributes,jump-prob=.1})
 
