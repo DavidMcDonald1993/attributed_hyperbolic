@@ -483,6 +483,8 @@ def configure_paths(args):
 
 def main():
 
+	print ("Beginning execution")
+
 	args = parse_args()
 	args.num_positive_samples = 1
 	args.softmax = True
@@ -516,6 +518,8 @@ def main():
 	else:
 		raise Exception
 
+	print ("Loaded dataset")
+
 	# print (len(topology_graph), len(topology_graph.edges()), features.shape, labels.shape, )
 	# raise SystemExit
 
@@ -524,6 +528,8 @@ def main():
 		# args.directed = True
 
 	configure_paths(args)
+
+	print ("Configured paths")
 
 	train = True
 	if args.no_load:
