@@ -462,17 +462,17 @@ def configure_paths(args):
 
 
 
-	args.test_results_path = os.path.join(args.test_results_path, dataset)
-	if not os.path.exists(args.test_results_path):
-		os.makedirs(args.test_results_path)
+	# args.test_results_path = os.path.join(args.test_results_path, dataset)
+	# if not os.path.exists(args.test_results_path):
+	# 	os.makedirs(args.test_results_path)
 
 	# remove seed from directoy path
 	s = directory.split("/")
 	test_results_directory = "/".join(s[:2] + s[3:])
 
 	args.test_results_path = os.path.join(args.test_results_path, test_results_directory)
-	if not os.path.exists(args.test_results_path):
-		os.makedirs(args.test_results_path)
+	assert os.path.exists(args.test_results_path)
+		# os.makedirs(args.test_results_path)
 
 	args.test_results_filename = os.path.join(args.test_results_path, "test_results.csv")
 	args.test_results_lock_filename = os.path.join(args.test_results_path, "test_results.lock")
@@ -710,20 +710,11 @@ def main():
 
 	print ("Training completed -- loading best model according to {}".format(monitor))
 
-	# saved_models = sorted([f for f in os.listdir(args.model_path) 
-	# 	if re.match(r"^[0-9][0-9][0-9][0-9]*", f)])
-	# model_file = os.path.join(args.model_path, saved_models[0])
 	model_file = os.path.join(args.model_path, "best_model.h5")
 
 	print ("Determined best model filename: {}".format(model_file))
 	embedding = load_embedding(model_file)
 	print (embedding)
-
-	# print ("removing all other saved models")
-	# for saved_model in saved_models[1:]:
-	# 	old_model_path = os.path.join(args.model_path, saved_model)
-	# 	print ("removing {}".format(old_model_path))
-	# 	os.remove(old_model_path)
 
 	if args.euclidean:
 		dists = euclidean_distances(embedding)
@@ -829,8 +820,6 @@ def main():
 	print ("saving test results to: {}".format(args.test_results_filename))
 	threadsafe_save_test_results(args.test_results_lock_filename, args.test_results_filename, 
 		args.seed, test_results)
-
-
 
 if __name__ == "__main__":
 	main()
