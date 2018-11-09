@@ -411,7 +411,7 @@ class PeriodicStdoutLogger(Callback):
 
 
 		if self.args.evaluate_class_prediction:
-			label_percentages, f1_micros, f1_macros = evaluate_classification(klein_embedding, self.labels, self.args)
+			label_percentages, f1_micros, f1_macros = evaluate_classification(klein_embedding, self.labels, )
 
 			print (f1_micros)
 

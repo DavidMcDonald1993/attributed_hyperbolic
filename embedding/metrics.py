@@ -116,7 +116,7 @@ def evaluate_rank_and_MAP_fb(dists, edge_dict, non_edge_dict):
 		"MEAN ROC AUC =", np.mean(roc_auc_scores))
 	return np.mean(ranks), np.mean(ap_scores), np.mean(roc_auc_scores)
 
-def evaluate_classification(klein_embedding, labels, args,
+def evaluate_classification(klein_embedding, labels,
 	label_percentages=np.arange(0.02, 0.11, 0.01), n_repeats=10):
 
 	assert len(labels.shape) == 1

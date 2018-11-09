@@ -794,9 +794,9 @@ def main():
 
 	if args.evaluate_class_prediction:
 		if args.euclidean:
-			label_percentages, f1_micros, f1_macros = evaluate_classification(embedding, labels, args)
+			label_percentages, f1_micros, f1_macros = evaluate_classification(embedding, labels, )
 		else:
-			label_percentages, f1_micros, f1_macros = evaluate_classification(klein_embedding, labels, args)
+			label_percentages, f1_micros, f1_macros = evaluate_classification(klein_embedding, labels, )
 
 		print (f1_micros)
 

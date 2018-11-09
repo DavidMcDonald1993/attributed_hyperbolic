@@ -107,6 +107,10 @@ def hyperbolic_softmax_loss(alpha=0):
     def hyperboloid_to_poincare_ball(X):
         return X[...,:-1] / (1 + X[...,-1,None])
 
+    def min_max_scale(x):
+        return (x - K.stop_gradient(K.min(x, axis=-1, keepdims=True))) /\
+         K.stop_gradient(K.max(x, axis=-1, keepdims=True) - K.min(x, axis=-1, keepdims=True))
+
     def loss(y_true, y_pred, alpha=alpha):
 
         alpha = K.cast(1e-3, K.floatx())
@@ -117,8 +121,8 @@ def hyperbolic_softmax_loss(alpha=0):
         inner_uv = minkowski_dot(u_emb, samples_emb)
         inner_uv = K.minimum(inner_uv, -(1+K.epsilon())) # clip to avoid nan
 
-        minus_d_uv = -tf.acosh(-inner_uv)
-        # minus_d_uv = -K.square(tf.acosh(-inner_uv) ) 
+        # minus_d_uv = -tf.acosh(-inner_uv)
+        minus_d_uv = -K.square(tf.acosh(-inner_uv) ) 
 
         # u_emb_poincare = hyperboloid_to_poincare_ball(u_emb)
         # samples_emb_poincare = hyperboloid_to_poincare_ball(samples_emb)
