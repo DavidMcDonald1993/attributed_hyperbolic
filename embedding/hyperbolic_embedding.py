@@ -3,7 +3,7 @@ from __future__ import print_function
 
 import os
 import h5py
-os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+# os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 os.environ["PYTHON_EGG_CACHE"] = "/rds/projects/2018/hesz01/attributed_hyperbolic/python-eggs"
 import multiprocessing 
 import re
@@ -431,18 +431,25 @@ def configure_paths(args):
 
 
 	args.plot_path = os.path.join(args.plot_path, directory)
-	assert os.path.exists(args.plot_path), args.plot_path
-		# os.makedirs(args.plot_path)
+	# assert os.path.exists(args.plot_path)
+	if not os.path.exists(args.plot_path):
+		os.makedirs(args.plot_path)
+		print ("making {}".format(args.plot_path))
 
 	args.log_path = os.path.join(args.log_path, directory)
-	assert os.path.exists(args.log_path)
-		# os.makedirs(args.log_path)
+	# assert os.path.exists(args.log_path)
+	if not os.path.exists(args.log_path):
+		os.makedirs(args.log_path)
+		print ("making {}".format(args.log_path))
 	args.log_path += "log.csv"
-	assert os.path.exists(args.log_path)
+	# assert os.path.exists(args.log_path)
 
 	args.model_path = os.path.join(args.model_path, directory)
+	# assert os.path.exists(args.model_path)
 	if not os.path.exists(args.model_path):
 		os.makedirs(args.model_path)
+		print ("making {}".format(args.model_path))
+
 
 	args.walk_path = os.path.join(args.walk_path, dataset, "seed={:03d}/".format(args.seed))
 	if args.only_lcc:
@@ -457,8 +464,9 @@ def configure_paths(args):
 			args.walk_path += "no_non_edges/"
 	else:
 		args.walk_path += "no_lp/"
-	assert os.path.exists(args.walk_path)
-		# os.makedirs(args.walk_path)
+	# assert os.path.exists(args.walk_path)
+	if not os.path.exists(args.walk_path):
+		os.makedirs(args.walk_path)
 
 
 
@@ -471,8 +479,9 @@ def configure_paths(args):
 	test_results_directory = "/".join(s[:2] + s[3:])
 
 	args.test_results_path = os.path.join(args.test_results_path, test_results_directory)
-	assert os.path.exists(args.test_results_path)
-		# os.makedirs(args.test_results_path)
+	# assert os.path.exists(args.test_results_path)
+	if not os.path.exists(args.test_results_path):
+		os.makedirs(args.test_results_path)
 
 	args.test_results_filename = os.path.join(args.test_results_path, "test_results.csv")
 	args.test_results_lock_filename = os.path.join(args.test_results_path, "test_results.lock")
@@ -809,7 +818,7 @@ def main():
 
 
 	if args.directed:
-		directed_f1_micro, directed_f1_macro= evaluate_direction(hyperboloid_embedding, 
+		directed_f1_micro, directed_f1_macro= evaluate_direction(embedding, 
 			directed_edges, )
 		test_results.update({"directed_f1_micro": directed_f1_micro,
 			"directed_f1_macro": directed_f1_macro, })

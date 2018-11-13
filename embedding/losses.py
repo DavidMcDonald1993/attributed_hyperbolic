@@ -107,9 +107,9 @@ def hyperbolic_softmax_loss(alpha=0):
     def hyperboloid_to_poincare_ball(X):
         return X[...,:-1] / (1 + X[...,-1,None])
 
-    def min_max_scale(x):
-        return (x - K.stop_gradient(K.min(x, axis=-1, keepdims=True))) /\
-         K.stop_gradient(K.max(x, axis=-1, keepdims=True) - K.min(x, axis=-1, keepdims=True))
+    def scale(x):
+        return tf.nn.sigmoid((x - K.stop_gradient(K.mean(x, axis=-1, keepdims=True))) /\
+                 K.stop_gradient(K.std(x, axis=-1, keepdims=True)))
 
     def loss(y_true, y_pred, alpha=alpha):
 
@@ -122,7 +122,9 @@ def hyperbolic_softmax_loss(alpha=0):
         inner_uv = K.minimum(inner_uv, -(1+K.epsilon())) # clip to avoid nan
 
         # minus_d_uv = -tf.acosh(-inner_uv)
-        minus_d_uv = -K.square(tf.acosh(-inner_uv) ) 
+        minus_d_uv = -K.square(tf.acosh(-inner_uv) )
+        # minus_d_uv = scale(minus_d_uv)
+        logits = minus_d_uv
 
         # u_emb_poincare = hyperboloid_to_poincare_ball(u_emb)
         # samples_emb_poincare = hyperboloid_to_poincare_ball(samples_emb)
@@ -135,14 +137,46 @@ def hyperbolic_softmax_loss(alpha=0):
 
         # d_uv_sq = K.square(tf.acosh(-inner_uv))
         # logits = -(1. + alpha * (samples_rank - u_rank)) * d_uv_sq
-        # logits -= K.stop_gradient(K.max(logits, axis=-1, keepdims=True, ))
+        logits -= K.stop_gradient(K.max(logits, axis=-1, keepdims=True, ))
 
-        return K.mean(tf.nn.softmax_cross_entropy_with_logits(labels=y_true[...,0], logits=minus_d_uv))
+        return K.mean(tf.nn.softmax_cross_entropy_with_logits(labels=y_true[...,0], logits=logits))
         # return K.mean(tf.nn.softmax_cross_entropy_with_logits(labels=y_true[...,0], logits=-d_uv_sq))
         # return K.mean(tf.nn.softmax_cross_entropy_with_logits(labels=y_true[...,0], logits=logits))
 
         
 
     return loss
+
+def hyperbolic_hinge_loss(alpha=0):
+# def hyperbolic_softmax_loss(alpha=0):
+
+
+    def acosh(x):
+        return K.log(x + K.sqrt(K.square(x) - 1))
+
+    def hyperboloid_to_poincare_ball(X):
+        return X[...,:-1] / (1 + X[...,-1,None])
+
+    def scale(x):
+        return tf.nn.sigmoid((x - K.stop_gradient(K.mean(x, axis=-1, keepdims=True))) /\
+                 K.stop_gradient(K.std(x, axis=-1, keepdims=True)))
+
+    def loss(y_true, y_pred, alpha=alpha):
+
+        alpha = K.cast(1e-3, K.floatx())
+
+        u_emb = y_pred[:,0]
+        samples_emb = y_pred[:,1:]
+        
+        inner_uv = minkowski_dot(u_emb, samples_emb)
+        inner_uv = K.minimum(inner_uv, -(1+K.epsilon())) # clip to avoid nan
+
+        # minus_d_uv = -tf.acosh(-inner_uv)
+        d_uv = K.square(tf.acosh(-inner_uv) ) 
+
+        return -K.mean( inner_uv[:,0] - K.log(K.sum(K.exp(inner_uv[:,1:]), axis=-1, keepdims=True)))
+
+    return loss
+
 
 
