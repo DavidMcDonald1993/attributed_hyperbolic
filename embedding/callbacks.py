@@ -14,9 +14,10 @@ from sklearn.metrics import roc_curve, roc_auc_score, precision_recall_curve, av
 from sklearn.utils.fixes import signature
 
 from keras.callbacks import Callback
-from utils import convert_edgelist_to_dict
 
+from utils import convert_edgelist_to_dict
 from metrics import evaluate_rank_and_MAP, evaluate_rank_and_MAP_fb, evaluate_classification, evaluate_direction
+from visualise import draw_graph
 
 def gans_to_hyperboloid_np(x):
 	t = np.sqrt(1. + np.sum(np.square(x), axis=-1, keepdims=True))
@@ -101,27 +102,12 @@ def plot_disk_embeddings(epoch, edges, poincare_embedding, labels, label_info,
 	mean_rank_reconstruction, map_reconstruction, mean_roc_reconstruction,
 	mean_rank_lp, map_lp, mean_roc_lp, path,  ):
 
-	# def bit_shift(bitlist):
-	#     out = 0
-	#     for bit in bitlist:
-	#         out = (out << 1) | bit
-	#     return out
-
-
-	# if len(labels.shape) > 1:
-	# 	raise Exception
-	# 	unique_labels = np.unique(labels, axis=0)
-	# 	labels = np.array([np.where((unique_labels == label).all(axis=-1))[0][0] for label in labels])
-
 	if not isinstance(edges, np.ndarray):
 		edges = np.array(edges)
 
 	if labels is not None:
 		num_classes = len(set(labels))
 		colors = np.random.rand(num_classes, 3)
-
-	# num_classes = len(set(labels))
-	# colors = np.random.rand(num_classes, 3)
 
 	print ("saving plot to {}".format(path))
 
@@ -138,41 +124,13 @@ def plot_disk_embeddings(epoch, edges, poincare_embedding, labels, label_info,
 	ax.add_artist(plt.Circle([0,0], 1, fill=False))
 	u_emb = poincare_embedding[edges[:,0]]
 	v_emb = poincare_embedding[edges[:,1]]
-	# for u, v in edges:
-	# 	u_emb = poincare_embedding[u]
-	# 	v_emb = poincare_embedding[v]
-	# 	plt.plot([u_emb[0], v_emb[0]], [u_emb[1], v_emb[1]], c="k", linewidth=0.05, zorder=0)
 	plt.plot([u_emb[:,0], v_emb[:,0]], [u_emb[:,1], v_emb[:,1]], c="k", linewidth=0.05, zorder=0)
 	if labels is None:
 		plt.scatter(poincare_embedding[:,0], poincare_embedding[:,1], s=10, c="r", zorder=1)
 	else:
 		plt.scatter(poincare_embedding[:,0], poincare_embedding[:,1], s=10, c=labels, ) 
-				# label=label_info[c] if label_info is not None else None, zorder=1)
-		# for c in range(num_classes):
-		# 	idx = labels == c
-		# 	plt.scatter(poincare_embedding[idx,0], poincare_embedding[idx,1], s=10, c=colors[c], 
-		# 		label=label_info[c] if label_info is not None else None, zorder=1)
-	# plt.scatter(poincare_embedding[:,0], poincare_embedding[:,1], s=10, c=colors[labels], zorder=1)
 	plt.xlim([-1,1])
 	plt.ylim([-1,1])
-
-	# ax = fig.add_subplot(122)
-	# plt.title("Klein")
-	# ax.add_artist(plt.Circle([0,0], 1, fill=False))
-	# u_emb = klein_embedding[edges[:,0]]
-	# v_emb = klein_embedding[edges[:,1]]
-	# # for u, v in edges:
-	# # 	u_emb = klein_embedding[u]
-	# # 	v_emb = klein_embedding[v]
-	# # 	plt.plot([u_emb[0], v_emb[0]], [u_emb[1], v_emb[1]], c="k", linewidth=0.05, zorder=0)
-	# plt.plot([u_emb[:,0], v_emb[:,0]], [u_emb[:,1], v_emb[:,1]], c="k", linewidth=0.05, zorder=0)
-	# for c in range(num_classes):
-	# 	idx = labels == c
-	# 	plt.scatter(klein_embedding[idx,0], klein_embedding[idx,1], s=10, c=colors[c], 
-	# 		label=label_info[c] if label_info is not None else None, zorder=1)
-	# # plt.scatter(klein_embedding[:,0], klein_embedding[:,1], s=10, c=c[labels], zorder=1)
-	# plt.xlim([-1,1])
-	# plt.ylim([-1,1])
 
 	# Shrink current axis by 20%
 	box = ax.get_position()
@@ -207,7 +165,6 @@ def plot_precisions_recalls(dists, reconstruction_edges, non_edges, val_edges, v
 	step_kwargs = ({'step': 'post'}
                if 'step' in signature(plt.fill_between).parameters else {})
 
-	# plt.plot(recalls, precisions, c="r")
 	plt.step(recalls, precisions, color='r', alpha=0.2,
          where='post', zorder=1)
 	plt.fill_between(recalls, precisions, alpha=0.2, color='r', zorder=1, **step_kwargs)
@@ -228,7 +185,6 @@ def plot_precisions_recalls(dists, reconstruction_edges, non_edges, val_edges, v
 		precisions, recalls, _ = precision_recall_curve(targets, -_dists)
 		ap = average_precision_score(targets, -_dists)
 
-		# plt.plot(recalls, precisions, c="b")
 		plt.step(recalls, precisions, color='b', alpha=0.2,
          where='post', zorder=0)
 		plt.fill_between(recalls, precisions, alpha=0.2, color='b', zorder=0, **step_kwargs)
@@ -432,23 +388,27 @@ class PeriodicStdoutLogger(Callback):
 
 		if self.epoch % self.n == 0:
 
-			# if self.args.embedding_dim == 2:
-			plot_path = os.path.join(self.args.plot_path, "epoch_{:05d}_plot.png".format(self.epoch) )
-			if self.args.euclidean:
-				plot_euclidean_embedding(self.epoch, self.reconstruction_edges, 
-					poincare_embedding,
-					self.labels, self.label_info,
-					mean_rank_reconstruction, map_reconstruction, mean_roc_reconstruction,
-					mean_rank_lp, map_lp, mean_roc_lp,
-					plot_path)
+			if self.args.embedding_dim == 2:
+				plot_path = os.path.join(self.args.plot_path, "epoch_{:05d}_plot.png".format(self.epoch) )
+				if not self.args.euclidean:
+					draw_graph(self.reconstruction_edges, poincare_embedding, self.labels, 
+						mean_rank_reconstruction, map_reconstruction, mean_roc_reconstruction, 
+						mean_rank_lp, map_lp, mean_roc_lp, plot_path)
+				# if self.args.euclidean:
+				# 	plot_euclidean_embedding(self.epoch, self.reconstruction_edges, 
+				# 		poincare_embedding,
+				# 		self.labels, self.label_info,
+				# 		mean_rank_reconstruction, map_reconstruction, mean_roc_reconstruction,
+				# 		mean_rank_lp, map_lp, mean_roc_lp,
+				# 		plot_path)
 
-			else:
-				plot_disk_embeddings(self.epoch, self.reconstruction_edges, 
-					poincare_embedding,
-					self.labels, self.label_info,
-					mean_rank_reconstruction, map_reconstruction, mean_roc_reconstruction,
-					mean_rank_lp, map_lp, mean_roc_lp,
-					plot_path)
+				# else:
+				# 	plot_disk_embeddings(self.epoch, self.reconstruction_edges, 
+				# 		poincare_embedding,
+				# 		self.labels, self.label_info,
+				# 		mean_rank_reconstruction, map_reconstruction, mean_roc_reconstruction,
+				# 		mean_rank_lp, map_lp, mean_roc_lp,
+				# 		plot_path)
 
 			roc_path = os.path.join(self.args.plot_path, "epoch_{:05d}_roc_curve.png".format(self.epoch) )
 			plot_roc(dists, self.reconstruction_edges, self.non_edges, 

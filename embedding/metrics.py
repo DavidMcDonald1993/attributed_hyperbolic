@@ -66,7 +66,7 @@ def evaluate_rank_and_MAP(dists, edgelist, non_edgelist):
 	ranks = ranks.mean()
 
 	print ("MEAN RANK =", ranks, "AP =", ap_score, 
-		"ROC AUC =", auc_score)
+		"AUROC =", auc_score)
 
 	return ranks, ap_score, auc_score
 
@@ -119,6 +119,8 @@ def evaluate_rank_and_MAP_fb(dists, edge_dict, non_edge_dict):
 def evaluate_classification(klein_embedding, labels,
 	label_percentages=np.arange(0.02, 0.11, 0.01), n_repeats=10):
 
+	print ("evaluating node classification")
+
 	assert len(labels.shape) == 1
 
 	num_nodes, dim = klein_embedding.shape
@@ -145,6 +147,7 @@ def evaluate_classification(klein_embedding, labels,
 			f1_macro = f1_score(labels[split_test], predictions, average="macro")
 			f1_micros[seed,i] = f1_micro
 			f1_macros[seed,i] = f1_macro
+		print ("completed repeat {}".format(seed))
 
 	return label_percentages, f1_micros.mean(axis=0), f1_macros.mean(axis=0)
 

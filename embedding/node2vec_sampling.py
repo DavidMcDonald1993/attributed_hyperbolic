@@ -34,13 +34,13 @@ class Graph():
 			# node2vec style random walk
 			cur_nbrs = sorted(G.neighbors(cur))
 
-			if self.jump_prob > 0 and (np.random.rand() < self.jump_prob or len(cur_nbrs) == 0):
+			if self.jump_prob > 0 and ((np.random.rand() < self.jump_prob) or len(cur_nbrs) == 0):
 				# random jump based on attribute similarity
 				if (feature_sim[cur]==0).all():
 					break
-				jump = True
 				next_ = np.random.choice(len(feature_sim), replace=False, p=feature_sim[cur])
 				walk.append(next_)
+				jump = True
 
 			elif len(cur_nbrs) > 0:
 				# if (self.p==1 and self.q==1) or len(walk) == 1: # no edge preprocessing required
@@ -54,9 +54,6 @@ class Graph():
 				jump = False
 			else:
 				break
-
-			
-
 		return walk
 
 	
@@ -73,7 +70,7 @@ class Graph():
 			for node in nodes:
 				walks.append(self.node2vec_walk(walk_length=walk_length, start_node=node))
 				if i % 1000 == 0:
-					print ("peformed walk {}/{}".format(i, num_walks*len(G)))
+					print ("performed walk {}/{}".format(i, num_walks*len(G)))
 				i += 1
 
 		return walks
@@ -138,9 +135,8 @@ class Graph():
 				if i % 1000 == 0:
 					print ("completed edge {}/{}".format(i, 2*len(G.edges())))
 				alias_edges[edge] = self.get_alias_edge(edge[0], edge[1])
-				i += 1
 				alias_edges[(edge[1], edge[0])] = self.get_alias_edge(edge[1], edge[0])
-				i += 1
+				i += 2
 			print ("completed edge {}/{}".format(i, 2*len(G.edges())))
 
 		self.alias_edges = alias_edges

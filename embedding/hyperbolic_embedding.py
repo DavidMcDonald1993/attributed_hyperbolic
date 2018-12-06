@@ -24,7 +24,8 @@ from sklearn.metrics.pairwise import cosine_similarity, euclidean_distances
 
 from data_utils import load_karate, load_labelled_attributed_network, load_ppi, load_g2g_datasets, load_tf_interaction, load_wordnet, load_collaboration_network
 from data_utils import load_contact
-from utils import load_walks, determine_positive_and_negative_samples, convert_edgelist_to_dict, split_edges, get_training_sample, make_validation_data, threadsafe_save_test_results
+from utils import load_walks, determine_positive_and_negative_samples, convert_edgelist_to_dict
+from utils import split_edges, get_training_sample, make_validation_data, threadsafe_save_test_results, create_feature_graph
 from callbacks import PeriodicStdoutLogger, hyperboloid_to_klein, hyperboloid_to_poincare_ball, hyperbolic_distance_hyperboloid_pairwise
 from losses import hyperbolic_negative_sampling_loss, hyperbolic_sigmoid_loss, hyperbolic_softmax_loss, euclidean_negative_sampling_loss
 from metrics import evaluate_rank_and_MAP, evaluate_rank_and_MAP_fb, evaluate_classification, evaluate_direction
@@ -66,11 +67,21 @@ def gans_to_hyperboloid(x):
 	t = K.sqrt(1. + K.sum(K.square(x), axis=-1, keepdims=True))
 	return tf.concat([x, t], axis=-1)
 
-
 def minkowski_dot(x, y):
-	axes = len(x.shape) - 1, len(y.shape) -1
-	return K.batch_dot( x[...,:-1], y[...,:-1], axes=axes) - K.batch_dot(x[...,-1:], y[...,-1:], axes=axes)
+    axes = len(x.shape) - 1, len(y.shape) -1
+    return K.batch_dot(x[...,:-1], y[...,:-1], axes=axes) - K.batch_dot(x[...,-1:], y[...,-1:], axes=axes)
 
+def minkowski_dot_2d(x, y):
+	# axes = len(x.shape) - 1, len(y.shape) -1
+	return K.dot( x[...,:-1], K.transpose(y[...,:-1])) - K.dot(x[...,-1:], K.transpose(y[...,-1:]))
+
+def hyperbolic_distance(x, y):
+	inner_uv = minkowski_dot_2d(x, y)
+	inner_uv = -inner_uv - 1.
+	inner_uv = K.maximum(inner_uv, K.epsilon()) # clip to avoid nan
+
+	d_uv = tf.acosh(1. + inner_uv)
+	return d_uv
 
 def hyperboloid_initializer(shape, r_max=1e-3):
 
@@ -90,7 +101,6 @@ def hyperboloid_initializer(shape, r_max=1e-3):
 
 	w = sphere_uniform_sample(shape, r_max=r_max)
 	return poincare_ball_to_hyperboloid(w)
-	# return np.genfromtxt("../data/labelled_attributed_networks/cora-lcc-warmstart.weights")
 
 class EmbeddingLayer(Layer):
 	
@@ -117,19 +127,31 @@ class EmbeddingLayer(Layer):
 
 		super(EmbeddingLayer, self).build(input_shape)
 
+
+
 	def call(self, x):
 		x = K.cast(x, dtype=tf.int64)
-		# u = x[:,:1]
-		# v = x[:,1:]
-		# u_embedding = tf.gather(self.embedding, u)
+		u = x[:,:1]
+		v = x[:,1:2]
+		neg_sample_idx = x[:,2:]
+		u_embedding = tf.gather(self.embedding, u)
+		v_embedding = tf.gather(self.embedding, v)
+
+		# dists = hyperbolic_distance(K.squeeze(u_embedding, 1), self.embedding)
+		# neg_sample_idx = tf.multinomial(logits=-dists, num_samples=x.shape[1]-2)	
+		# # neg_sample_idx = tf.multinomial(logits=-tf.where(dists > 1e-6, x=dists, y=tf.ones_like(dists)*100), 
+		# 	# num_samples=x.shape[1]-2)	
+		# neg_sample_idx = K.stop_gradient(neg_sample_idx)	
+
+
+		neg_samples_embedding = tf.gather(self.embedding, neg_sample_idx)
+
 		# v_embedding = tf.gather(self.context_embedding, v)
 
-		# embedding = K.concatenate([u_embedding, v_embedding], axis=1)
+		embedding = K.concatenate([u_embedding, v_embedding, neg_samples_embedding], axis=1)
 
-		embedding = tf.gather(self.embedding, x, name="embedding_gather")
+		# embedding = tf.gather(self.embedding, x, name="embedding_gather")
 
-		# embedding = gans_to_hyperboloid(embedding)
-		
 		return embedding
 
 	def compute_output_shape(self, input_shape):
@@ -146,9 +168,9 @@ class ExponentialMappingOptimizer(optimizer.Optimizer):
 	def __init__(self, learning_rate=0.001, use_locking=False, name="ExponentialMappingOptimizer", burnin=10, max_norm=np.inf):
 		super(ExponentialMappingOptimizer, self).__init__(use_locking, name)
 		self._lr = learning_rate
-		self.burnin = burnin
-        # with K.name_scope(self.__class__.__name__):
-		self.iterations = K.variable(0, dtype='int64', name='iterations')
+		# self.burnin = burnin
+		# with K.name_scope(self.__class__.__name__):
+		# self.iterations = K.variable(0, dtype='int64', name='iterations')
 		self.max_norm = max_norm
 
 	def _prepare(self):
@@ -168,16 +190,13 @@ class ExponentialMappingOptimizer(optimizer.Optimizer):
 		return tf.assign(var, exp_map)
 		
 	def _apply_sparse(self, grad, var):
-
-		# assert False
 		indices = grad.indices
 		values = grad.values
-		# p = tf.nn.embedding_lookup(var, indices)
 		p = tf.gather(var, indices, name="gather_apply_sparse")
 
 		lr_t = math_ops.cast(self._lr_t, var.dtype.base_dtype)
 		spacial_grad = values[:, :-1]
-		t_grad = - values[:, -1:]
+		t_grad = -values[:, -1:]
 
 		ambient_grad = tf.concat([spacial_grad, t_grad], axis=-1, name="optimizer_concat")
 		tangent_grad = self.project_onto_tangent_space(p, ambient_grad)
@@ -200,6 +219,7 @@ class ExponentialMappingOptimizer(optimizer.Optimizer):
 
 		norm_x = K.sqrt( K.maximum(K.cast(0., K.floatx()), minkowski_dot(x, x), ) )
 		clipped_norm_x = K.minimum(norm_x, self.max_norm)
+		# clipped_norm_x = K.ones_like(norm_x) * 1e-3
 		####################################################
 		exp_map_p = tf.cosh(clipped_norm_x) * p
 		
@@ -212,7 +232,7 @@ class ExponentialMappingOptimizer(optimizer.Optimizer):
 		dense_shape = tf.cast( tf.shape(p), tf.int64)
 		exp_map_x = tf.scatter_nd(indices=idx[:,None], updates=updates, shape=dense_shape)
 		
-		exp_map = exp_map_p + exp_map_x    
+		exp_map = exp_map_p + exp_map_x 
 		###################################################
 		# z = x / K.maximum(norm_x, K.epsilon()) # unit norm 
 		# exp_map = tf.cosh(norm_x) * p + tf.sinh(norm_x) * z
@@ -285,19 +305,19 @@ def parse_args():
 	parser.add_argument("--rho", dest="rho", type=float, default=0,
 		help="Minimum feature correlation (default is 0).")
 
-	parser.add_argument("-e", "--num_epochs", dest="num_epochs", type=int, default=50000,
-		help="The number of epochs to train for (default is 50000).")
+	parser.add_argument("-e", "--num_epochs", dest="num_epochs", type=int, default=300,
+		help="The number of epochs to train for (default is 300).")
 	parser.add_argument("-b", "--batch_size", dest="batch_size", type=int, default=512, 
 		help="Batch size for training (default is 512).")
 	parser.add_argument("--nneg", dest="num_negative_samples", type=int, default=10, 
 		help="Number of negative samples for training (default is 10).")
-	parser.add_argument("--context-size", dest="context_size", type=int, default=1,
-		help="Context size for generating positive samples (default is 1).")
-	parser.add_argument("--patience", dest="patience", type=int, default=25,
-		help="The number of epochs of no improvement in validation loss before training is stopped. (Default is 25)")
+	parser.add_argument("--context-size", dest="context_size", type=int, default=3,
+		help="Context size for generating positive samples (default is 3).")
+	parser.add_argument("--patience", dest="patience", type=int, default=300,
+		help="The number of epochs of no improvement in validation loss before training is stopped. (Default is 300)")
 
-	parser.add_argument("--plot-freq", dest="plot_freq", type=int, default=100, 
-		help="Frequency for plotting (default is 100).")
+	parser.add_argument("--plot-freq", dest="plot_freq", type=int, default=10, 
+		help="Frequency for plotting (default is 10).")
 
 	parser.add_argument("-d", "--dim", dest="embedding_dim", type=int,
 		help="Dimension of embeddings for each layer (default is 2).", default=2)
@@ -381,8 +401,8 @@ def parse_args():
 	return args
 
 def touch(path):
-    with open(path, 'a'):
-        os.utime(path, None)
+	with open(path, 'a'):
+		os.utime(path, None)
 
 def configure_paths(args):
 	'''
@@ -435,6 +455,7 @@ def configure_paths(args):
 	if not os.path.exists(args.plot_path):
 		os.makedirs(args.plot_path)
 		print ("making {}".format(args.plot_path))
+	print ("saving plots to {}".format(args.plot_path))
 
 	args.log_path = os.path.join(args.log_path, directory)
 	# assert os.path.exists(args.log_path)
@@ -442,6 +463,8 @@ def configure_paths(args):
 		os.makedirs(args.log_path)
 		print ("making {}".format(args.log_path))
 	args.log_path += "log.csv"
+	print ("writing log to {}".format(args.log_path))
+
 	# assert os.path.exists(args.log_path)
 
 	args.model_path = os.path.join(args.model_path, directory)
@@ -449,7 +472,7 @@ def configure_paths(args):
 	if not os.path.exists(args.model_path):
 		os.makedirs(args.model_path)
 		print ("making {}".format(args.model_path))
-
+	print ("saving models to {}".format(args.model_path))
 
 	args.walk_path = os.path.join(args.walk_path, dataset, "seed={:03d}/".format(args.seed))
 	if args.only_lcc:
@@ -467,6 +490,8 @@ def configure_paths(args):
 	# assert os.path.exists(args.walk_path)
 	if not os.path.exists(args.walk_path):
 		os.makedirs(args.walk_path)
+		print ("making {}".format(args.walk_path))
+	print ("saving walks to {}".format(args.walk_path))
 
 
 
@@ -482,9 +507,12 @@ def configure_paths(args):
 	# assert os.path.exists(args.test_results_path)
 	if not os.path.exists(args.test_results_path):
 		os.makedirs(args.test_results_path)
+		print ("making {}".format(args.test_results_path))
 
 	args.test_results_filename = os.path.join(args.test_results_path, "test_results.csv")
 	args.test_results_lock_filename = os.path.join(args.test_results_path, "test_results.lock")
+
+	print ("saving results to {}".format(args.test_results_filename))
 
 	# touch lock file to ensure that it exists
 	# touch(args.test_results_lock_filename)
@@ -496,7 +524,7 @@ def main():
 
 	args = parse_args()
 	args.num_positive_samples = 1
-	args.softmax = True
+	# args.softmax = True
 	# args.seed = 0
 
 	assert not sum([args.multiply_attributes, args.alpha>0, args.jump_prob>0]) > 1
@@ -506,8 +534,8 @@ def main():
 	tf.set_random_seed(args.seed)
 
 	dataset = args.dataset
-	if not args.evaluate_link_prediction and dataset in ["cora", "cora_ml", "pubmed", "citeseer"]:
-		args.directed = True
+	# if not args.evaluate_link_prediction and dataset in ["cora", "cora_ml", "pubmed", "citeseer"]:
+	# 	args.directed = True
 
 	if dataset == "karate":
 		topology_graph, features, labels = load_karate(args)
@@ -598,8 +626,12 @@ def main():
 
 	if args.alpha > 0:
 		assert features is not None
-		walk_file = os.path.join(args.walk_path, "add_attributes_alpha={}".format(args.alpha))
-		g = nx.from_numpy_matrix((1 - args.alpha) * nx.adjacency_matrix(topology_graph).A + args.alpha * feature_sim)
+		# walk_file = os.path.join(args.walk_path, "combine_graphs")
+		# feature_g = create_feature_graph(features, args)
+		# walk_file = os.path.join(args.walk_path, "add_attributes_alpha={}".format(args.alpha))
+		# g = nx.from_numpy_matrix((1 - args.alpha) * nx.adjacency_matrix(topology_graph).A + args.alpha * feature_sim)
+		walk_file = os.path.join(args.walk_path, "no_attributes")
+		g = topology_graph
 	elif args.multiply_attributes:
 		assert features is not None
 		walk_file = os.path.join(args.walk_path, "multiply_attributes")
@@ -617,10 +649,17 @@ def main():
 
 	walks = load_walks(g, walk_file, feature_sim, args)
 
+	# lets just try this TODO remove 
+	# assert args.alpha > 0 and args.rho > 0
+	# walks += load_walks(create_feature_graph(features, args), 
+	# 	os.path.join(args.walk_path, "feature_graph_rho={}_num_walks={}-walk_len={}-p={}-q={}.walk".format(args.rho, args.num_walks, 
+	# 			args.walk_length, args.p, args.q)), 
+	# 	feature_sim, args)
+
 	if args.just_walks:
 		return
 		
-	positive_samples, negative_samples, alias_dict =\
+	positive_samples, negative_samples, probs, alias_dict =\
 		determine_positive_and_negative_samples(nodes=topology_graph.nodes(), 
 		walks=walks, context_size=args.context_size, directed=args.directed)
 
@@ -631,6 +670,7 @@ def main():
 	optimizer = ("adam" if args.euclidean else
 		ExponentialMappingOptimizer(learning_rate=args.lr)
 	)
+	# optimizer = "adam"
 	loss = (
 		hyperbolic_softmax_loss(args.directed * 0)
 		if args.softmax 
@@ -644,7 +684,8 @@ def main():
 	model.summary()
 
 	if args.evaluate_link_prediction:
-		val_data = make_validation_data(val_edges, val_non_edges, negative_samples, alias_dict, args)
+		# val_data = make_validation_data(val_edges, val_non_edges, negative_samples, alias_dict, args)
+		val_data = None
 	else:
 		val_data = None
 
@@ -686,10 +727,8 @@ def main():
 
 		if args.use_generator:
 			print ("Training with data generator with {} worker threads".format(args.workers))
-			random.shuffle(positive_samples)
-			training_gen = TrainingSequence(positive_samples, negative_samples, alias_dict, args)
-
-			sys.stdout.flush()
+			# random.shuffle(positive_samples)
+			training_gen = TrainingSequence(positive_samples, negative_samples, probs, alias_dict, args)
 
 			model.fit_generator(training_gen, 
 				workers=args.workers, max_queue_size=25, 
@@ -703,13 +742,10 @@ def main():
 		else:
 			print ("Training without data generator")
 
-			x = get_training_sample(np.array(positive_samples), negative_samples, args.num_negative_samples, alias_dict)
-			# y = np.zeros(len(x))
+			x = get_training_sample(np.array(positive_samples), negative_samples, args.num_negative_samples, probs, alias_dict)
 			y = np.zeros((len(x), args.num_positive_samples + args.num_negative_samples, 1))
 			y[:,0] = 1
-			print ("determined training samples")
-
-			sys.stdout.flush()
+			print ("Determined training samples")
 
 			model.fit(x, y, batch_size=args.batch_size, 
 				epochs=args.num_epochs, initial_epoch=initial_epoch, verbose=args.verbose,
@@ -810,8 +846,8 @@ def main():
 		print (f1_micros)
 
 		for label_percentage, f1_micro, f1_macro in zip(label_percentages, f1_micros, f1_macros):
-				test_results.update({"{}_micro".format(label_percentage): f1_micro})
-				test_results.update({"{}_macro".format(label_percentage): f1_macro})
+				test_results.update({"{:.2f}_micro".format(label_percentage): f1_micro})
+				test_results.update({"{:.2f}_macro".format(label_percentage): f1_macro})
 
 		f1_path = os.path.join(args.plot_path, "epoch_{:05d}_class_prediction_f1_test.png".format(epoch))
 		plot_classification(label_percentages, f1_micros, f1_macros, f1_path)

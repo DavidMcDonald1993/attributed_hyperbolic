@@ -98,6 +98,13 @@ def load_g2g_datasets(dataset_str, args):
 	else: 
 		label_info = None 
 
+	if args.only_lcc:
+		topology_graph = max(nx.connected_component_subgraphs(topology_graph), key=len)
+		features = features[topology_graph.nodes()]
+		labels = labels[topology_graph.nodes()]
+		topology_graph = nx.convert_node_labels_to_integers(topology_graph, label_attribute="original_name")
+		nx.set_edge_attributes(G=topology_graph, name="weight", values=1.)
+
 	return topology_graph, features, labels, label_info
 
 def load_labelled_attributed_network(dataset_str, args, scale=False):
@@ -313,9 +320,12 @@ def load_collaboration_network(args):
 	label_info = None
 
 	if args.only_lcc:
+		print (len(topology_graph))
 		topology_graph = max(nx.connected_component_subgraphs(topology_graph), key=len)
 		topology_graph = nx.convert_node_labels_to_integers(topology_graph, label_attribute="original_name")
 		nx.set_edge_attributes(G=topology_graph, name="weight", values=1.)
+		print (len(topology_graph))
+		raise SystemExit
 
 	return topology_graph, features, labels, label_info
 

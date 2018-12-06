@@ -12,7 +12,6 @@ import random
 from sklearn.metrics.pairwise import cosine_similarity
 
 import pandas as pd
-# from pandas.errors import EmptyDataError
 
 def alias_setup(probs):
 	'''
@@ -82,10 +81,7 @@ def convert_edgelist_to_dict(edgelist, undirected=True, self_edges=False):
 
 	return edge_dict
 
-def get_training_sample(batch_positive_samples, negative_samples, num_negative_samples, alias_dict):
-
-	# print ((np.bincount(batch_positive_samples.flatten())==0).sum())
-
+def get_training_sample(batch_positive_samples, negative_samples, num_negative_samples, probs, alias_dict):
 	input_nodes = batch_positive_samples[:,0]
 
 	batch_negative_samples = np.array([
@@ -96,8 +92,6 @@ def get_training_sample(batch_positive_samples, negative_samples, num_negative_s
 		negative_samples[u][alias_draw(alias_dict[u][0], alias_dict[u][1], num_negative_samples)]
 		for u in input_nodes
 	], dtype=np.int64)
-	# print((np.bincount(batch_negative_samples.flatten())==0).sum())
-	# raise SystemExit
 	batch_nodes = np.append(batch_positive_samples, batch_negative_samples, axis=1)
 	return batch_nodes
 
@@ -109,7 +103,7 @@ def make_validation_data(val_edges, val_non_edges, negative_samples, alias_dict,
 	if not isinstance(val_edges, np.ndarray):
 		val_edges = np.array(val_edges)
 	idx = np.arange(len(val_edges))
-	positive_samples = val_edges[idx]#
+	positive_samples = val_edges[idx]
 
 	# for u in positive_samples[:,0]:
 	# 	print (negative_samples[u][alias_draw(alias_dict[u][0], 
@@ -178,7 +172,8 @@ def determine_positive_and_negative_samples(nodes, walks, context_size, directed
 	if not isinstance(nodes, set):
 		nodes = set(nodes)
 	
-	all_positive_samples = {n: {n} for n in sorted(nodes)}
+	all_positive_samples = {n: set() for n in sorted(nodes)}
+	# negative_samples = {n: set() for n in sorted(nodes)}
 	positive_samples = []
 
 	counts = {n: 0. for n in sorted(nodes)}
@@ -187,33 +182,38 @@ def determine_positive_and_negative_samples(nodes, walks, context_size, directed
 		for i in range(len(walk)):
 			u = walk[i]
 			counts[u] += 1	
-			# positive_samples += [(u,u)]
 			for j in range(context_size):
 				if i+j+1 >= len(walk):
-					continue
+					break
 				v = walk[i+j+1]
 				if u == v:
 					continue
 				n = 1
 				# n = context_size - j
+				# if j <3: 
 				positive_samples.extend([(u, v)] * n)
 				all_positive_samples[u].add(v)
 				# if not directed:
 				positive_samples.extend([(v, u)] * n)
 				all_positive_samples[v].add(u)
+				# else:
+				# 	negative_samples[u].add(v)
+				# 	negative_samples[v].add(u)
 
- 
 		if num_walk % 1000 == 0:  
 			print ("processed walk {}/{}".format(num_walk, len(walks)))
-	print ("processed walk {}/{}".format(num_walk, len(walks)))
-		
 
 	negative_samples = {n: np.array(sorted(nodes.difference(all_positive_samples[n]))) for n in sorted(nodes)}
+	# negative_samples = {n: np.array(sorted(all_positive_samples[n])) for n in sorted(nodes)}
+	# negative_samples = {n : np.array(sorted(nodes)) for n in sorted(nodes)}
+	# negative_samples = {n: np.array(sorted(neg_samples)) for n, neg_samples in negative_samples.items()}
 	for u, neg_samples in negative_samples.items():
-		assert u not in neg_samples, "u should not be in negative samples"
+		# assert u not in neg_samples, "u should not be in negative samples"
 		assert len(neg_samples) > 0, "node {} does not have any negative samples".format(u)
+		print (len(neg_samples))
 		# for v in neg_samples:
 		# 	assert (u, v) not in positive_samples and (v, u) not in positive_samples
+
 
 	print ("DETERMINED POSITIVE AND NEGATIVE SAMPLES")
 	print ("found {} positive sample pairs".format(len(positive_samples)))
@@ -223,12 +223,13 @@ def determine_positive_and_negative_samples(nodes, walks, context_size, directed
 	# probs = np.ones_like(counts)
 
 	prob_dict = {n: probs[negative_samples[n]] for n in sorted(nodes)}
-	prob_dict = {n: probs / probs.sum() for n, probs in prob_dict.items()}
-	alias_dict = {n: alias_setup(probs) for n, probs in prob_dict.items()}
+	prob_dict = {n: p / p.sum() for n, p in prob_dict.items()}
+
+	alias_dict = {n: alias_setup(p) for n, p in prob_dict.items()}
 
 	print ("PREPROCESSED NEGATIVE SAMPLE PROBS")
 
-	return positive_samples, negative_samples, alias_dict
+	return positive_samples, negative_samples, prob_dict, alias_dict
 
 def load_walks(G, walk_file, feature_sim, args):
 
