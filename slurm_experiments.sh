@@ -1,4 +1,4 @@
-!/bin/bash
+#!/bin/bash
 
 #SBATCH --job-name=noGPUexp
 #SBATCH --output=noGPUexp_%A_%a.out
