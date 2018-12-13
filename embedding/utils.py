@@ -208,9 +208,10 @@ def determine_positive_and_negative_samples(nodes, walks, context_size, directed
 	# negative_samples = {n : np.array(sorted(nodes)) for n in sorted(nodes)}
 	# negative_samples = {n: np.array(sorted(neg_samples)) for n, neg_samples in negative_samples.items()}
 	for u, neg_samples in negative_samples.items():
+		# print (len(neg_samples), len(all_positive_samples[u]))
 		# assert u not in neg_samples, "u should not be in negative samples"
 		assert len(neg_samples) > 0, "node {} does not have any negative samples".format(u)
-		print (len(neg_samples))
+		# print (len(neg_samples))
 		# for v in neg_samples:
 		# 	assert (u, v) not in positive_samples and (v, u) not in positive_samples
 

@@ -46,12 +46,12 @@ def evaluate_rank_and_MAP(dists, edgelist, non_edgelist):
 
 	alpha = 0e+3
 
-	edge_dists = dists[edgelist[:,0], edgelist[:,1]]
-	edge_scores = -edge_dists
+	edge_dists = dists[edgelist[:,0], edgelist[:,1]] ** 2
+	edge_scores = -edge_dists 
 	# edge_scores = -(1. + alpha * (poincare_ranks[edgelist[:,1]] - poincare_ranks[edgelist[:,0]])) * edge_dists ** 2
 
-	non_edge_dists = dists[non_edgelist[:,0], non_edgelist[:,1]]
-	non_edge_scores = -non_edge_dists
+	non_edge_dists = dists[non_edgelist[:,0], non_edgelist[:,1]] ** 2
+	non_edge_scores = -non_edge_dists 
 	# non_edge_scores = -(1. + alpha * (poincare_ranks[non_edgelist[:,1]] - poincare_ranks[non_edgelist[:,0]])) * non_edge_dists ** 2
 
 	labels = np.append(np.ones_like(edge_dists), np.zeros_like(non_edge_dists))

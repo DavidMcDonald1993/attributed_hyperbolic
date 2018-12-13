@@ -34,7 +34,7 @@ def load_karate(args):
 
 	return topology_graph, features, labels
 
-def load_g2g_datasets(dataset_str, args):
+def load_g2g_datasets(dataset_str, args, scale=True):
 
 	"""Load a graph from a Numpy binary file.
 	Parameters
@@ -105,9 +105,13 @@ def load_g2g_datasets(dataset_str, args):
 		topology_graph = nx.convert_node_labels_to_integers(topology_graph, label_attribute="original_name")
 		nx.set_edge_attributes(G=topology_graph, name="weight", values=1.)
 
+	if scale:
+		scaler = StandardScaler()
+		features = scaler.fit_transform(features)
+
 	return topology_graph, features, labels, label_info
 
-def load_labelled_attributed_network(dataset_str, args, scale=False):
+def load_labelled_attributed_network(dataset_str, args, scale=True):
 	"""Load data."""
 
 	def parse_index_file(filename):
@@ -139,7 +143,7 @@ def load_labelled_attributed_network(dataset_str, args, scale=False):
 	test_idx_range = np.sort(test_idx_reorder)
 
 	if dataset_str == 'citeseer':
-		scale=True
+		assert scale
 		# Fix citeseer dataset (there are some isolated nodes in the graph)
 		# Find isolated nodes, add them as zero-vecs into the right position
 		test_idx_range_full = list(range(min(test_idx_reorder), max(test_idx_reorder)+1))

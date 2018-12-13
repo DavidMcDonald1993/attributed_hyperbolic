@@ -3,7 +3,7 @@ from __future__ import print_function
 
 import os
 import h5py
-# os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 os.environ["PYTHON_EGG_CACHE"] = "/rds/projects/2018/hesz01/attributed_hyperbolic/python-eggs"
 import multiprocessing 
 import re
