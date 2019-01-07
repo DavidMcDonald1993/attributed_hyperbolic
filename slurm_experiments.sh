@@ -3,14 +3,14 @@
 #SBATCH --job-name=noGPUexp
 #SBATCH --output=noGPUexp_%A_%a.out
 #SBATCH --error=noGPULexp_%A_%a.err
-#SBATCH --array=0-1439
+#SBATCH --array=0-2879
 #SBATCH --time=3-00:00:00
 #SBATCH --ntasks=1
-#SBATCH --mem=8G
+#SBATCH --mem=16G
 
 DATA_DIR="/rds/homes/d/dxm237/data"
 
-ARR=(--dataset={cora_ml,citeseer}" "--seed={0..29}" "--softmax" "--dim={5,10,25}" --evaluate-"{link,class}"-prediction "--{no-attributes,jump-prob={.05,.1,.2}})
+ARR=(--dataset={cora_ml,citeseer,pubmed}" "--seed={0..29}" "--softmax" "--dim={5,10,25,50}" --evaluate-"{link,class}"-prediction "--{no-attributes,jump-prob={.05,.1,.2}})
 
 module purge; module load bluebear
 module load apps/cuda/8.0.44
