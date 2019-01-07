@@ -173,7 +173,9 @@ def determine_positive_and_negative_samples(nodes, walks, context_size, directed
 		nodes = set(nodes)
 	
 	all_positive_samples = {n: set() for n in sorted(nodes)}
-	# negative_samples = {n: set() for n in sorted(nodes)}
+	# neighbourhood_samples = {n: set() for n in sorted(nodes)}
+	negative_samples = {n: set() for n in sorted(nodes)}
+
 	positive_samples = []
 
 	counts = {n: 0. for n in sorted(nodes)}
@@ -182,39 +184,41 @@ def determine_positive_and_negative_samples(nodes, walks, context_size, directed
 		for i in range(len(walk)):
 			u = walk[i]
 			counts[u] += 1	
+			# for j in range(len(walk) - i):
 			for j in range(context_size):
 				if i+j+1 >= len(walk):
 					break
 				v = walk[i+j+1]
-				if u == v:
-					continue
+				# if u == v:
+				# 	continue
 				n = 1
 				# n = context_size - j
-				# if j <3: 
+				# if j < 1: 
 				positive_samples.extend([(u, v)] * n)
-				all_positive_samples[u].add(v)
-				# if not directed:
 				positive_samples.extend([(v, u)] * n)
-				all_positive_samples[v].add(u)
-				# else:
+				# elif j < 3:
+				# 	neighbourhood_samples[u].add(v)
+				# 	neighbourhood_samples[v].add(u)
+				# else: 
 				# 	negative_samples[u].add(v)
 				# 	negative_samples[v].add(u)
 
+
+				all_positive_samples[u].add(v)
+				all_positive_samples[v].add(u)
+
 		if num_walk % 1000 == 0:  
 			print ("processed walk {}/{}".format(num_walk, len(walks)))
+	
+	# neighbourhood_samples = {n : list(v) for n, v in neighbourhood_samples.items()}
+	# negative_samples = {n : list(v) for n, v in negative_samples.items()}
 
 	negative_samples = {n: np.array(sorted(nodes.difference(all_positive_samples[n]))) for n in sorted(nodes)}
 	# negative_samples = {n: np.array(sorted(all_positive_samples[n])) for n in sorted(nodes)}
 	# negative_samples = {n : np.array(sorted(nodes)) for n in sorted(nodes)}
 	# negative_samples = {n: np.array(sorted(neg_samples)) for n, neg_samples in negative_samples.items()}
 	for u, neg_samples in negative_samples.items():
-		# print (len(neg_samples), len(all_positive_samples[u]))
-		# assert u not in neg_samples, "u should not be in negative samples"
 		assert len(neg_samples) > 0, "node {} does not have any negative samples".format(u)
-		# print (len(neg_samples))
-		# for v in neg_samples:
-		# 	assert (u, v) not in positive_samples and (v, u) not in positive_samples
-
 
 	print ("DETERMINED POSITIVE AND NEGATIVE SAMPLES")
 	print ("found {} positive sample pairs".format(len(positive_samples)))

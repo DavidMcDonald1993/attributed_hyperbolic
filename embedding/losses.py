@@ -25,13 +25,15 @@ def hyperbolic_negative_sampling_loss(r, t):
         d_uv = tf.acosh(1. + inner_uv) 
         d_uv_sq = K.square(d_uv)
 
-
         # r_sq = -K.stop_gradient(tf.nn.top_k(-K.flatten(d_uv_sq), k=512).values)[-1]
         # r = K.stop_gradient(K.mean(d_uv) - 2 * K.std( d_uv))
         # r_sq = K.stop_gradient(K.mean(d_uv) **2 )
 
-        r_sq = K.square(r)
-
+        # r_sq = K.square(r)
+        # r_sq = K.stop_gradient(K.maximum(K.cast(0, dtype=K.floatx()), K.mean(d_uv_sq)))# ** 2
+        r_sq = K.stop_gradient(K.min(d_uv_sq[:,0]))
+        # r_sq = K.maximum(r_sq, K.cast(1, dtype=K.floatx()))
+        # r_sq = 9
 
         out_uv = (r_sq - d_uv_sq) / t
         # out_uv = (K.square(r) - K.square(d_uv)) / t
@@ -41,10 +43,10 @@ def hyperbolic_negative_sampling_loss(r, t):
         neg_out_uv = out_uv[:,1:]
         
         pos_p_uv = tf.nn.sigmoid(pos_out_uv)
-        neg_p_uv = 1. - tf.nn.sigmoid(neg_out_uv)
+        neg_p_uv = 1 - tf.nn.sigmoid(neg_out_uv)
 
-        pos_p_uv = K.clip(pos_p_uv, min_value=K.epsilon(), max_value=1-K.epsilon())
-        neg_p_uv = K.clip(neg_p_uv, min_value=K.epsilon(), max_value=1-K.epsilon())
+        # pos_p_uv = K.clip(pos_p_uv, min_value=K.epsilon(), max_value=1-K.epsilon())
+        # neg_p_uv = K.clip(neg_p_uv, min_value=K.epsilon(), max_value=1-K.epsilon())
 
         return -K.mean(K.log(pos_p_uv) + K.sum(K.log(neg_p_uv), axis=-1))
 
@@ -54,11 +56,6 @@ def hyperbolic_sigmoid_loss(y_true, y_pred):
 
     def hyperboloid_to_poincare_ball(X):
         return X[...,:-1] / (1. + X[...,-1:])
-
-    # def euclidean_to_polar(X):
-    #     r = K.sqrt(K.sum(X ** 2, axis=-1, keepdims=True))
-    #     theta = tf.atan2(X[...,1:], X[...,:1])
-    #     return K.concatenate([r, theta], axis=-1)
 
     def poincare_inner(a, b):
 
@@ -85,31 +82,34 @@ def hyperbolic_sigmoid_loss(y_true, y_pred):
     pos_d_uv = d_uv[:,0]
     neg_d_uv = d_uv[:,1:]
 
-    sigma_sq = K.cast(9., dtype=K.floatx())
+    sigma_sq = K.cast(1., dtype=K.floatx())
     # sigma_sq = K.maximum(sigma_sq, K.stop_gradient(K.mean(pos_d_uv)))
     # # sigma_sq = K.mean(d_uv)
 
-    p = K.exp(-0.5 * K.square(pos_d_uv) / sigma_sq)
+    # p = K.exp(-0.5 * K.square(pos_d_uv) / sigma_sq)
     # D = K.stop_gradient(K.exp(-0.5 * K.maximum(K.cast(10, dtype=K.floatx()), K.max(d_uv))**2 / sigma_sq))
     # q_lower = D / K.exp(-0.5 * K.square(neg_d_uv) / sigma_sq) 
-    q_lower = K.exp(-0.5 * (K.stop_gradient(K.max(d_uv)**2) - neg_d_uv ** 2) / sigma_sq)
-    q_upper = 1.
+    # max_ = 3.
+    # q_lower = K.exp(-0.5 * (max_**2 + neg_d_uv ** 2) / sigma_sq)
+    # q_upper = 1. / K.exp(-0.5 * -(pos_d_uv ** 2 - max_ ** 2) / sigma_sq)
 
+    # pos_p_uv = p / K.stop_gradient(p + q_upper)
+    # neg_p_uv = q_lower / K.stop_gradient(q_lower + K.exp(-0.5 * K.square(neg_d_uv) / sigma_sq))
 
-    pos_p_uv = p #/ (p + q_upper)
-    neg_p_uv = q_lower #/ (q_lower + K.exp(-0.5 * K.square(neg_d_uv) / sigma_sq))
+    max_ = K.stop_gradient( K.max(d_uv) )
+    # max_ = K.stop_gradient(K.maximum(K.cast(1., dtype=K.floatx()), K.max(neg_d_uv)))
+    pos_log_p_uv = -0.5 * K.square(pos_d_uv) / sigma_sq
+    neg_log_p_uv = -0.5 * (max_ ** 2 - K.square(neg_d_uv)) / sigma_sq
 
-    # pos_log_p_uv = -0.5 * K.square(pos_d_uv) / sigma_sq
-    # neg_log_p_uv = -0.5 * K.square(neg_d_uv) / sigma_sq
+    return - K.mean( pos_log_p_uv + K.sum( neg_log_p_uv , axis=-1) )
 
     # pos_p_uv = K.exp(pos_log_p_uv)
-    # neg_p_uv = 1 - K.exp(neg_log_p_uv)
+    # neg_p_uv = K.exp(neg_log_p_uv)
 
-    pos_p_uv = K.clip(pos_p_uv, min_value=K.epsilon(), max_value=1-K.epsilon())
-    neg_p_uv = K.clip(neg_p_uv, min_value=K.epsilon(), max_value=1-K.epsilon())
+    # # pos_p_uv = K.clip(pos_p_uv, min_value=K.epsilon(), max_value=1-K.epsilon())
+    # # neg_p_uv = K.clip(neg_p_uv, min_value=K.epsilon(), max_value=1-K.epsilon())
 
-    return - K.mean( K.log( pos_p_uv ) + K.sum( K.log( neg_p_uv ), axis=-1) )
-    # return - K.mean(pos_log_p_uv + K.sum(neg_log_p_uv + K.log(1. / neg_p_uv - 1.), axis=-1)) 
+    # return - K.mean( K.log( pos_p_uv ) + K.sum( K.log( neg_p_uv ), axis=-1) )
 
 def euclidean_negative_sampling_loss(y_true, y_pred):
 
@@ -193,25 +193,14 @@ def hyperbolic_softmax_loss(alpha=0):
 
         d_uv = tf.acosh(1. + inner_uv) 
 
-        # d_uv /= K.stop_gradient(K.maximum(K.sqrt(K.mean(d_uv[:,0])), 1.))
-        # mean = K.stop_gradient(K.mean(d_uv[:,0]))
-        # std = K.stop_gradient(K.std(d_uv[:,0]))
-        # sigma_sq = std **2
-        sigma = K.cast(1., dtype=K.floatx())
-        # sigma = K.maximum(sigma, K.mean(d_uv[:,0]))
+        sigma = K.cast(1e0, dtype=K.floatx())
         sigma_sq = K.stop_gradient(sigma ** 2)
-        # sigma_sq = K.cast(0., dtype=K.floatx())
-        # sigma_sq = K.maximum(sigma_sq, K.stop_gradient(K.mean(d_uv[:,0])))
-        # d_uv /= K.sqrt(sigma_sq)
-        minus_d_uv_sq = - 0.5 *  K.square(d_uv) / sigma_sq
+        # sigma_sq = K.cast(9, dtype=K.floatx())
+        # sigma_sq = alpha
+        minus_d_uv_sq = - 0.5 * K.square(d_uv) / sigma_sq
+        # minus_d_uv_sq = - .5 * d_uv / sigma_sq
+        # minus_d_uv_sq = - K.square(d_uv) / K.maximum(K.cast(1., dtype=K.floatx()), K.stop_gradient(d_uv))
 
-        # exp_minus_d_uv_sq = K.exp(minus_d_uv_sq)
-        # return -K.mean(K.log(exp_minus_d_uv_sq[:,0] / K.sum(exp_minus_d_uv_sq[:,1:], axis=-1)))
-
-        # return -K.mean(minus_d_uv_sq[:,0]  - (max_ + K.log(K.sum(K.exp(minus_d_uv_sq[:,1:] - max_[:,None]),  axis=-1, keepdims=False))))
-        # return -K.mean(minus_d_uv_sq[:,0] - tf.reduce_logsumexp(minus_d_uv_sq[:,1:],  axis=-1, keepdims=False))
-        return  K.mean(tf.nn.softmax_cross_entropy_with_logits(labels=y_true[...,0], logits=minus_d_uv_sq))
-
-
+        return K.mean(tf.nn.softmax_cross_entropy_with_logits(labels=y_true[...,0], logits=minus_d_uv_sq)) - 0e-5 * K.mean(y_pred[...,-1])
 
     return loss

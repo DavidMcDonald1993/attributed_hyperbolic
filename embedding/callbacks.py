@@ -13,6 +13,7 @@ from sklearn.metrics.pairwise import euclidean_distances
 from sklearn.metrics import roc_curve, roc_auc_score, precision_recall_curve, average_precision_score
 from sklearn.utils.fixes import signature
 
+import keras.backend as K
 from keras.callbacks import Callback
 
 from utils import convert_edgelist_to_dict
@@ -287,12 +288,15 @@ class PeriodicStdoutLogger(Callback):
 		self.directed_non_edges = directed_non_edges
 		self.epoch = epoch
 		self.n = n
+		# self.alpha = alpha
 		self.args = args
 
 
 	def on_epoch_end(self, batch, logs={}):
 	
 		self.epoch += 1
+		# K.set_value(self.alpha, np.log(1. + self.epoch))
+		# print ("Set temp to {}".format(K.get_value(self.alpha)))
 
 		s = "Completed epoch {}, loss={}".format(self.epoch, logs["loss"])
 		if "val_loss" in logs.keys():
@@ -320,6 +324,7 @@ class PeriodicStdoutLogger(Callback):
 		else:
 			dists = hyperbolic_distance_hyperboloid_pairwise(hyperboloid_embedding, hyperboloid_embedding)
 		print (dists)
+		print (dists.mean(), dists.max())
 		print (minkowski_dot_np(hyperboloid_embedding, hyperboloid_embedding))
 
 		# if self.args.verbose:

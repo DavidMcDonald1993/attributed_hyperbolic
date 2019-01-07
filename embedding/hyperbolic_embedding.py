@@ -31,6 +31,7 @@ from losses import hyperbolic_negative_sampling_loss, hyperbolic_sigmoid_loss, h
 from metrics import evaluate_rank_and_MAP, evaluate_rank_and_MAP_fb, evaluate_classification, evaluate_direction
 from callbacks import plot_disk_embeddings, plot_euclidean_embedding, plot_roc, plot_classification, plot_precisions_recalls
 from generators import TrainingSequence
+from greedy_routing import evaluate_greedy_routing
 
 from keras.layers import Input, Layer, Dense, Embedding
 from keras.models import Model
@@ -134,16 +135,9 @@ class EmbeddingLayer(Layer):
 		u = x[:,:1]
 		v = x[:,1:2]
 		neg_sample_idx = x[:,2:]
+		
 		u_embedding = tf.gather(self.embedding, u)
 		v_embedding = tf.gather(self.embedding, v)
-
-		# dists = hyperbolic_distance(K.squeeze(u_embedding, 1), self.embedding)
-		# neg_sample_idx = tf.multinomial(logits=-dists, num_samples=x.shape[1]-2)	
-		# # neg_sample_idx = tf.multinomial(logits=-tf.where(dists > 1e-6, x=dists, y=tf.ones_like(dists)*100), 
-		# 	# num_samples=x.shape[1]-2)	
-		# neg_sample_idx = K.stop_gradient(neg_sample_idx)	
-
-
 		neg_samples_embedding = tf.gather(self.embedding, neg_sample_idx)
 
 		# v_embedding = tf.gather(self.context_embedding, v)
@@ -165,7 +159,8 @@ class EmbeddingLayer(Layer):
 
 class ExponentialMappingOptimizer(optimizer.Optimizer):
 	
-	def __init__(self, learning_rate=0.001, use_locking=False, name="ExponentialMappingOptimizer", burnin=10, max_norm=np.inf):
+	def __init__(self, learning_rate=0.001, use_locking=False,
+			name="ExponentialMappingOptimizer", burnin=10, max_norm=np.inf):
 		super(ExponentialMappingOptimizer, self).__init__(use_locking, name)
 		self._lr = learning_rate
 		# self.burnin = burnin
@@ -196,7 +191,7 @@ class ExponentialMappingOptimizer(optimizer.Optimizer):
 
 		lr_t = math_ops.cast(self._lr_t, var.dtype.base_dtype)
 		spacial_grad = values[:, :-1]
-		t_grad = -values[:, -1:]
+		t_grad = -1 * values[:, -1:]
 
 		ambient_grad = tf.concat([spacial_grad, t_grad], axis=-1, name="optimizer_concat")
 		tangent_grad = self.project_onto_tangent_space(p, ambient_grad)
@@ -217,15 +212,16 @@ class ExponentialMappingOptimizer(optimizer.Optimizer):
 			t = K.sqrt(1. + K.sum(K.square(x), axis=-1, keepdims=True))
 			return tf.concat([x, t], axis=-1)
 
-		norm_x = K.sqrt( K.maximum(K.cast(0., K.floatx()), minkowski_dot(x, x), ) )
+		norm_x = K.sqrt( K.maximum(K.cast(0., K.floatx()), minkowski_dot(x, x) ) )
 		clipped_norm_x = K.minimum(norm_x, self.max_norm)
-		# clipped_norm_x = K.ones_like(norm_x) * 1e-3
+		# clipped_norm_x = K.cast(1e-4, K.floatx())
 		####################################################
 		exp_map_p = tf.cosh(clipped_norm_x) * p
 		
 		idx = tf.cast( tf.where(norm_x > K.cast(0., K.floatx()), )[:,0], tf.int64)
 		non_zero_norm = tf.gather(norm_x, idx)
 		clipped_non_zero_norm = tf.gather(clipped_norm_x, idx)
+		# clipped_non_zero_norm = clipped_norm_x
 		z = tf.gather(x, idx) / non_zero_norm
 
 		updates = tf.sinh(clipped_non_zero_norm) * z
@@ -233,7 +229,7 @@ class ExponentialMappingOptimizer(optimizer.Optimizer):
 		exp_map_x = tf.scatter_nd(indices=idx[:,None], updates=updates, shape=dense_shape)
 		
 		exp_map = exp_map_p + exp_map_x 
-		###################################################
+		#####################################################
 		# z = x / K.maximum(norm_x, K.epsilon()) # unit norm 
 		# exp_map = tf.cosh(norm_x) * p + tf.sinh(norm_x) * z
 		#####################################################
@@ -307,8 +303,8 @@ def parse_args():
 
 	parser.add_argument("-e", "--num_epochs", dest="num_epochs", type=int, default=300,
 		help="The number of epochs to train for (default is 300).")
-	parser.add_argument("-b", "--batch_size", dest="batch_size", type=int, default=512, 
-		help="Batch size for training (default is 512).")
+	parser.add_argument("-b", "--batch_size", dest="batch_size", type=int, default=32, 
+		help="Batch size for training (default is 32).")
 	parser.add_argument("--nneg", dest="num_negative_samples", type=int, default=10, 
 		help="Number of negative samples for training (default is 10).")
 	parser.add_argument("--context-size", dest="context_size", type=int, default=3,
@@ -396,6 +392,8 @@ def parse_args():
 	parser.add_argument('--no-non-edges', action="store_true", help='flag to not add non edges to training graph')
 	parser.add_argument('--add-non-edges', action="store_true", help='flag to add non edges to training graph')
 
+	parser.add_argument('--num-routing', dest="num_routing", type=int, default=1000, 
+		help="Number of source-target pairs to evaluate (default is 1000).")
 
 	args = parser.parse_args()
 	return args
@@ -525,6 +523,7 @@ def main():
 	args = parse_args()
 	args.num_positive_samples = 1
 	# args.softmax = True
+	args.verbose = True
 	# args.seed = 0
 
 	assert not sum([args.multiply_attributes, args.alpha>0, args.jump_prob>0]) > 1
@@ -671,8 +670,10 @@ def main():
 		ExponentialMappingOptimizer(learning_rate=args.lr)
 	)
 	# optimizer = "adam"
+	# alpha = K.variable(max(0.3, np.log(1 + initial_epoch)), dtype=K.floatx())
+	# print ("set alpha to {}".format(K.get_value(alpha)))
 	loss = (
-		hyperbolic_softmax_loss(args.directed * 0)
+		hyperbolic_softmax_loss(alpha=0)
 		if args.softmax 
 		else hyperbolic_sigmoid_loss
 		if args.sigmoid 
@@ -728,7 +729,8 @@ def main():
 		if args.use_generator:
 			print ("Training with data generator with {} worker threads".format(args.workers))
 			# random.shuffle(positive_samples)
-			training_gen = TrainingSequence(positive_samples, negative_samples, probs, alias_dict, args)
+			training_gen = TrainingSequence(positive_samples,  
+				negative_samples, probs, alias_dict, args)
 
 			model.fit_generator(training_gen, 
 				workers=args.workers, max_queue_size=25, 
@@ -741,8 +743,9 @@ def main():
 
 		else:
 			print ("Training without data generator")
-
+			print ("Building training samples")
 			x = get_training_sample(np.array(positive_samples), negative_samples, args.num_negative_samples, probs, alias_dict)
+			print (x)
 			y = np.zeros((len(x), args.num_positive_samples + args.num_negative_samples, 1))
 			y[:,0] = 1
 			print ("Determined training samples")
@@ -755,7 +758,8 @@ def main():
 
 	print ("Training completed -- loading best model according to {}".format(monitor))
 
-	model_file = os.path.join(args.model_path, "best_model.h5")
+	# model_file = os.path.join(args.model_path, "best_model.h5")
+	model_file = os.path.join(args.model_path, "{:05d}.h5".format(args.num_epochs))
 
 	print ("Determined best model filename: {}".format(model_file))
 	embedding = load_embedding(model_file)
@@ -861,6 +865,9 @@ def main():
 			# "directed_ap_score": directed_ap_score,
 			# "directed_auc_score": directed_auc_score})
 
+	# evaluate greedy routing
+	mean_complete, mean_hop_stretch = evaluate_greedy_routing(topology_graph, dists, args)
+	test_results.update({"mean_complete_gr": mean_complete, "mean_hop_stretch_gr": mean_hop_stretch})
 
 	print ("saving test results to: {}".format(args.test_results_filename))
 	threadsafe_save_test_results(args.test_results_lock_filename, args.test_results_filename, 
