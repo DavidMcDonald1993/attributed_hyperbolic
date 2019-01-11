@@ -1,0 +1,199 @@
+\begin{thebibliography}{}
+
+\bibitem[\protect\citeauthoryear{Alanis-Lobato \bgroup \em et al.\egroup
+  }{2016a}]{alanis2016efficient}
+Gregorio Alanis-Lobato, Pablo Mier, and Miguel~A Andrade-Navarro.
+\newblock Efficient embedding of complex networks to hyperbolic space via their
+  laplacian.
+\newblock {\em Scientific Reports}, 6, 2016.
+
+\bibitem[\protect\citeauthoryear{Alanis-Lobato \bgroup \em et al.\egroup
+  }{2016b}]{alanis2016manifold}
+Gregorio Alanis-Lobato, Pablo Mier, and Miguel~A Andrade-Navarro.
+\newblock Manifold learning and maximum likelihood estimation for hyperbolic
+  network embedding.
+\newblock {\em Applied Network Science}, 1(1):10, 2016.
+
+\bibitem[\protect\citeauthoryear{Barab{\'a}si and
+  Albert}{1999}]{barabasi1999emergence}
+Albert-L{\'a}szl{\'o} Barab{\'a}si and R{\'e}ka Albert.
+\newblock Emergence of scaling in random networks.
+\newblock {\em science}, 286(5439):509--512, 1999.
+
+\bibitem[\protect\citeauthoryear{Bengio \bgroup \em et al.\egroup
+  }{2013}]{bengio2013representation}
+Yoshua Bengio, Aaron Courville, and Pascal Vincent.
+\newblock Representation learning: A review and new perspectives.
+\newblock {\em IEEE transactions on pattern analysis and machine intelligence},
+  35(8):1798--1828, 2013.
+
+\bibitem[\protect\citeauthoryear{Bianconi and
+  Rahmede}{2017}]{bianconi2017emergent}
+Ginestra Bianconi and Christoph Rahmede.
+\newblock Emergent hyperbolic network geometry.
+\newblock {\em Scientific Reports}, 7:41974, 2017.
+
+\bibitem[\protect\citeauthoryear{Bogun{\'a} \bgroup \em et al.\egroup
+  }{2010}]{boguna2010sustaining}
+Mari{\'a}n Bogun{\'a}, Fragkiskos Papadopoulos, and Dmitri Krioukov.
+\newblock Sustaining the internet with hyperbolic mapping.
+\newblock {\em Nature communications}, 1:62, 2010.
+
+\bibitem[\protect\citeauthoryear{Chamberlain \bgroup \em et al.\egroup
+  }{2017}]{chamberlain2017neural}
+Benjamin~Paul Chamberlain, James Clough, and Marc~Peter Deisenroth.
+\newblock Neural embeddings of graphs in hyperbolic space.
+\newblock {\em arXiv preprint arXiv:1705.10359}, 2017.
+
+\bibitem[\protect\citeauthoryear{Clough and Evans}{2017}]{clough2017embedding}
+James~R Clough and Tim~S Evans.
+\newblock Embedding graphs in lorentzian spacetime.
+\newblock {\em PloS one}, 12(11):e0187301, 2017.
+
+\bibitem[\protect\citeauthoryear{De~Sa \bgroup \em et al.\egroup
+  }{2018}]{de2018representation}
+Christopher De~Sa, Albert Gu, Christopher R{\'e}, and Frederic Sala.
+\newblock Representation tradeoffs for hyperbolic embeddings.
+\newblock {\em arXiv preprint arXiv:1804.03329}, 2018.
+
+\bibitem[\protect\citeauthoryear{Ganea \bgroup \em et al.\egroup
+  }{2018}]{ganea2018hyperbolic}
+Octavian-Eugen Ganea, Gary B{\'e}cigneul, and Thomas Hofmann.
+\newblock Hyperbolic neural networks.
+\newblock {\em arXiv preprint arXiv:1805.09112}, 2018.
+
+\bibitem[\protect\citeauthoryear{Gibert \bgroup \em et al.\egroup
+  }{2012}]{gibert2012graph}
+Jaume Gibert, Ernest Valveny, and Horst Bunke.
+\newblock Graph embedding in vector spaces by node attribute statistics.
+\newblock {\em Pattern Recognition}, 45(9):3072--3083, 2012.
+
+\bibitem[\protect\citeauthoryear{Grover and
+  Leskovec}{2016}]{grover2016node2vec}
+Aditya Grover and Jure Leskovec.
+\newblock node2vec: Scalable feature learning for networks.
+\newblock In {\em Proceedings of the 22nd ACM SIGKDD international conference
+  on Knowledge discovery and data mining}, pages 855--864. ACM, 2016.
+
+\bibitem[\protect\citeauthoryear{Kleinberg}{2007}]{kleinberg2007geographic}
+Robert Kleinberg.
+\newblock Geographic routing using hyperbolic space.
+\newblock In {\em INFOCOM 2007. 26th IEEE International Conference on Computer
+  Communications. IEEE}, pages 1902--1909. IEEE, 2007.
+
+\bibitem[\protect\citeauthoryear{Kleineberg and
+  Helbing}{2017}]{kleineberg2017collective}
+Kaj-Kolja Kleineberg and Dirk Helbing.
+\newblock Collective navigation of complex networks: Participatory greedy
+  routing.
+\newblock {\em Scientific reports}, 7(1):2897, 2017.
+
+\bibitem[\protect\citeauthoryear{Krioukov \bgroup \em et al.\egroup
+  }{2009}]{krioukov2009curvature}
+Dmitri Krioukov, Fragkiskos Papadopoulos, Amin Vahdat, and Mari{\'a}n
+  Bogu{\~n}{\'a}.
+\newblock Curvature and temperature of complex networks.
+\newblock {\em Physical Review E}, 80(3):035101, 2009.
+
+\bibitem[\protect\citeauthoryear{Krioukov \bgroup \em et al.\egroup
+  }{2010}]{krioukov2010hyperbolic}
+Dmitri Krioukov, Fragkiskos Papadopoulos, Maksim Kitsak, Amin Vahdat, and
+  Mari{\'a}n Bogun{\'a}.
+\newblock Hyperbolic geometry of complex networks.
+\newblock {\em Physical Review E}, 82(3):036106, 2010.
+
+\bibitem[\protect\citeauthoryear{Li \bgroup \em et al.\egroup
+  }{2017}]{li2017attributed}
+Jundong Li, Harsh Dani, Xia Hu, Jiliang Tang, Yi~Chang, and Huan Liu.
+\newblock Attributed network embedding for learning in a dynamic environment.
+\newblock In {\em Proceedings of the 2017 ACM on Conference on Information and
+  Knowledge Management}, pages 387--396. ACM, 2017.
+
+\bibitem[\protect\citeauthoryear{Liao \bgroup \em et al.\egroup
+  }{2018}]{liao2018attributed}
+Lizi Liao, Xiangnan He, Hanwang Zhang, and Tat-Seng Chua.
+\newblock Attributed social network embedding.
+\newblock {\em IEEE Transactions on Knowledge and Data Engineering},
+  30(12):2257--2270, 2018.
+
+\bibitem[\protect\citeauthoryear{Mikolov \bgroup \em et al.\egroup
+  }{2013a}]{mikolov2013efficient}
+Tomas Mikolov, Kai Chen, Greg Corrado, and Jeffrey Dean.
+\newblock Efficient estimation of word representations in vector space.
+\newblock {\em arXiv preprint arXiv:1301.3781}, 2013.
+
+\bibitem[\protect\citeauthoryear{Mikolov \bgroup \em et al.\egroup
+  }{2013b}]{mikolov2013distributed}
+Tomas Mikolov, Ilya Sutskever, Kai Chen, Greg~S Corrado, and Jeff Dean.
+\newblock Distributed representations of words and phrases and their
+  compositionality.
+\newblock In {\em Advances in neural information processing systems}, pages
+  3111--3119, 2013.
+
+\bibitem[\protect\citeauthoryear{Nickel and Kiela}{2017}]{nickel2017poincar}
+Maximilian Nickel and Douwe Kiela.
+\newblock Poincar$\backslash$'e embeddings for learning hierarchical
+  representations.
+\newblock {\em arXiv preprint arXiv:1705.08039}, 2017.
+
+\bibitem[\protect\citeauthoryear{Niepert \bgroup \em et al.\egroup
+  }{2016}]{niepert2016learning}
+Mathias Niepert, Mohamed Ahmed, and Konstantin Kutzkov.
+\newblock Learning convolutional neural networks for graphs.
+\newblock In {\em International conference on machine learning}, pages
+  2014--2023, 2016.
+
+\bibitem[\protect\citeauthoryear{Papadopoulos \bgroup \em et al.\egroup
+  }{2010}]{papadopoulos2010greedy}
+Fragkiskos Papadopoulos, Dmitri Krioukov, Mari{\'a}n Bogu{\~n}{\'a}, and Amin
+  Vahdat.
+\newblock Greedy forwarding in dynamic scale-free networks embedded in
+  hyperbolic metric spaces.
+\newblock In {\em INFOCOM, 2010 Proceedings IEEE}, pages 1--9. IEEE, 2010.
+
+\bibitem[\protect\citeauthoryear{Papadopoulos \bgroup \em et al.\egroup
+  }{2011}]{papadopoulos2011popularity}
+Fragkiskos Papadopoulos, Maksim Kitsak, M~Serrano, Mari{\'a}n Bogun{\'a}, and
+  Dmitri Krioukov.
+\newblock Popularity versus similarity in growing networks.
+\newblock {\em arXiv preprint arXiv:1106.0286}, 2011.
+
+\bibitem[\protect\citeauthoryear{Papadopoulos \bgroup \em et al.\egroup
+  }{2015a}]{papadopoulos2015networkgeo}
+Fragkiskos Papadopoulos, Rodrigo Aldecoa, and Dmitri Krioukov.
+\newblock Network geometry inference using common neighbors.
+\newblock {\em Physical Review E}, 92(2):022807, 2015.
+
+\bibitem[\protect\citeauthoryear{Papadopoulos \bgroup \em et al.\egroup
+  }{2015b}]{papadopoulos2015network}
+Fragkiskos Papadopoulos, Constantinos Psomas, and Dmitri Krioukov.
+\newblock Network mapping by replaying hyperbolic growth.
+\newblock {\em IEEE/ACM Transactions on Networking (TON)}, 23(1):198--211,
+  2015.
+
+\bibitem[\protect\citeauthoryear{Reynolds}{1993}]{reynolds1993hyperbolic}
+William~F Reynolds.
+\newblock Hyperbolic geometry on a hyperboloid.
+\newblock {\em The American mathematical monthly}, 100(5):442--455, 1993.
+
+\bibitem[\protect\citeauthoryear{Sarkar}{2011}]{sarkar2011low}
+Rik Sarkar.
+\newblock Low distortion delaunay embedding of trees in hyperbolic plane.
+\newblock In {\em International Symposium on Graph Drawing}, pages 355--366.
+  Springer, 2011.
+
+\bibitem[\protect\citeauthoryear{Thomas \bgroup \em et al.\egroup
+  }{2016}]{thomas2016machine}
+Josephine~Maria Thomas, Alessandro Muscoloni, Sara Ciucci, Ginestra Bianconi,
+  and Carlo~Vittorio Cannistraci.
+\newblock Machine learning meets network science: dimensionality reduction for
+  fast and efficient embedding of networks in the hyperbolic space.
+\newblock {\em arXiv preprint arXiv:1602.06522}, 2016.
+
+\bibitem[\protect\citeauthoryear{Wilson and
+  Leimeister}{2018}]{wilson2018gradient}
+Benjamin Wilson and Matthias Leimeister.
+\newblock Gradient descent in hyperbolic space.
+\newblock {\em arXiv preprint arXiv:1805.08207}, 2018.
+
+\end{thebibliography}

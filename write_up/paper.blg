@@ -1,0 +1,63 @@
+This is BibTeX, Version 0.99d (TeX Live 2015/Debian)
+Capacity: max_strings=35307, hash_size=35307, hash_prime=30011
+The top-level auxiliary file: paper.aux
+The style file: named.bst
+Database file #1: references.bib
+Repeated entry---line 276 of file references.bib
+ : @inproceedings{grover2016node2vec
+ :                                  ,
+I'm skipping whatever remains of this entry
+Repeated entry---line 285 of file references.bib
+ : @inproceedings{mikolov2013distributed
+ :                                      ,
+I'm skipping whatever remains of this entry
+Repeated entry---line 304 of file references.bib
+ : @article{krioukov2010hyperbolic
+ :                                ,
+I'm skipping whatever remains of this entry
+Repeated entry---line 449 of file references.bib
+ : @inproceedings{niepert2016learning
+ :                                   ,
+I'm skipping whatever remains of this entry
+You've used 30 entries,
+            2439 wiz_defined-function locations,
+            727 strings with 9898 characters,
+and the built_in function-call counts, 12604 in all, are:
+= -- 1314
+> -- 552
+< -- 7
++ -- 189
+- -- 186
+* -- 1022
+:= -- 2028
+add.period$ -- 95
+call.type$ -- 30
+change.case$ -- 213
+chr.to.int$ -- 27
+cite$ -- 30
+duplicate$ -- 497
+empty$ -- 899
+format.name$ -- 223
+if$ -- 2610
+int.to.chr$ -- 4
+int.to.str$ -- 0
+missing$ -- 30
+newline$ -- 153
+num.names$ -- 90
+pop$ -- 174
+preamble$ -- 1
+purify$ -- 243
+quote$ -- 0
+skip$ -- 417
+stack$ -- 0
+substring$ -- 667
+swap$ -- 132
+text.length$ -- 7
+text.prefix$ -- 0
+top$ -- 0
+type$ -- 240
+warning$ -- 0
+while$ -- 101
+width$ -- 34
+write$ -- 389
+(There were 4 error messages)
