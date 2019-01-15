@@ -523,7 +523,7 @@ def main():
 	args = parse_args()
 	args.num_positive_samples = 1
 	# args.softmax = True
-	args.verbose = True
+	# args.verbose = True
 	# args.seed = 0
 
 	assert not sum([args.multiply_attributes, args.alpha>0, args.jump_prob>0]) > 1
