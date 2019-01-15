@@ -36,9 +36,6 @@ def evaluate_greedy_routing(graph, dists, args):
 
 	print ("Evaluating greedy routing")
 
-	# print ("computing shortest paths")
-	# sp = nx.floyd_warshall_numpy(graph)
-
 	np.random.seed(args.seed)
 
 	lcc = max(nx.connected_component_subgraphs(graph), key=len)
@@ -48,14 +45,6 @@ def evaluate_greedy_routing(graph, dists, args):
 
 	starts = []
 	ends = []
-	# starts = np.random.choice(lcc.nodes(), size=num_routing)
-	# ends = np.random.choice(lcc.nodes(), size=num_routing)
-
-	# print ("STARTS")
-	# print (starts)
-	# print ("ENDS")
-	# print (ends)
-	# print ()
 
 	path_lengths = []
 
@@ -67,7 +56,6 @@ def evaluate_greedy_routing(graph, dists, args):
 		starts.append(start)
 		ends.append(end)
 
-		# print(start, end)
 
 		failure = False
 
@@ -79,9 +67,6 @@ def evaluate_greedy_routing(graph, dists, args):
 			next_ = neighbours[neighbour_dists.argmin()]
 
 			if next_ in path:
-				# failure
-				# print ("FAILURE")
-				# print (path, next_)
 				failure = True
 				path_lengths.append(-1)
 				break
@@ -90,16 +75,12 @@ def evaluate_greedy_routing(graph, dists, args):
 			cur = path[-1]
 
 		if not failure:
-			# print ("SUCCESS")
-			# print (path)
 			path_lengths.append(len(path) - 1) # number of hops
-		# print ()
 
 	path_lengths = np.array(path_lengths)
 	complete = path_lengths >= 0
 	mean_complete = np.mean(complete)
 
-	# true_sp_length = sp[starts[complete], ends[complete]]
 	print ("Determining shortest path lengths")
 	true_sp_length = np.array([nx.shortest_path_length(graph, source=start, 
 		target=end, weight="weight") for start, end in zip(starts, ends)])

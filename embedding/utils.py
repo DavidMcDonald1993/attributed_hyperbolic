@@ -95,7 +95,6 @@ def get_training_sample(batch_positive_samples, negative_samples, num_negative_s
 	batch_nodes = np.append(batch_positive_samples, batch_negative_samples, axis=1)
 	return batch_nodes
 
-
 def make_validation_data(val_edges, val_non_edges, negative_samples, alias_dict, args):
 
 	val_edges = val_edges + [(v, u) for u, v in val_edges]
@@ -110,15 +109,15 @@ def make_validation_data(val_edges, val_non_edges, negative_samples, alias_dict,
 	# 		alias_dict[u][1], args.num_negative_samples)])
 	# raise SystemExit
 
+
 	val_negative_samples = np.array([
-		# np.random.choice(non_edge_dict[u], size=args.num_negative_samples, replace=True,)
 		negative_samples[u][alias_draw(alias_dict[u][0], alias_dict[u][1], args.num_negative_samples)]
 		for u in positive_samples[:,0]
 	])
 
 	x = np.append(positive_samples, val_negative_samples, axis=-1)
 	y = np.zeros((len(x), args.num_positive_samples + args.num_negative_samples, 1))
-	y[:,0] = 1
+	y[:,0] = 1.
 
 	return x, y
 
@@ -193,25 +192,26 @@ def determine_positive_and_negative_samples(nodes, walks, context_size, directed
 				# 	continue
 				n = 1
 				# n = context_size - j
-				# if j < 1: 
-				positive_samples.extend([(u, v)] * n)
-				positive_samples.extend([(v, u)] * n)
+				if j < context_size: 
+					positive_samples.extend([(u, v)] * n)
+					positive_samples.extend([(v, u)] * n)
+
+					all_positive_samples[u].add(v)
+					all_positive_samples[v].add(u)
+
 				# elif j < 3:
 				# 	neighbourhood_samples[u].add(v)
 				# 	neighbourhood_samples[v].add(u)
 				# else: 
 				# 	negative_samples[u].add(v)
-				# 	negative_samples[v].add(u)
+					# negative_samples[v].add(u)
 
-
-				all_positive_samples[u].add(v)
-				all_positive_samples[v].add(u)
 
 		if num_walk % 1000 == 0:  
 			print ("processed walk {}/{}".format(num_walk, len(walks)))
-	
+
 	# neighbourhood_samples = {n : list(v) for n, v in neighbourhood_samples.items()}
-	# negative_samples = {n : list(v) for n, v in negative_samples.items()}
+	# negative_samples = {n : np.array(list(v)) for n, v in negative_samples.items()}
 
 	negative_samples = {n: np.array(sorted(nodes.difference(all_positive_samples[n]))) for n in sorted(nodes)}
 	# negative_samples = {n: np.array(sorted(all_positive_samples[n])) for n in sorted(nodes)}

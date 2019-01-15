@@ -93,11 +93,6 @@ def load_g2g_datasets(dataset_str, args, scale=True):
 	features = graph["X"].A
 	labels = graph["z"]
 
-	if idx_to_class:
-		label_info = graph["idx_to_class"]
-	else: 
-		label_info = None 
-
 	if args.only_lcc:
 		topology_graph = max(nx.connected_component_subgraphs(topology_graph), key=len)
 		features = features[topology_graph.nodes()]
@@ -109,7 +104,7 @@ def load_g2g_datasets(dataset_str, args, scale=True):
 		scaler = StandardScaler()
 		features = scaler.fit_transform(features)
 
-	return topology_graph, features, labels, label_info
+	return topology_graph, features, labels
 
 def load_labelled_attributed_network(dataset_str, args, scale=True):
 	"""Load data."""

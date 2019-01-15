@@ -3,7 +3,7 @@ from __future__ import print_function
 
 import os
 import h5py
-os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 os.environ["PYTHON_EGG_CACHE"] = "/rds/projects/2018/hesz01/attributed_hyperbolic/python-eggs"
 import multiprocessing 
 import re
@@ -539,18 +539,18 @@ def main():
 	if dataset == "karate":
 		topology_graph, features, labels = load_karate(args)
 	elif dataset == "contact":
-		topology_graph, features, labels, label_info = load_contact(args)
+		topology_graph, features, labels = load_contact(args)
 	elif dataset in ["cora", "cora_ml", "pubmed", "citeseer"]:
 		# topology_graph, features, labels = load_labelled_attributed_network(dataset, args)
-		topology_graph, features, labels, label_info = load_g2g_datasets(dataset, args)
+		topology_graph, features, labels = load_g2g_datasets(dataset, args)
 	elif dataset in ["AstroPh", "CondMat", "GrQc", "HepPh"]:
-		topology_graph, features, labels, label_info = load_collaboration_network(args)
+		topology_graph, features, labels = load_collaboration_network(args)
 	elif dataset == "ppi":
 		topology_graph, features, labels = load_ppi(args)
 	elif dataset == "tf_interaction":
-		topology_graph, features, labels, label_info = load_tf_interaction(args)
+		topology_graph, features, labels = load_tf_interaction(args)
 	elif dataset == "wordnet":
-		topology_graph, features, labels, label_info = load_wordnet(args)
+		topology_graph, features, labels = load_wordnet(args)
 	else:
 		raise Exception
 
@@ -589,7 +589,7 @@ def main():
 	reconstruction_edges = topology_graph.edges()
 	non_edges = list(nx.non_edges(topology_graph))
 
-	print ("determined reconstruction edges and non-edges")
+	print ("Determined reconstruction edges and non-edges")
 
 	if features is not None:
 		feature_sim = cosine_similarity(features)
@@ -670,10 +670,11 @@ def main():
 		ExponentialMappingOptimizer(learning_rate=args.lr)
 	)
 	# optimizer = "adam"
-	# alpha = K.variable(max(0.3, np.log(1 + initial_epoch)), dtype=K.floatx())
-	# print ("set alpha to {}".format(K.get_value(alpha)))
+	alpha = K.variable(np.log(2 + initial_epoch) / 1, dtype=K.floatx())
+	# alpha = K.variable(max(.2, np.log(1 + initial_epoch)), dtype=K.floatx())
+	print ("set alpha to {}".format(K.get_value(alpha)))
 	loss = (
-		hyperbolic_softmax_loss(alpha=0)
+		hyperbolic_softmax_loss(alpha=alpha)
 		if args.softmax 
 		else hyperbolic_sigmoid_loss
 		if args.sigmoid 
@@ -690,7 +691,7 @@ def main():
 	else:
 		val_data = None
 
-	print ("determined validation data")
+	print ("Determined validation data")
 
 	if args.evaluate_link_prediction:
 		# monitor = "mean_roc_reconstruction"
@@ -711,7 +712,7 @@ def main():
 	early_stopping = EarlyStopping(monitor=monitor, mode=mode, patience=args.patience, verbose=1)
 	logger = PeriodicStdoutLogger(reconstruction_edges, non_edges, 
 		val_edges, val_non_edges, 
-		labels, label_info,
+		labels, alpha,
 		directed_edges, directed_non_edges,
 		n=args.plot_freq, epoch=initial_epoch, args=args) 
 
@@ -745,9 +746,8 @@ def main():
 			print ("Training without data generator")
 			print ("Building training samples")
 			x = get_training_sample(np.array(positive_samples), negative_samples, args.num_negative_samples, probs, alias_dict)
-			print (x)
 			y = np.zeros((len(x), args.num_positive_samples + args.num_negative_samples, 1))
-			y[:,0] = 1
+			y[:,0] = 1.
 			print ("Determined training samples")
 
 			model.fit(x, y, batch_size=args.batch_size, 
@@ -772,9 +772,9 @@ def main():
 	
 	print ("Evaluating on test data")
 
-	reconstruction_edge_dict = convert_edgelist_to_dict(reconstruction_edges)
-	non_edge_dict = convert_edgelist_to_dict(non_edges)
-	test_edge_dict = convert_edgelist_to_dict(test_edges)
+	# reconstruction_edge_dict = convert_edgelist_to_dict(reconstruction_edges)
+	# non_edge_dict = convert_edgelist_to_dict(non_edges)
+	# test_edge_dict = convert_edgelist_to_dict(test_edges)
 
 	test_results = dict()
 
@@ -822,14 +822,14 @@ def main():
 	if args.euclidean:
 		plot_euclidean_embedding(epoch, reconstruction_edges, 
 			embedding,
-			labels, label_info,
+			labels, 
 			mean_rank_reconstruction, map_reconstruction, mean_roc_reconstruction,
 			mean_rank_lp, map_lp, mean_roc_lp,
 			plot_path)
 	else:
 		plot_disk_embeddings(epoch, reconstruction_edges, 
 			poincare_embedding, 
-			labels, label_info,
+			labels, 
 			mean_rank_reconstruction, map_reconstruction, mean_roc_reconstruction,
 			mean_rank_lp, map_lp, mean_roc_lp,
 			plot_path)

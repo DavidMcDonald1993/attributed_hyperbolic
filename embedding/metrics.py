@@ -147,7 +147,7 @@ def evaluate_classification(klein_embedding, labels,
 			f1_macro = f1_score(labels[split_test], predictions, average="macro")
 			f1_micros[seed,i] = f1_micro
 			f1_macros[seed,i] = f1_macro
-		print ("completed repeat {}".format(seed))
+		print ("completed repeat {}".format(seed+1))
 
 	return label_percentages, f1_micros.mean(axis=0), f1_macros.mean(axis=0)
 

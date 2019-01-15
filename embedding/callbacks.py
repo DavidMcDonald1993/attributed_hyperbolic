@@ -48,7 +48,7 @@ def hyperboloid_to_poincare_ball(X):
 def hyperboloid_to_klein(X):
 	return X[:,:-1] / X[:,-1,None]
 
-def plot_euclidean_embedding(epoch, edges, euclidean_embedding, labels, label_info,
+def plot_euclidean_embedding(epoch, edges, euclidean_embedding, labels, 
 	mean_rank_reconstruction, map_reconstruction, mean_roc_reconstruction,
 	mean_rank_lp, map_lp, mean_roc_lp, path):
 
@@ -92,14 +92,14 @@ def plot_euclidean_embedding(epoch, edges, euclidean_embedding, labels, label_in
 		for c in range(num_classes):
 			idx = labels == c
 			plt.scatter(euclidean_embedding[idx,0], euclidean_embedding[idx,1], s=10, c=colors[c], 
-				label=label_info[c] if label_info is not None else None, zorder=1)
+				label=None, zorder=1)
 		
 	plt.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05), ncol=3)
 	plt.savefig(path)
 	plt.close()
 
 
-def plot_disk_embeddings(epoch, edges, poincare_embedding, labels, label_info,
+def plot_disk_embeddings(epoch, edges, poincare_embedding, labels, 
 	mean_rank_reconstruction, map_reconstruction, mean_roc_reconstruction,
 	mean_rank_lp, map_lp, mean_roc_lp, path,  ):
 
@@ -268,11 +268,18 @@ def plot_classification(label_percentages, f1_micros, f1_macros, path):
 
 class PeriodicStdoutLogger(Callback):
 
-	def __init__(self, reconstruction_edges, non_edges, val_edges, 
+	def __init__(self, 
+		reconstruction_edges, 
+		non_edges, 
+		val_edges, 
 		val_non_edges, 
-		labels, label_info,
-		directed_edges, directed_non_edges,
-		epoch, n, args):
+		labels, 
+		alpha,
+		directed_edges, 
+		directed_non_edges,
+		epoch, 
+		n, 
+		args):
 		self.reconstruction_edges = reconstruction_edges
 		self.non_edges = non_edges
 		# self.reconstruction_edge_dict = convert_edgelist_to_dict(reconstruction_edges)
@@ -283,20 +290,19 @@ class PeriodicStdoutLogger(Callback):
 		# self.val_edge_dict = convert_edgelist_to_dict(val_edges)
 		# self.val_non_edge_dict = convert_edgelist_to_dict(val_non_edges)
 		self.labels = labels
-		self.label_info = label_info
 		self.directed_edges = directed_edges
 		self.directed_non_edges = directed_non_edges
 		self.epoch = epoch
 		self.n = n
-		# self.alpha = alpha
+		self.alpha = alpha
 		self.args = args
 
 
 	def on_epoch_end(self, batch, logs={}):
 	
 		self.epoch += 1
-		# K.set_value(self.alpha, np.log(1. + self.epoch))
-		# print ("Set temp to {}".format(K.get_value(self.alpha)))
+		K.set_value(self.alpha, np.log(2. + self.epoch) / 1)
+		print ("Set temp to {}".format(K.get_value(self.alpha)))
 
 		s = "Completed epoch {}, loss={}".format(self.epoch, logs["loss"])
 		if "val_loss" in logs.keys():
