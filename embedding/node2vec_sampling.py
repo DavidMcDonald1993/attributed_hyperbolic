@@ -11,8 +11,8 @@ class Graph():
 		self.q = q
 		self.jump_prob = jump_prob
 		self.feature_sim = feature_sim 
-		if self.feature_sim is not None:
-			self.feature_sim /= np.maximum(self.feature_sim.sum(axis=1, keepdims=True), 1e-32)
+		# if self.feature_sim is not None:
+		# 	self.feature_sim /= np.maximum(self.feature_sim.sum(axis=1, keepdims=True), 1e-32)
 		np.random.seed(seed)
 		random.seed(seed)
 
@@ -114,10 +114,10 @@ class Graph():
 
 			alias_nodes[node] = alias_setup(normalized_probs)
 			if i % 1000 == 0:
-				print ("completed node {}/{}".format(i, len(G)))
+				print ("completed node {:05d}/{}".format(i, len(G)))
 			i += 1
 
-		print ("completed node {}/{}".format(i, len(G)))
+		print ("completed node {:05d}/{}".format(i, len(G)))
 
 		# triads = {}
 		print ("DONE nodes")
@@ -133,11 +133,11 @@ class Graph():
 			i = 0
 			for edge in G.edges():
 				if i % 1000 == 0:
-					print ("completed edge {}/{}".format(i, 2*len(G.edges())))
+					print ("completed edge {:05d}/{}".format(i, 2*len(G.edges())))
 				alias_edges[edge] = self.get_alias_edge(edge[0], edge[1])
 				alias_edges[(edge[1], edge[0])] = self.get_alias_edge(edge[1], edge[0])
 				i += 2
-			print ("completed edge {}/{}".format(i, 2*len(G.edges())))
+			print ("completed edge {:05d}/{}".format(i, 2*len(G.edges())))
 
 		self.alias_edges = alias_edges
 		# else:

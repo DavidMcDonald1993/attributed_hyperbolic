@@ -3,7 +3,7 @@ from __future__ import print_function
 
 import os
 import h5py
-os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 os.environ["PYTHON_EGG_CACHE"] = "/rds/projects/2018/hesz01/attributed_hyperbolic/python-eggs"
 import multiprocessing 
 import re
@@ -78,8 +78,8 @@ def minkowski_dot_2d(x, y):
 
 def hyperbolic_distance(x, y):
 	inner_uv = minkowski_dot_2d(x, y)
-	inner_uv = -inner_uv - 1.
-	inner_uv = K.maximum(inner_uv, K.epsilon()) # clip to avoid nan
+	inner_uv = -inner_uv - 1. + 1e-7
+	# inner_uv = K.maximum(inner_uv, K.epsilon()) # clip to avoid nan
 
 	d_uv = tf.acosh(1. + inner_uv)
 	return d_uv
@@ -100,12 +100,16 @@ def hyperboloid_initializer(shape, r_max=1e-3):
 		U = tf.random_uniform(shape=(num_samples, 1), dtype=K.floatx())
 		return r_max * U ** (1./dim) * X / X_norm
 
-	w = sphere_uniform_sample(shape, r_max=r_max)
+	# w = sphere_uniform_sample(shape, r_max=r_max)
+	w = tf.random_uniform(shape=shape, minval=-r_max, maxval=r_max, dtype=K.floatx())
 	return poincare_ball_to_hyperboloid(w)
 
 class EmbeddingLayer(Layer):
 	
-	def __init__(self, num_nodes, embedding_dim, **kwargs):
+	def __init__(self, 
+		num_nodes, 
+		embedding_dim, 
+		**kwargs):
 		super(EmbeddingLayer, self).__init__(**kwargs)
 		self.num_nodes = num_nodes
 		self.embedding_dim = embedding_dim
@@ -124,8 +128,6 @@ class EmbeddingLayer(Layer):
 		  # shape=(self.num_nodes, self.embedding_dim),
 		  # initializer="random_normal",
 		  # trainable=True)
-
-
 		super(EmbeddingLayer, self).build(input_shape)
 
 
@@ -159,8 +161,12 @@ class EmbeddingLayer(Layer):
 
 class ExponentialMappingOptimizer(optimizer.Optimizer):
 	
-	def __init__(self, learning_rate=0.001, use_locking=False,
-			name="ExponentialMappingOptimizer", burnin=10, max_norm=np.inf):
+	def __init__(self, 
+		learning_rate=0.1, 
+		use_locking=False,
+		name="ExponentialMappingOptimizer", 
+		# burnin=10, 
+		max_norm=np.inf):
 		super(ExponentialMappingOptimizer, self).__init__(use_locking, name)
 		self._lr = learning_rate
 		# self.burnin = burnin
@@ -205,7 +211,7 @@ class ExponentialMappingOptimizer(optimizer.Optimizer):
 		tang = minkowski_ambient + minkowski_dot(hyperboloid_point, minkowski_ambient) * hyperboloid_point
 		return tang
    
-	def exponential_mapping( self, p, x, ):
+	def exponential_mapping( self, p, x ):
 
 		def adjust_to_hyperboloid(x):
 			x = x[:,:-1]
@@ -214,24 +220,22 @@ class ExponentialMappingOptimizer(optimizer.Optimizer):
 
 		norm_x = K.sqrt( K.maximum(K.cast(0., K.floatx()), minkowski_dot(x, x) ) )
 		clipped_norm_x = K.minimum(norm_x, self.max_norm)
-		# clipped_norm_x = K.cast(1e-4, K.floatx())
 		####################################################
-		exp_map_p = tf.cosh(clipped_norm_x) * p
+		# exp_map_p = tf.cosh(clipped_norm_x) * p
 		
-		idx = tf.cast( tf.where(norm_x > K.cast(0., K.floatx()), )[:,0], tf.int64)
-		non_zero_norm = tf.gather(norm_x, idx)
-		clipped_non_zero_norm = tf.gather(clipped_norm_x, idx)
-		# clipped_non_zero_norm = clipped_norm_x
-		z = tf.gather(x, idx) / non_zero_norm
+		# idx = tf.cast( tf.where(norm_x > K.cast(0., K.floatx()), )[:,0], tf.int64)
+		# non_zero_norm = tf.gather(norm_x, idx)
+		# clipped_non_zero_norm = tf.gather(clipped_norm_x, idx)
+		# z = tf.gather(x, idx) / non_zero_norm
 
-		updates = tf.sinh(clipped_non_zero_norm) * z
-		dense_shape = tf.cast( tf.shape(p), tf.int64)
-		exp_map_x = tf.scatter_nd(indices=idx[:,None], updates=updates, shape=dense_shape)
+		# updates = tf.sinh(clipped_non_zero_norm) * z
+		# dense_shape = tf.cast( tf.shape(p), tf.int64)
+		# exp_map_x = tf.scatter_nd(indices=idx[:,None], updates=updates, shape=dense_shape)
 		
-		exp_map = exp_map_p + exp_map_x 
+		# exp_map = exp_map_p + exp_map_x 
 		#####################################################
-		# z = x / K.maximum(norm_x, K.epsilon()) # unit norm 
-		# exp_map = tf.cosh(norm_x) * p + tf.sinh(norm_x) * z
+		z = x / (norm_x + K.epsilon())#K.maximum(norm_x, K.epsilon()) # unit norm 
+		exp_map = tf.cosh(clipped_norm_x) * p + tf.sinh(clipped_norm_x) * z
 		#####################################################
 		exp_map = adjust_to_hyperboloid(exp_map)
 
@@ -373,7 +377,7 @@ def parse_args():
 	parser.add_argument("--test-results", dest="test_results_path", default="test_results/", 
 		help="path to save test results (default is 'test_results/)'.")
 
-	parser.add_argument('--no-gpu', action="store_true", help='flag to train on cpu')
+	# parser.add_argument('--no-gpu', action="store_true", help='flag to train on cpu')
 
 	parser.add_argument('--only-lcc', action="store_true", help='flag to train on only lcc')
 
@@ -595,6 +599,12 @@ def main():
 		feature_sim = cosine_similarity(features)
 		feature_sim -= np.identity(len(features)) # remove diagonal
 		feature_sim [feature_sim  < args.rho] = 0 # remove negative cosine similarity
+		# feature_sim = features.dot(features.T)
+		# np.fill_diagonal(feature_sim, 0)
+		# feature_sim = feature_sim ** 2
+		# feature_sim -= np.max(feature_sim, axis=-1, keepdims=True)
+		# feature_sim = np.exp(feature_sim)
+		feature_sim /= feature_sim.sum(axis=-1, keepdims=True) # row normalize
 	else:
 		feature_sim = None
 
@@ -648,13 +658,6 @@ def main():
 
 	walks = load_walks(g, walk_file, feature_sim, args)
 
-	# lets just try this TODO remove 
-	# assert args.alpha > 0 and args.rho > 0
-	# walks += load_walks(create_feature_graph(features, args), 
-	# 	os.path.join(args.walk_path, "feature_graph_rho={}_num_walks={}-walk_len={}-p={}-q={}.walk".format(args.rho, args.num_walks, 
-	# 			args.walk_length, args.p, args.q)), 
-	# 	feature_sim, args)
-
 	if args.just_walks:
 		return
 		
@@ -671,7 +674,6 @@ def main():
 	)
 	# optimizer = "adam"
 	alpha = K.variable(np.log(2 + initial_epoch) / 1, dtype=K.floatx())
-	# alpha = K.variable(max(.2, np.log(1 + initial_epoch)), dtype=K.floatx())
 	print ("set alpha to {}".format(K.get_value(alpha)))
 	loss = (
 		hyperbolic_softmax_loss(alpha=alpha)
@@ -686,8 +688,8 @@ def main():
 	model.summary()
 
 	if args.evaluate_link_prediction:
-		# val_data = make_validation_data(val_edges, val_non_edges, negative_samples, alias_dict, args)
-		val_data = None
+		val_data = make_validation_data(val_edges, val_non_edges, negative_samples, alias_dict, args)
+		# val_data = None
 	else:
 		val_data = None
 
@@ -695,26 +697,35 @@ def main():
 
 	if args.evaluate_link_prediction:
 		# monitor = "mean_roc_reconstruction"
-		monitor = "map_lp"
-		mode = "max"
-		# monitor = "val_loss"
+		# monitor = "map_lp"
+		# mode = "max"
+		monitor = "val_loss"
 		# monitor = "loss"
-		# mode = "min"
+		mode = "min"
 	elif args.evaluate_class_prediction:
-		monitor = "micro_sum"
-		mode = "max"
-		# monitor = "val_loss"
-		# mode = "min"
+		# monitor = "micro_sum"
+		# mode = "max"
+		monitor = "val_loss"
+		mode = "min"
 	else:
 		monitor = "map_reconstruction"
 		mode = "max"
 		
-	early_stopping = EarlyStopping(monitor=monitor, mode=mode, patience=args.patience, verbose=1)
-	logger = PeriodicStdoutLogger(reconstruction_edges, non_edges, 
-		val_edges, val_non_edges, 
-		labels, alpha,
-		directed_edges, directed_non_edges,
-		n=args.plot_freq, epoch=initial_epoch, args=args) 
+	early_stopping = EarlyStopping(monitor=monitor, 
+		mode=mode, 
+		patience=args.patience, 
+		verbose=1)
+	logger = PeriodicStdoutLogger(reconstruction_edges, 
+		non_edges, 
+		val_edges, 
+		val_non_edges, 
+		labels, 
+		alpha,
+		directed_edges, 
+		directed_non_edges,
+		n=args.plot_freq, 
+		epoch=initial_epoch, 
+		args=args) 
 
 	callbacks=[
 		TerminateOnNaN(), 
@@ -729,15 +740,17 @@ def main():
 
 		if args.use_generator:
 			print ("Training with data generator with {} worker threads".format(args.workers))
-			# random.shuffle(positive_samples)
 			training_gen = TrainingSequence(positive_samples,  
 				negative_samples, probs, alias_dict, args)
 
 			model.fit_generator(training_gen, 
-				workers=args.workers, max_queue_size=25, 
+				workers=args.workers,
+				max_queue_size=25, 
 				use_multiprocessing=args.workers>0, 
 				steps_per_epoch=num_steps, 
-				epochs=args.num_epochs, initial_epoch=initial_epoch, verbose=args.verbose,
+				epochs=args.num_epochs, 
+				initial_epoch=initial_epoch, 
+				verbose=args.verbose,
 				validation_data=val_data,
 				callbacks=callbacks
 			)
@@ -750,8 +763,11 @@ def main():
 			y[:,0] = 1.
 			print ("Determined training samples")
 
-			model.fit(x, y, batch_size=args.batch_size, 
-				epochs=args.num_epochs, initial_epoch=initial_epoch, verbose=args.verbose,
+			model.fit(x, y, 
+				batch_size=args.batch_size, 
+				epochs=args.num_epochs, 
+				initial_epoch=initial_epoch, 
+				verbose=args.verbose,
 				validation_data=val_data,
 				callbacks=callbacks
 			)
@@ -819,20 +835,24 @@ def main():
 	epoch = logger.epoch
 
 	plot_path = os.path.join(args.plot_path, "epoch_{:05d}_plot_test.png".format(epoch) )
-	if args.euclidean:
-		plot_euclidean_embedding(epoch, reconstruction_edges, 
-			embedding,
-			labels, 
-			mean_rank_reconstruction, map_reconstruction, mean_roc_reconstruction,
-			mean_rank_lp, map_lp, mean_roc_lp,
-			plot_path)
-	else:
-		plot_disk_embeddings(epoch, reconstruction_edges, 
-			poincare_embedding, 
-			labels, 
-			mean_rank_reconstruction, map_reconstruction, mean_roc_reconstruction,
-			mean_rank_lp, map_lp, mean_roc_lp,
-			plot_path)
+	# if args.euclidean:
+	# 	plot_euclidean_embedding(epoch, reconstruction_edges, 
+	# 		embedding,
+	# 		labels, 
+	# 		mean_rank_reconstruction, map_reconstruction, mean_roc_reconstruction,
+	# 		mean_rank_lp, map_lp, mean_roc_lp,
+	# 		plot_path)
+	# else:
+	# 	plot_disk_embeddings(epoch, reconstruction_edges, 
+	# 		poincare_embedding, 
+	# 		labels, 
+	# 		mean_rank_reconstruction, map_reconstruction, mean_roc_reconstruction,
+	# 		mean_rank_lp, map_lp, mean_roc_lp,
+	# 		plot_path)
+	if args.embedding_dim == 2 and not args.euclidean:
+		draw_graph(self.reconstruction_edges, poincare_embedding, labels, 
+			mean_rank_reconstruction, map_reconstruction, mean_roc_reconstruction, 
+			mean_rank_lp, map_lp, mean_roc_lp, plot_path)
 
 	roc_path = os.path.join(args.plot_path, "epoch_{:05d}_roc_curve_test.png".format(epoch) )
 	plot_roc(dists, reconstruction_edges, non_edges, test_edges, test_non_edges, roc_path)

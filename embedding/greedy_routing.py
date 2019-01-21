@@ -75,6 +75,7 @@ def evaluate_greedy_routing(graph, dists, args):
 			cur = path[-1]
 
 		if not failure:
+			assert len(path) > 0
 			path_lengths.append(len(path) - 1) # number of hops
 
 	path_lengths = np.array(path_lengths)

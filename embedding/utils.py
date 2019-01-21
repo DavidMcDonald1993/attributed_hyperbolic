@@ -104,12 +104,6 @@ def make_validation_data(val_edges, val_non_edges, negative_samples, alias_dict,
 	idx = np.arange(len(val_edges))
 	positive_samples = val_edges[idx]
 
-	# for u in positive_samples[:,0]:
-	# 	print (negative_samples[u][alias_draw(alias_dict[u][0], 
-	# 		alias_dict[u][1], args.num_negative_samples)])
-	# raise SystemExit
-
-
 	val_negative_samples = np.array([
 		negative_samples[u][alias_draw(alias_dict[u][0], alias_dict[u][1], args.num_negative_samples)]
 		for u in positive_samples[:,0]
@@ -208,7 +202,7 @@ def determine_positive_and_negative_samples(nodes, walks, context_size, directed
 
 
 		if num_walk % 1000 == 0:  
-			print ("processed walk {}/{}".format(num_walk, len(walks)))
+			print ("processed walk {:05d}/{}".format(num_walk, len(walks)))
 
 	# neighbourhood_samples = {n : list(v) for n, v in neighbourhood_samples.items()}
 	# negative_samples = {n : np.array(list(v)) for n, v in negative_samples.items()}

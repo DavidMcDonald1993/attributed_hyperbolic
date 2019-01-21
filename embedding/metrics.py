@@ -151,9 +151,6 @@ def evaluate_classification(klein_embedding, labels,
 
 	return label_percentages, f1_micros.mean(axis=0), f1_macros.mean(axis=0)
 
-
-
-
 # def evaluate_lexical_entailment(embedding):
 
 # 	def is_a_score(u, v, alpha=1e3):
