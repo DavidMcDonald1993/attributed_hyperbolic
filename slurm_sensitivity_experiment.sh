@@ -1,8 +1,8 @@
 #!/bin/bash
 
-#SBATCH --job-name=noGPUexp
-#SBATCH --output=noGPUexp_%A_%a.out
-#SBATCH --error=noGPUexp_%A_%a.err
+#SBATCH --job-name=sensitivity
+#SBATCH --output=sensitivity_%A_%a.out
+#SBATCH --error=sensitivity_%A_%a.err
 #SBATCH --array=0-719
 #SBATCH --time=3-00:00:00
 #SBATCH --ntasks=1
