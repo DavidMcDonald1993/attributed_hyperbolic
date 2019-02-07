@@ -29,11 +29,10 @@ def hyperbolic_negative_sampling_loss(r, t):
         # r = K.stop_gradient(K.mean(d_uv) - 2 * K.std( d_uv))
         # r_sq = K.stop_gradient(K.mean(d_uv) **2 )
 
-        r_sq = K.square(r)
+        # r_sq = K.square(r)
         # r_sq = K.stop_gradient(K.maximum(K.cast(0, dtype=K.floatx()), K.mean(d_uv_sq)))# ** 2
-        # r_sq = K.stop_gradient(K.min(d_uv_sq[:,0]))
-        # r_sq = K.maximum(r_sq, K.cast(1, dtype=K.floatx()))
-        # r_sq = 9
+        r_sq = K.stop_gradient((K.max(d_uv[:,0]) + K.min(d_uv[:,1:])) / 2.) ** 2
+        r_sq = K.minimum(r_sq, K.cast(100., dtype=K.floatx()))
 
         out_uv = (r_sq - d_uv_sq) / t
         # out_uv = (K.square(r) - K.square(d_uv)) / t
@@ -45,8 +44,8 @@ def hyperbolic_negative_sampling_loss(r, t):
         pos_p_uv = tf.nn.sigmoid(pos_out_uv)
         neg_p_uv = 1 - tf.nn.sigmoid(neg_out_uv)
 
-        # pos_p_uv = K.clip(pos_p_uv, min_value=K.epsilon(), max_value=1-K.epsilon())
-        # neg_p_uv = K.clip(neg_p_uv, min_value=K.epsilon(), max_value=1-K.epsilon())
+        pos_p_uv = K.clip(pos_p_uv, min_value=1e-7, max_value=1-1e-8)
+        neg_p_uv = K.clip(neg_p_uv, min_value=1e-7, max_value=1-1e-8)
 
         return -K.mean(K.log(pos_p_uv) + K.sum(K.log(neg_p_uv), axis=-1))
 
@@ -170,6 +169,9 @@ def hyperbolic_softmax_loss(alpha=0):
 
     def loss(y_true, y_pred, alpha=alpha):
 
+        # print (y_true.shape, y_true.dtype)
+        # raise SystemExit
+
         u_emb = y_pred[:,0]
         samples_emb = y_pred[:,1:]
         
@@ -180,11 +182,14 @@ def hyperbolic_softmax_loss(alpha=0):
         d_uv = tf.acosh(1. + inner_uv) 
 
         # sigma = alpha
-        sigma = K.cast(1., dtype=K.floatx())
+        sigma = K.cast(1.0, dtype=K.floatx())
         sigma_sq = K.stop_gradient(sigma ** 2)
         minus_d_uv_sq = - 0.5 * K.square(d_uv) / sigma_sq
         # minus_d_uv_sq = - 0.5 * d_uv / sigma_sq
 
-        return K.mean(tf.nn.softmax_cross_entropy_with_logits(labels=y_true[...,0], logits=minus_d_uv_sq)) 
+        # y_true = tf.cast(y_true, tf.int64)
+
+        return K.mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=y_true[:,0], logits=minus_d_uv_sq)) 
+        # return K.mean(tf.nn.softmax_cross_entropy_with_logits(labels=y_true[...,0], logits=minus_d_uv_sq)) 
 
     return loss

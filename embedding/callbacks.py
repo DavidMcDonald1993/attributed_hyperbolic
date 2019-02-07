@@ -274,11 +274,11 @@ class PeriodicStdoutLogger(Callback):
 		val_edges, 
 		val_non_edges, 
 		labels, 
-		alpha,
+		# alpha,
 		directed_edges, 
 		directed_non_edges,
 		epoch, 
-		n, 
+		plot_freq, 
 		args):
 		self.reconstruction_edges = reconstruction_edges
 		self.non_edges = non_edges
@@ -293,8 +293,8 @@ class PeriodicStdoutLogger(Callback):
 		self.directed_edges = directed_edges
 		self.directed_non_edges = directed_non_edges
 		self.epoch = epoch
-		self.n = n
-		self.alpha = alpha
+		self.plot_freq = plot_freq
+		# self.alpha = alpha
 		self.args = args
 
 
@@ -309,7 +309,7 @@ class PeriodicStdoutLogger(Callback):
 		# # 	s += ", val_loss={}".format(logs["val_loss"])
 		# # print (s)
 
-		hyperboloid_embedding = self.model.layers[-1].get_weights()[0]
+		hyperboloid_embedding = self.model.layers[-1].get_weights()[-1]
 		print (hyperboloid_embedding)
 
 		if self.args.euclidean:
@@ -331,103 +331,103 @@ class PeriodicStdoutLogger(Callback):
 		print (dists.mean(), dists.max())
 		print (minkowski_dot_np(hyperboloid_embedding, hyperboloid_embedding))
 
-		# print ("reconstruction")
-		# (mean_rank_reconstruction, map_reconstruction, 
-		# 	mean_roc_reconstruction) = evaluate_rank_and_MAP(dists, 
-		# 	self.reconstruction_edges, self.non_edges)
+		print ("reconstruction")
+		(mean_rank_reconstruction, map_reconstruction, 
+			mean_roc_reconstruction) = evaluate_rank_and_MAP(dists, 
+			self.reconstruction_edges, self.non_edges)
 
-		# logs.update({"mean_rank_reconstruction": mean_rank_reconstruction, 
-		# 	"map_reconstruction": map_reconstruction,
-		# 	"mean_roc_reconstruction": mean_roc_reconstruction})
+		logs.update({"mean_rank_reconstruction": mean_rank_reconstruction, 
+			"map_reconstruction": map_reconstruction,
+			"mean_roc_reconstruction": mean_roc_reconstruction})
 
-		# # print ("reconstruction fb")
-		# # (mean_rank_reconstruction_fb, map_reconstruction_fb, 
-		# # 	mean_roc_reconstruction_fb) = evaluate_rank_and_MAP_fb(dists, 
-		# # 	self.reconstruction_edge_dict, self.non_edge_dict)
+		# print ("reconstruction fb")
+		# (mean_rank_reconstruction_fb, map_reconstruction_fb, 
+		# 	mean_roc_reconstruction_fb) = evaluate_rank_and_MAP_fb(dists, 
+		# 	self.reconstruction_edge_dict, self.non_edge_dict)
 
-		# # logs.update({"mean_rank_reconstruction_fb": mean_rank_reconstruction_fb, 
-		# # 	"map_reconstruction_fb": map_reconstruction_fb,
-		# # 	"mean_roc_reconstruction_fb": mean_roc_reconstruction_fb})
-
-
-		# if self.args.evaluate_link_prediction:
-		# 	print ("link prediction")
-		# 	(mean_rank_lp, map_lp, 
-		# 	mean_roc_lp) = evaluate_rank_and_MAP(dists, 
-		# 	self.val_edges, self.val_non_edges)
-
-		# 	logs.update({"mean_rank_lp": mean_rank_lp, 
-		# 		"map_lp": map_lp,
-		# 		"mean_roc_lp": mean_roc_lp})
-
-		# 	# print ("link prediction fb")
-		# 	# (mean_rank_lp_fb, map_lp_fb, 
-		# 	# mean_roc_lp_fb) = evaluate_rank_and_MAP_fb(dists, 
-		# 	# self.val_edge_dict, self.non_edge_dict)
-
-		# 	# logs.update({"mean_rank_lp_fb": mean_rank_lp_fb, 
-		# 	# 	"map_lp_fb": map_lp_fb,
-		# 	# 	"mean_roc_lp_fb": mean_roc_lp_fb})
-		# else:
-
-		# 	mean_rank_lp, map_lp, mean_roc_lp = None, None, None
+		# logs.update({"mean_rank_reconstruction_fb": mean_rank_reconstruction_fb, 
+		# 	"map_reconstruction_fb": map_reconstruction_fb,
+		# 	"mean_roc_reconstruction_fb": mean_roc_reconstruction_fb})
 
 
-		# if self.args.evaluate_class_prediction:
-		# 	label_percentages, f1_micros, f1_macros = evaluate_classification(klein_embedding, self.labels, )
+		if self.args.evaluate_link_prediction:
+			print ("link prediction")
+			(mean_rank_lp, map_lp, 
+			mean_roc_lp) = evaluate_rank_and_MAP(dists, 
+			self.val_edges, self.val_non_edges)
 
-		# 	print (f1_micros)
+			logs.update({"mean_rank_lp": mean_rank_lp, 
+				"map_lp": map_lp,
+				"mean_roc_lp": mean_roc_lp})
 
-		# 	for label_percentage, f1_micro, f1_macro in zip(label_percentages, f1_micros, f1_macros):
-		# 		logs.update({"{}_micro".format(label_percentage): f1_micro})
-		# 		logs.update({"{}_macro".format(label_percentage): f1_macro})
-		# 	logs.update({"micro_sum" : np.sum(f1_micros)})
+			# print ("link prediction fb")
+			# (mean_rank_lp_fb, map_lp_fb, 
+			# mean_roc_lp_fb) = evaluate_rank_and_MAP_fb(dists, 
+			# self.val_edge_dict, self.non_edge_dict)
 
-		# if self.args.directed:
-		# 	print ("EVALUATING DIRECTION", len(self.directed_edges), len(self.directed_non_edges))
-		# 	directed_f1_micro, directed_f1_macro = evaluate_direction(hyperboloid_embedding, 
-		# 		self.directed_edges,)
-		# 	logs.update({"directed_f1_micro": directed_f1_micro, 
-		# 		"directed_f1_macro": directed_f1_macro, })
-		# 		# "directed_ap_score": directed_ap_score,
-		# 		# "directed_auc_score": directed_auc_score})
+			# logs.update({"mean_rank_lp_fb": mean_rank_lp_fb, 
+			# 	"map_lp_fb": map_lp_fb,
+			# 	"mean_roc_lp_fb": mean_roc_lp_fb})
+		else:
+
+			mean_rank_lp, map_lp, mean_roc_lp = None, None, None
 
 
-		# if self.epoch % self.n == 0:
+		if self.args.evaluate_class_prediction:
+			label_percentages, f1_micros, f1_macros = evaluate_classification(klein_embedding, self.labels, )
 
-		# 	if self.args.embedding_dim == 2:
-		# 		plot_path = os.path.join(self.args.plot_path, "epoch_{:05d}_plot.png".format(self.epoch) )
-		# 		if not self.args.euclidean:
-		# 			draw_graph(self.reconstruction_edges, poincare_embedding, self.labels, 
-		# 				mean_rank_reconstruction, map_reconstruction, mean_roc_reconstruction, 
-		# 				mean_rank_lp, map_lp, mean_roc_lp, plot_path)
-		# 		# if self.args.euclidean:
-		# 		# 	plot_euclidean_embedding(self.epoch, self.reconstruction_edges, 
-		# 		# 		poincare_embedding,
-		# 		# 		self.labels, self.label_info,
-		# 		# 		mean_rank_reconstruction, map_reconstruction, mean_roc_reconstruction,
-		# 		# 		mean_rank_lp, map_lp, mean_roc_lp,
-		# 		# 		plot_path)
+			print (f1_micros)
 
-		# 		# else:
-		# 		# 	plot_disk_embeddings(self.epoch, self.reconstruction_edges, 
-		# 		# 		poincare_embedding,
-		# 		# 		self.labels, self.label_info,
-		# 		# 		mean_rank_reconstruction, map_reconstruction, mean_roc_reconstruction,
-		# 		# 		mean_rank_lp, map_lp, mean_roc_lp,
-		# 		# 		plot_path)
+			for label_percentage, f1_micro, f1_macro in zip(label_percentages, f1_micros, f1_macros):
+				logs.update({"{}_micro".format(label_percentage): f1_micro})
+				logs.update({"{}_macro".format(label_percentage): f1_macro})
+			logs.update({"micro_sum" : np.sum(f1_micros)})
 
-		# 	roc_path = os.path.join(self.args.plot_path, "epoch_{:05d}_roc_curve.png".format(self.epoch) )
-		# 	plot_roc(dists, self.reconstruction_edges, self.non_edges, 
-		# 		self.val_edges, self.val_non_edges, roc_path)
+		if self.args.directed:
+			print ("EVALUATING DIRECTION", len(self.directed_edges), len(self.directed_non_edges))
+			directed_f1_micro, directed_f1_macro = evaluate_direction(hyperboloid_embedding, 
+				self.directed_edges,)
+			logs.update({"directed_f1_micro": directed_f1_micro, 
+				"directed_f1_macro": directed_f1_macro, })
+				# "directed_ap_score": directed_ap_score,
+				# "directed_auc_score": directed_auc_score})
 
-		# 	precision_recall_path = os.path.join(self.args.plot_path, "epoch_{:05d}_precision_recall_curve.png".format(self.epoch) )
-		# 	plot_precisions_recalls(dists, self.reconstruction_edges, self.non_edges, 
-		# 		self.val_edges, self.val_non_edges, precision_recall_path)
 
-		# 	if self.args.evaluate_class_prediction:
-		# 		f1_path = os.path.join(self.args.plot_path, "epoch_{:05d}_class_prediction_f1.png".format(self.epoch))
-		# 		plot_classification(label_percentages, f1_micros, f1_macros, f1_path)
+		if self.epoch % self.plot_freq == 0:
+
+			if self.args.embedding_dim == 2:
+				plot_path = os.path.join(self.args.plot_path, "epoch_{:05d}_plot.png".format(self.epoch) )
+				if not self.args.euclidean:
+					draw_graph(self.reconstruction_edges, poincare_embedding, self.labels, 
+						mean_rank_reconstruction, map_reconstruction, mean_roc_reconstruction, 
+						mean_rank_lp, map_lp, mean_roc_lp, plot_path)
+				# if self.args.euclidean:
+				# 	plot_euclidean_embedding(self.epoch, self.reconstruction_edges, 
+				# 		poincare_embedding,
+				# 		self.labels, self.label_info,
+				# 		mean_rank_reconstruction, map_reconstruction, mean_roc_reconstruction,
+				# 		mean_rank_lp, map_lp, mean_roc_lp,
+				# 		plot_path)
+
+				# else:
+				# 	plot_disk_embeddings(self.epoch, self.reconstruction_edges, 
+				# 		poincare_embedding,
+				# 		self.labels, self.label_info,
+				# 		mean_rank_reconstruction, map_reconstruction, mean_roc_reconstruction,
+				# 		mean_rank_lp, map_lp, mean_roc_lp,
+				# 		plot_path)
+
+			roc_path = os.path.join(self.args.plot_path, "epoch_{:05d}_roc_curve.png".format(self.epoch) )
+			plot_roc(dists, self.reconstruction_edges, self.non_edges, 
+				self.val_edges, self.val_non_edges, roc_path)
+
+			precision_recall_path = os.path.join(self.args.plot_path, "epoch_{:05d}_precision_recall_curve.png".format(self.epoch) )
+			plot_precisions_recalls(dists, self.reconstruction_edges, self.non_edges, 
+				self.val_edges, self.val_non_edges, precision_recall_path)
+
+			if self.args.evaluate_class_prediction:
+				f1_path = os.path.join(self.args.plot_path, "epoch_{:05d}_class_prediction_f1.png".format(self.epoch))
+				plot_classification(label_percentages, f1_micros, f1_macros, f1_path)
 
 		self.remove_old_models()
 		self.save_model()

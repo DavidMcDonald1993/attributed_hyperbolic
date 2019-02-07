@@ -50,8 +50,8 @@ class TrainingSequence(Sequence):
 		# ], dtype=np.int64)
 
 		batch_negative_samples = np.array([
-			negative_samples[u][self.alias_draw(alias_dict[u][0], alias_dict[u][1], size=num_negative_samples)]
-			# np.random.choice(negative_samples[u], size=num_negative_samples, replace=True, p=probs[u])
+			# negative_samples[u][self.alias_draw(alias_dict[u][0], alias_dict[u][1], size=num_negative_samples)]
+			np.random.choice(negative_samples[u], size=num_negative_samples, replace=True, p=probs[u])
 			for u in input_nodes
 		], dtype=np.int64)
 
@@ -68,9 +68,12 @@ class TrainingSequence(Sequence):
 		batch_positive_samples = np.array(
 			positive_samples[batch_idx * batch_size : (batch_idx + 1) * batch_size], dtype=np.int64)
 		training_sample = self.get_training_sample(batch_positive_samples)
-		target = np.zeros((training_sample.shape[0], training_sample.shape[1]-1, 1 ))
-		target[:,0] = 1 - self.num_negative_samples * 0.0
-		target[:,1:] = 0.0
+		
+		# target = np.zeros((training_sample.shape[0], training_sample.shape[1]-1, 1 ))
+		# target[:,0] = 1. - self.num_negative_samples * 0.0
+		# target[:,1:] = 0.0
+		target = np.zeros((training_sample.shape[0],  ))
+		
 		return training_sample, target
 
 	def on_epoch_end(self):

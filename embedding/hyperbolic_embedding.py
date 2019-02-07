@@ -32,6 +32,7 @@ from metrics import evaluate_rank_and_MAP, evaluate_rank_and_MAP_fb, evaluate_cl
 from callbacks import plot_disk_embeddings, plot_euclidean_embedding, plot_roc, plot_classification, plot_precisions_recalls
 from generators import TrainingSequence
 from greedy_routing import evaluate_greedy_routing
+from visualise import draw_graph
 
 from keras.layers import Input, Layer, Dense, Embedding
 from keras.models import Model
@@ -67,6 +68,10 @@ K.tensorflow_backend.set_session(tf.Session(config=config))
 def gans_to_hyperboloid(x):
 	t = K.sqrt(1. + K.sum(K.square(x), axis=-1, keepdims=True))
 	return tf.concat([x, t], axis=-1)
+
+def euclidean_dot(x, y):
+    axes = len(x.shape) - 1, len(y.shape) -1
+    return K.batch_dot(x, y, axes=axes)
 
 def minkowski_dot(x, y):
     axes = len(x.shape) - 1, len(y.shape) -1
@@ -124,36 +129,31 @@ class EmbeddingLayer(Layer):
 		#   shape=(self.num_nodes, self.embedding_dim),
 		#   initializer=hyperboloid_initializer,
 		#   trainable=True)
-		# self.embedding = self.add_weight(name='embedding', 
-		  # shape=(self.num_nodes, self.embedding_dim),
-		  # initializer="random_normal",
-		  # trainable=True)
 		super(EmbeddingLayer, self).build(input_shape)
 
 
 
 	def call(self, x):
-		x = K.cast(x, dtype=tf.int64)
-		u = x[:,:1]
-		v = x[:,1:2]
-		neg_sample_idx = x[:,2:]
+		# x = K.cast(x, dtype=tf.int64)
+		# u = x[:,:1]
+		# v = x[:,1:2]
+		# neg_sample_idx = x[:,2:]
 		
-		u_embedding = tf.gather(self.embedding, u)
-		v_embedding = tf.gather(self.embedding, v)
-		neg_samples_embedding = tf.gather(self.embedding, neg_sample_idx)
+		# u_embedding = tf.gather(self.embedding, u)
+		# v_embedding = tf.gather(self.embedding, v)
+		# neg_samples_embedding = tf.gather(self.embedding, neg_sample_idx)
 
-		# v_embedding = tf.gather(self.context_embedding, v)
+		# # v_embedding = tf.gather(self.context_embedding, v)
+		# # neg_samples_embedding = tf.gather(self.context_embedding, neg_sample_idx)
 
-		embedding = K.concatenate([u_embedding, v_embedding, neg_samples_embedding], axis=1)
+		# embedding = K.concatenate([u_embedding, v_embedding, neg_samples_embedding], axis=1)
 
-		# embedding = tf.gather(self.embedding, x, name="embedding_gather")
+		embedding = tf.gather(self.embedding, x)
 
 		return embedding
 
 	def compute_output_shape(self, input_shape):
 		return (input_shape[0], input_shape[1], self.embedding_dim+1)
-		# return (input_shape[0], input_shape[1], self.embedding_dim)
-
 	
 	def get_config(self):
 		base_config = super(EmbeddingLayer, self).get_config()
@@ -181,7 +181,7 @@ class ExponentialMappingOptimizer(optimizer.Optimizer):
 		assert False
 		lr_t = math_ops.cast(self._lr_t, var.dtype.base_dtype)
 		spacial_grad = grad[:,:-1]
-		t_grad = -grad[:,-1:]
+		t_grad = -1 * grad[:,-1:]
 		
 		ambient_grad = tf.concat([spacial_grad, t_grad], axis=-1)
 		tangent_grad = self.project_onto_tangent_space(var, ambient_grad)
@@ -193,11 +193,12 @@ class ExponentialMappingOptimizer(optimizer.Optimizer):
 	def _apply_sparse(self, grad, var):
 		indices = grad.indices
 		values = grad.values
+
 		p = tf.gather(var, indices, name="gather_apply_sparse")
 
 		lr_t = math_ops.cast(self._lr_t, var.dtype.base_dtype)
 		spacial_grad = values[:, :-1]
-		t_grad = -1 * values[:, -1:]
+		t_grad = - values[:, -1:]
 
 		ambient_grad = tf.concat([spacial_grad, t_grad], axis=-1, name="optimizer_concat")
 		tangent_grad = self.project_onto_tangent_space(p, ambient_grad)
@@ -218,8 +219,12 @@ class ExponentialMappingOptimizer(optimizer.Optimizer):
 			t = K.sqrt(1. + K.sum(K.square(x), axis=-1, keepdims=True))
 			return tf.concat([x, t], axis=-1)
 
-		norm_x = K.sqrt( K.maximum(K.cast(0., K.floatx()), minkowski_dot(x, x) ) )
-		clipped_norm_x = K.minimum(norm_x, self.max_norm)
+		# norm_x = K.sqrt( K.maximum(K.cast(0., K.floatx()), euclidean_dot(x, x) ) )
+		# norm_x = K.sqrt( K.maximum(K.cast(0., K.floatx()), minkowski_dot(x, x) ) )
+		norm_x = K.sqrt(  minkowski_dot(x, x) ) 
+		# clipped_norm_x = K.minimum(norm_x, self.max_norm)
+		clipped_norm_x = norm_x
+		# clipped_norm_x = K.constant(1e-3, )
 		####################################################
 		# exp_map_p = tf.cosh(clipped_norm_x) * p
 		
@@ -234,20 +239,20 @@ class ExponentialMappingOptimizer(optimizer.Optimizer):
 		
 		# exp_map = exp_map_p + exp_map_x 
 		#####################################################
-		z = x / (norm_x + K.epsilon())#K.maximum(norm_x, K.epsilon()) # unit norm 
+		z = x / K.maximum(norm_x, K.epsilon()) # unit norm 
 		exp_map = tf.cosh(clipped_norm_x) * p + tf.sinh(clipped_norm_x) * z
 		#####################################################
-		exp_map = adjust_to_hyperboloid(exp_map)
+		# exp_map = adjust_to_hyperboloid(exp_map)
 
 		return exp_map
 
-	
-
 def build_model(num_nodes, args):
 
-	x = Input(shape=(1+args.num_positive_samples+args.num_negative_samples,), name="model_input")
+	x = Input(shape=(1 + args.num_positive_samples + args.num_negative_samples,), 
+		name="model_input", dtype=tf.int64)
 	if args.euclidean:
-		y = Embedding(num_nodes, args.embedding_dim, input_length=1+args.num_positive_samples+args.num_negative_samples,
+		y = Embedding(num_nodes, args.embedding_dim, 
+			input_length=1 + args.num_positive_samples + args.num_negative_samples,
 			embeddings_regularizer=None, name="embedding_layer")(x)
 	else:
 		y = EmbeddingLayer(num_nodes, args.embedding_dim, name="embedding_layer")(x)
@@ -265,7 +270,8 @@ def build_model(num_nodes, args):
 		print ("Loading model from file: {}".format(model_file))
 		model.load_weights(model_file)
 
-		print (model.layers[-1].get_weights()[0])
+		for w in model.layers[-1].get_weights():
+			print (w)
 
 		initial_epoch = int(saved_models[-1].split(".")[0])
 		print ("initial epoch={}".format(initial_epoch))
@@ -360,7 +366,6 @@ def parse_args():
 	parser.add_argument("--euclidean", dest="euclidean", action="store_true", 
 		help="Use this flag to use euclidean negative sampling loss.")
 
-	
 	
 	parser.add_argument("--plot", dest="plot_path", default="plots/", 
 		help="path to save plots (default is 'plots/)'.")
@@ -495,8 +500,6 @@ def configure_paths(args):
 		print ("making {}".format(args.walk_path))
 	print ("saving walks to {}".format(args.walk_path))
 
-
-
 	# args.test_results_path = os.path.join(args.test_results_path, dataset)
 	# if not os.path.exists(args.test_results_path):
 	# 	os.makedirs(args.test_results_path)
@@ -526,8 +529,8 @@ def main():
 
 	args = parse_args()
 	args.num_positive_samples = 1
-	# args.softmax = True
-	# args.verbose = True
+	args.softmax = True
+	args.verbose = True
 	# args.seed = 0
 
 	assert not sum([args.multiply_attributes, args.alpha>0, args.jump_prob>0]) > 1
@@ -541,27 +544,25 @@ def main():
 	# 	args.directed = True
 
 	if dataset == "karate":
-		topology_graph, features, labels = load_karate(args)
+		graph, features, labels = load_karate(args)
 	elif dataset == "contact":
-		topology_graph, features, labels = load_contact(args)
+		graph, features, labels = load_contact(args)
+	# elif dataset in ["cora", "pubmed", "citeseer"]:
+	# 	graph, features, labels = load_labelled_attributed_network(dataset, args)
 	elif dataset in ["cora", "cora_ml", "pubmed", "citeseer"]:
-		# topology_graph, features, labels = load_labelled_attributed_network(dataset, args)
-		topology_graph, features, labels = load_g2g_datasets(dataset, args)
+		graph, features, labels = load_g2g_datasets(dataset, args)
 	elif dataset in ["AstroPh", "CondMat", "GrQc", "HepPh"]:
-		topology_graph, features, labels = load_collaboration_network(args)
+		graph, features, labels = load_collaboration_network(args)
 	elif dataset == "ppi":
-		topology_graph, features, labels = load_ppi(args)
+		graph, features, labels = load_ppi(args)
 	elif dataset == "tf_interaction":
-		topology_graph, features, labels = load_tf_interaction(args)
+		graph, features, labels = load_tf_interaction(args)
 	elif dataset == "wordnet":
-		topology_graph, features, labels = load_wordnet(args)
+		graph, features, labels = load_wordnet(args)
 	else:
 		raise Exception
 
 	print ("Loaded dataset")
-
-	# print (len(topology_graph), len(topology_graph.edges()), features.shape, labels.shape, )
-	# raise SystemExit
 
 	if not args.evaluate_link_prediction:
 		args.evaluate_class_prediction = labels is not None
@@ -579,48 +580,62 @@ def main():
 			train = False
 
 	if args.directed:
-		directed_edges = list(set(topology_graph.edges()) - {edge[::-1] for edge in topology_graph.edges()})
-		# directed_edges = [edge for edge in topology_graph.edges() if edge[::-1] not in topology_graph.edges()]
+		directed_edges = list(set(graph.edges()) - {edge[::-1] for edge in graph.edges()})
+		# directed_edges = [edge for edge in graph.edges() if edge[::-1] not in graph.edges()]
 		directed_non_edges = [(v, u) for u, v in directed_edges]
 		print ("DISCOVERED {} DIRECTED EDGES".format(len(directed_edges)))
 	else:
 		directed_edges = None
 		directed_non_edges = None
 
-	topology_graph = topology_graph.to_undirected() # we perform walks on undirected matrix
+	graph = graph.to_undirected() # we perform walks on undirected matrix
 
 	# original edges for reconstruction
-	reconstruction_edges = topology_graph.edges()
-	non_edges = list(nx.non_edges(topology_graph))
+	reconstruction_edges = graph.edges()
+	non_edges = list(nx.non_edges(graph))
 
 	print ("Determined reconstruction edges and non-edges")
 
 	if features is not None:
 		feature_sim = cosine_similarity(features)
-		feature_sim -= np.identity(len(features)) # remove diagonal
-		feature_sim [feature_sim  < args.rho] = 0 # remove negative cosine similarity
+		# # feature_sim [feature_sim  < args.rho] = 0 # remove negative cosine similarity
 		# feature_sim = features.dot(features.T)
-		# np.fill_diagonal(feature_sim, 0)
+		np.fill_diagonal(feature_sim, 0) # remove diagonal
+
+		# k = 10
+
+		# N = len(feature_sim)
+		# J = feature_sim.argsort(-1)[:,:N-k].flatten()
+		# I = np.concatenate([[i] * (N-k) for i in range(N)])
+		# feature_sim[I, J] = 0
+
 		# feature_sim = feature_sim ** 2
 		# feature_sim -= np.max(feature_sim, axis=-1, keepdims=True)
-		# feature_sim = np.exp(feature_sim)
-		feature_sim /= feature_sim.sum(axis=-1, keepdims=True) # row normalize
+		# feature_sim = np.exp(feature_sim / 1.)
+		# np.fill_diagonal(feature_sim, 0)
+		feature_sim[feature_sim < 1e-15] = 0
+		feature_sim /= np.maximum(feature_sim.sum(axis=-1, keepdims=True), 1e-15) # row normalize
+		# print (feature_sim[feature_sim > 0][:10])
+		# print (feature_sim.max(-1)[:100])
+		# print (N*5, (feature_sim > 0).sum(), len(graph.edges()), len(graph), len(graph)**2)
+		# print (feature_sim[feature_sim>0][:100])
+		# raise SystemExit
 	else:
 		feature_sim = None
 
 	if args.evaluate_link_prediction:
 		train_edges, (val_edges, val_non_edges), (test_edges, test_non_edges) = split_edges(reconstruction_edges, non_edges, args)
-		n1, e1 = len(topology_graph), len(topology_graph.edges())
+		n1, e1 = len(graph), len(graph.edges())
 		print ("number of validation edges: {}".format(len(val_edges)))
 		print ("number of test edges: {}".format(len(test_edges)))
 		print ("removing {} edges from training set".format(len(val_edges) + len(test_edges)))
-		topology_graph.remove_edges_from(val_edges + test_edges)
-		n2, e2 = len(topology_graph), len(topology_graph.edges())
+		graph.remove_edges_from(val_edges + test_edges)
+		n2, e2 = len(graph), len(graph.edges())
 		if args.add_non_edges:
 			print ("adding {} non edges as edges to training set".format(len(val_non_edges) + len(test_non_edges)))
-			topology_graph.add_edges_from(val_non_edges + test_non_edges)
-			nx.set_edge_attributes(topology_graph, "weight", 1)
-		n3, e3 = len(topology_graph), len(topology_graph.edges())
+			graph.add_edges_from(val_non_edges + test_non_edges)
+			nx.set_edge_attributes(graph, "weight", 1)
+		n3, e3 = len(graph), len(graph.edges())
 		assert n1 == n2 == n3
 		assert e1 > e2 
 		assert len(val_edges) == len(val_non_edges)
@@ -635,24 +650,27 @@ def main():
 
 	if args.alpha > 0:
 		assert features is not None
-		# walk_file = os.path.join(args.walk_path, "combine_graphs")
-		# feature_g = create_feature_graph(features, args)
-		# walk_file = os.path.join(args.walk_path, "add_attributes_alpha={}".format(args.alpha))
-		# g = nx.from_numpy_matrix((1 - args.alpha) * nx.adjacency_matrix(topology_graph).A + args.alpha * feature_sim)
-		walk_file = os.path.join(args.walk_path, "no_attributes")
-		g = topology_graph
+		walk_file = os.path.join(args.walk_path, "add_attributes_alpha={}".format(args.alpha))
+		A = nx.adjacency_matrix(graph).A
+		np.fill_diagonal(A, 1)
+		A /= np.maximum(A.sum(axis=-1, keepdims=True), 1e-15)
+		# assert ((A.sum(-1) - 1)<1e-7).all(), A
+		# assert ((feature_sim.sum(-1) - 1) < 1e-7).all()
+		adj = (1. - args.alpha) * A + args.alpha * feature_sim
+		# assert ((adj.sum(axis=-1) - 1) < 1e-7).all()
+		g = nx.from_numpy_matrix(adj)
 	elif args.multiply_attributes:
 		assert features is not None
 		walk_file = os.path.join(args.walk_path, "multiply_attributes")
-		A = nx.adjacency_matrix(topology_graph).A
+		A = nx.adjacency_matrix(graph).A
 		g = nx.from_numpy_matrix(A * feature_sim)
 	elif args.jump_prob > 0:
 		assert features is not None
 		walk_file = os.path.join(args.walk_path, "jump_prob={}".format(args.jump_prob))
-		g = topology_graph
+		g = graph
 	else:
 		walk_file = os.path.join(args.walk_path, "no_attributes")
-		g = topology_graph
+		g = graph
 	walk_file += "_num_walks={}-walk_len={}-p={}-q={}.walk".format(args.num_walks, 
 				args.walk_length, args.p, args.q)
 
@@ -662,21 +680,26 @@ def main():
 		return
 		
 	positive_samples, negative_samples, probs, alias_dict =\
-		determine_positive_and_negative_samples(nodes=topology_graph.nodes(), 
+		determine_positive_and_negative_samples(nodes=graph.nodes(), 
 		walks=walks, context_size=args.context_size, directed=args.directed)
 
+	random.shuffle(positive_samples)
 
-	num_nodes = len(topology_graph)
+	num_nodes = len(graph)
 	num_steps = int((len(positive_samples) + args.batch_size - 1) / args.batch_size)
 	model, initial_epoch = build_model(num_nodes, args)
+
+	if initial_epoch == args.num_epochs:
+		train = False 
+
 	optimizer = ("adam" if args.euclidean else
 		ExponentialMappingOptimizer(learning_rate=args.lr)
 	)
 	# optimizer = "adam"
-	alpha = K.variable(np.log(2 + initial_epoch) / 1, dtype=K.floatx())
-	print ("set alpha to {}".format(K.get_value(alpha)))
+	# alpha = K.variable(np.log(2 + initial_epoch) / 1, dtype=K.floatx())
+	# print ("set alpha to {}".format(K.get_value(alpha)))
 	loss = (
-		hyperbolic_softmax_loss(alpha=alpha)
+		hyperbolic_softmax_loss(alpha=0)
 		if args.softmax 
 		else hyperbolic_sigmoid_loss
 		if args.sigmoid 
@@ -684,11 +707,13 @@ def main():
 		if args.euclidean
 		else hyperbolic_negative_sampling_loss(r=args.r, t=args.t)
 	)
-	model.compile(optimizer=optimizer, loss=loss)
+	model.compile(optimizer=optimizer, loss=loss, 
+		target_tensors=[tf.placeholder(dtype=np.int64)])
 	model.summary()
 
 	if args.evaluate_link_prediction:
-		val_data = make_validation_data(val_edges, val_non_edges, negative_samples, alias_dict, args)
+		val_data = make_validation_data(val_edges, 
+			val_non_edges, negative_samples, alias_dict, args)
 		# val_data = None
 	else:
 		val_data = None
@@ -720,10 +745,10 @@ def main():
 		val_edges, 
 		val_non_edges, 
 		labels, 
-		alpha,
+		# alpha,
 		directed_edges, 
 		directed_non_edges,
-		n=args.plot_freq, 
+		plot_freq=args.plot_freq, 
 		epoch=initial_epoch, 
 		args=args) 
 
@@ -740,14 +765,13 @@ def main():
 
 		if args.use_generator:
 			print ("Training with data generator with {} worker threads".format(args.workers))
-			training_gen = TrainingSequence(positive_samples,  
+			training_generator = TrainingSequence(positive_samples,  
 				negative_samples, probs, alias_dict, args)
 
-			model.fit_generator(training_gen, 
+			model.fit_generator(training_generator, 
 				workers=args.workers,
-				max_queue_size=25, 
+				max_queue_size=10, 
 				use_multiprocessing=args.workers>0, 
-				steps_per_epoch=num_steps, 
 				epochs=args.num_epochs, 
 				initial_epoch=initial_epoch, 
 				verbose=args.verbose,
@@ -758,9 +782,18 @@ def main():
 		else:
 			print ("Training without data generator")
 			print ("Building training samples")
-			x = get_training_sample(np.array(positive_samples), negative_samples, args.num_negative_samples, probs, alias_dict)
-			y = np.zeros((len(x), args.num_positive_samples + args.num_negative_samples, 1))
-			y[:,0] = 1.
+			x = get_training_sample(np.array(positive_samples), 
+				negative_samples,
+				args.num_negative_samples, 
+				probs, 
+				alias_dict)
+			
+			# y = np.zeros((len(x), args.num_positive_samples + args.num_negative_samples, 1))
+			# y[:,0] = 1.
+
+			y = np.zeros((len(x),), dtype=np.int64)
+
+			# y = None
 			print ("Determined training samples")
 
 			model.fit(x, y, 
@@ -779,7 +812,6 @@ def main():
 
 	print ("Determined best model filename: {}".format(model_file))
 	embedding = load_embedding(model_file)
-	print (embedding)
 
 	if args.euclidean:
 		dists = euclidean_distances(embedding)
@@ -835,22 +867,8 @@ def main():
 	epoch = logger.epoch
 
 	plot_path = os.path.join(args.plot_path, "epoch_{:05d}_plot_test.png".format(epoch) )
-	# if args.euclidean:
-	# 	plot_euclidean_embedding(epoch, reconstruction_edges, 
-	# 		embedding,
-	# 		labels, 
-	# 		mean_rank_reconstruction, map_reconstruction, mean_roc_reconstruction,
-	# 		mean_rank_lp, map_lp, mean_roc_lp,
-	# 		plot_path)
-	# else:
-	# 	plot_disk_embeddings(epoch, reconstruction_edges, 
-	# 		poincare_embedding, 
-	# 		labels, 
-	# 		mean_rank_reconstruction, map_reconstruction, mean_roc_reconstruction,
-	# 		mean_rank_lp, map_lp, mean_roc_lp,
-	# 		plot_path)
 	if args.embedding_dim == 2 and not args.euclidean:
-		draw_graph(self.reconstruction_edges, poincare_embedding, labels, 
+		draw_graph(reconstruction_edges, poincare_embedding, labels, 
 			mean_rank_reconstruction, map_reconstruction, mean_roc_reconstruction, 
 			mean_rank_lp, map_lp, mean_roc_lp, plot_path)
 
@@ -866,8 +884,6 @@ def main():
 			label_percentages, f1_micros, f1_macros = evaluate_classification(embedding, labels, )
 		else:
 			label_percentages, f1_micros, f1_macros = evaluate_classification(klein_embedding, labels, )
-
-		print (f1_micros)
 
 		for label_percentage, f1_micro, f1_macro in zip(label_percentages, f1_micros, f1_macros):
 				test_results.update({"{:.2f}_micro".format(label_percentage): f1_micro})
@@ -886,7 +902,7 @@ def main():
 			# "directed_auc_score": directed_auc_score})
 
 	# evaluate greedy routing
-	mean_complete, mean_hop_stretch = evaluate_greedy_routing(topology_graph, dists, args)
+	mean_complete, mean_hop_stretch = evaluate_greedy_routing(graph, dists, args)
 	test_results.update({"mean_complete_gr": mean_complete, "mean_hop_stretch_gr": mean_hop_stretch})
 
 	print ("saving test results to: {}".format(args.test_results_filename))

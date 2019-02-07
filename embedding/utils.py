@@ -110,8 +110,10 @@ def make_validation_data(val_edges, val_non_edges, negative_samples, alias_dict,
 	])
 
 	x = np.append(positive_samples, val_negative_samples, axis=-1)
-	y = np.zeros((len(x), args.num_positive_samples + args.num_negative_samples, 1))
-	y[:,0] = 1.
+
+	y = np.zeros(len(x))
+	# y = np.zeros((len(x), args.num_positive_samples + args.num_negative_samples, 1))
+	# y[:,0] = 1.
 
 	return x, y
 
@@ -212,6 +214,7 @@ def determine_positive_and_negative_samples(nodes, walks, context_size, directed
 	# negative_samples = {n : np.array(sorted(nodes)) for n in sorted(nodes)}
 	# negative_samples = {n: np.array(sorted(neg_samples)) for n, neg_samples in negative_samples.items()}
 	for u, neg_samples in negative_samples.items():
+		# print ("node {} has {} negative samples".format(u, len(neg_samples)))
 		assert len(neg_samples) > 0, "node {} does not have any negative samples".format(u)
 
 	print ("DETERMINED POSITIVE AND NEGATIVE SAMPLES")
@@ -230,7 +233,7 @@ def determine_positive_and_negative_samples(nodes, walks, context_size, directed
 
 	return positive_samples, negative_samples, prob_dict, alias_dict
 
-def load_walks(G, walk_file, feature_sim, args):
+def load_walks(graph, walk_file, feature_sim, args):
 
 	def save_walks_to_file(walks, walk_file):
 		with open(walk_file, "w") as f:
@@ -248,7 +251,7 @@ def load_walks(G, walk_file, feature_sim, args):
 
 
 	if not os.path.exists(walk_file):
-		node2vec_graph = Graph(nx_G=G, is_directed=False, p=args.p, q=args.q,
+		node2vec_graph = Graph(graph=graph, is_directed=False, p=args.p, q=args.q,
 			jump_prob=args.jump_prob, feature_sim=feature_sim, seed=args.seed)
 		node2vec_graph.preprocess_transition_probs()
 		walks = node2vec_graph.simulate_walks(num_walks=args.num_walks, walk_length=args.walk_length)
