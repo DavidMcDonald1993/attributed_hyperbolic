@@ -13,6 +13,9 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 import pandas as pd
 
+
+
+
 def alias_setup(probs):
 	'''
 	Compute utility lists for non-uniform sampling from discrete distributions.
@@ -95,27 +98,27 @@ def get_training_sample(batch_positive_samples, negative_samples, num_negative_s
 	batch_nodes = np.append(batch_positive_samples, batch_negative_samples, axis=1)
 	return batch_nodes
 
-def make_validation_data(val_edges, val_non_edges, negative_samples, alias_dict, args):
+# def make_validation_data(val_edges, val_non_edges, negative_samples, alias_dict, args):
 
-	val_edges = val_edges + [(v, u) for u, v in val_edges]
+# 	val_edges = val_edges + [(v, u) for u, v in val_edges]
 
-	if not isinstance(val_edges, np.ndarray):
-		val_edges = np.array(val_edges)
-	idx = np.arange(len(val_edges))
-	positive_samples = val_edges[idx]
+# 	if not isinstance(val_edges, np.ndarray):
+# 		val_edges = np.array(val_edges)
+# 	idx = np.arange(len(val_edges))
+# 	positive_samples = val_edges[idx]
 
-	val_negative_samples = np.array([
-		negative_samples[u][alias_draw(alias_dict[u][0], alias_dict[u][1], args.num_negative_samples)]
-		for u in positive_samples[:,0]
-	])
+# 	val_negative_samples = np.array([
+# 		negative_samples[u][alias_draw(alias_dict[u][0], alias_dict[u][1], args.num_negative_samples)]
+# 		for u in positive_samples[:,0]
+# 	])
 
-	x = np.append(positive_samples, val_negative_samples, axis=-1)
+# 	x = np.append(positive_samples, val_negative_samples, axis=-1)
 
-	y = np.zeros(len(x))
-	# y = np.zeros((len(x), args.num_positive_samples + args.num_negative_samples, 1))
-	# y[:,0] = 1.
+# 	y = np.zeros(len(x))
+# 	# y = np.zeros((len(x), args.num_positive_samples + args.num_negative_samples, 1))
+# 	# y[:,0] = 1.
 
-	return x, y
+# 	return x, y
 
 
 def create_second_order_topology_graph(topology_graph, args):
@@ -233,7 +236,36 @@ def determine_positive_and_negative_samples(nodes, walks, context_size, directed
 
 	return positive_samples, negative_samples, prob_dict, alias_dict
 
-def load_walks(graph, walk_file, feature_sim, args):
+def determine_walk_file():
+
+	if args.alpha > 0:
+		assert features is not None
+		walk_file = os.path.join(args.walk_path, "add_attributes_alpha={}".format(args.alpha))
+		A = nx.adjacency_matrix(graph).A
+		np.fill_diagonal(A, 1)
+		A /= np.maximum(A.sum(axis=-1, keepdims=True), 1e-15)
+		# assert ((A.sum(-1) - 1)<1e-7).all(), A
+		# assert ((feature_sim.sum(-1) - 1) < 1e-7).all()
+		adj = (1. - args.alpha) * A + args.alpha * feature_sim
+		# assert ((adj.sum(axis=-1) - 1) < 1e-7).all()
+		g = nx.from_numpy_matrix(adj)
+	elif args.multiply_attributes:
+		assert features is not None
+		walk_file = os.path.join(args.walk_path, "multiply_attributes")
+		A = nx.adjacency_matrix(graph).A
+		g = nx.from_numpy_matrix(A * feature_sim)
+	elif args.jump_prob > 0:
+		assert features is not None
+		walk_file = os.path.join(args.walk_path, "jump_prob={}".format(args.jump_prob))
+		g = graph
+	else:
+		walk_file = os.path.join(args.walk_path, "no_attributes")
+		g = graph
+	walk_file += "_num_walks={}-walk_len={}-p={}-q={}.walk".format(args.num_walks, 
+				args.walk_length, args.p, args.q)
+
+
+def perform_walks(graph, features, args):
 
 	def save_walks_to_file(walks, walk_file):
 		with open(walk_file, "w") as f:
@@ -249,9 +281,42 @@ def load_walks(graph, walk_file, feature_sim, args):
 				walks.append([int(n) for n in line.split(",")])
 		return walks
 
+	def make_feature_sim(features):
+
+		if features is not None:
+			feature_sim = cosine_similarity(features)
+			np.fill_diagonal(feature_sim, 0) # remove diagonal
+			feature_sim[feature_sim < 1e-15] = 0
+			feature_sim /= np.maximum(feature_sim.sum(axis=-1, keepdims=True), 1e-15) # row normalize
+		else:
+			feature_sim = None
+
+		return feature_sim
+
+	walk_file = args.walk_filename
 
 	if not os.path.exists(walk_file):
-		node2vec_graph = Graph(graph=graph, is_directed=False, p=args.p, q=args.q,
+
+		feature_sim = make_feature_sim(features)
+
+		if args.alpha > 0:
+			assert features is not None
+			A = nx.adjacency_matrix(graph).A
+			np.fill_diagonal(A, 1)
+			A /= np.maximum(A.sum(axis=-1, keepdims=True), 1e-15)
+			adj = (1. - args.alpha) * A + args.alpha * feature_sim
+			g = nx.from_numpy_matrix(adj)
+		elif args.multiply_attributes:
+			assert features is not None
+			A = nx.adjacency_matrix(graph).A
+			g = nx.from_numpy_matrix(A * feature_sim)
+		elif args.jump_prob > 0:
+			assert features is not None
+			g = graph
+		else:
+			g = graph
+
+		node2vec_graph = Graph(graph=g, is_directed=False, p=args.p, q=args.q,
 			jump_prob=args.jump_prob, feature_sim=feature_sim, seed=args.seed)
 		node2vec_graph.preprocess_transition_probs()
 		walks = node2vec_graph.simulate_walks(num_walks=args.num_walks, walk_length=args.walk_length)

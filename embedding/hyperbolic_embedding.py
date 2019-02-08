@@ -24,8 +24,8 @@ from sklearn.metrics.pairwise import cosine_similarity, euclidean_distances
 
 from data_utils import load_karate, load_labelled_attributed_network, load_ppi, load_g2g_datasets, load_tf_interaction, load_wordnet, load_collaboration_network
 from data_utils import load_contact
-from utils import load_walks, determine_positive_and_negative_samples, convert_edgelist_to_dict
-from utils import split_edges, get_training_sample, make_validation_data, threadsafe_save_test_results, create_feature_graph
+from utils import perform_walks, determine_positive_and_negative_samples, convert_edgelist_to_dict
+from utils import split_edges, get_training_sample, threadsafe_save_test_results
 from callbacks import PeriodicStdoutLogger, hyperboloid_to_klein, hyperboloid_to_poincare_ball, hyperbolic_distance_hyperboloid_pairwise
 from losses import hyperbolic_negative_sampling_loss, hyperbolic_sigmoid_loss, hyperbolic_softmax_loss, euclidean_negative_sampling_loss
 from metrics import evaluate_rank_and_MAP, evaluate_rank_and_MAP_fb, evaluate_classification, evaluate_direction
@@ -311,8 +311,8 @@ def parse_args():
 	parser.add_argument("--rho", dest="rho", type=float, default=0,
 		help="Minimum feature correlation (default is 0).")
 
-	parser.add_argument("-e", "--num_epochs", dest="num_epochs", type=int, default=300,
-		help="The number of epochs to train for (default is 300).")
+	parser.add_argument("-e", "--num_epochs", dest="num_epochs", type=int, default=5,
+		help="The number of epochs to train for (default is 5).")
 	parser.add_argument("-b", "--batch_size", dest="batch_size", type=int, default=32, 
 		help="Batch size for training (default is 32).")
 	parser.add_argument("--nneg", dest="num_negative_samples", type=int, default=10, 
@@ -332,10 +332,10 @@ def parse_args():
 		help="node2vec return parameter (default is 1.).")
 	parser.add_argument("-q", dest="q", type=float, default=1.,
 		help="node2vec in-out parameter (default is 1.).")
-	parser.add_argument('--num-walks', dest="num_walks", type=int, default=25, 
-		help="Number of walks per source (default is 25).")
-	parser.add_argument('--walk-length', dest="walk_length", type=int, default=15, 
-		help="Length of random walk from source (default is 15).")
+	parser.add_argument('--num-walks', dest="num_walks", type=int, default=10, 
+		help="Number of walks per source (default is 10).")
+	parser.add_argument('--walk-length', dest="walk_length", type=int, default=80, 
+		help="Length of random walk from source (default is 80).")
 
 	parser.add_argument("--alpha", dest="alpha", type=float, default=0,
 		help="weighting of attributes (default is 0).")
@@ -377,6 +377,8 @@ def parse_args():
 	#   help="path to save tensorboards (default is '../tensorboards/)'.")
 	parser.add_argument("--walks", dest="walk_path", default="walks/", 
 		help="path to save random walks (default is 'walks/)'.")
+	parser.add_argument("--samples", dest="samples_path", default="samples/", 
+		help="path to save positive/negative samples (default is 'samples/)'.")
 	parser.add_argument("--model", dest="model_path", default="models/", 
 		help="path to save model after each epoch (default is 'models/)'.")
 	parser.add_argument("--test-results", dest="test_results_path", default="test_results/", 
@@ -389,17 +391,17 @@ def parse_args():
 	parser.add_argument('--evaluate-class-prediction', action="store_true", help='flag to evaluate class prediction')
 	parser.add_argument('--evaluate-link-prediction', action="store_true", help='flag to evaluate link prediction')
 
-	parser.add_argument('--just-walks', action="store_true", help='flag to generate walks with given parameters')
+	# parser.add_argument('--just-walks', action="store_true", help='flag to generate walks with given parameters')
 
-	parser.add_argument('--no-load', action="store_true", help='flag to terminate program if trained model exists')
+	# parser.add_argument('--no-load', action="store_true", help='flag to terminate program if trained model exists')
 
 	parser.add_argument('--directed', action="store_true", help='flag to train on directed graph')
 
 
 	parser.add_argument('--use-generator', action="store_true", help='flag to train using a generator')
 
-	parser.add_argument('--no-non-edges', action="store_true", help='flag to not add non edges to training graph')
-	parser.add_argument('--add-non-edges', action="store_true", help='flag to add non edges to training graph')
+	# parser.add_argument('--no-non-edges', action="store_true", help='flag to not add non edges to training graph')
+	# parser.add_argument('--add-non-edges', action="store_true", help='flag to add non edges to training graph')
 
 	parser.add_argument('--num-routing', dest="num_routing", type=int, default=1000, 
 		help="Number of source-target pairs to evaluate (default is 1000).")
@@ -429,10 +431,10 @@ def configure_paths(args):
 
 	if args.evaluate_link_prediction:
 		directory += "eval_lp/"
-		if args.add_non_edges:
-			directory += "add_non_edges/"
-		else:
-			directory += "no_non_edges/"
+		# if args.add_non_edges:
+		# 	directory += "add_non_edges/"
+		# else:
+		# 	directory += "no_non_edges/"
 	elif args.evaluate_class_prediction:
 		directory += "eval_class_pred/"
 	else: 
@@ -482,23 +484,55 @@ def configure_paths(args):
 	print ("saving models to {}".format(args.model_path))
 
 	args.walk_path = os.path.join(args.walk_path, dataset, "seed={:03d}/".format(args.seed))
+	args.samples_path = os.path.join(args.samples_path, dataset, "seed={:03d}/".format(args.seed))
+
 	if args.only_lcc:
 		args.walk_path += "lcc/"
+		args.samples_path += "lcc/"
+
 	else:
 		args.walk_path += "all_components/"
+		args.samples_path += "all_components/"
+
 	if args.evaluate_link_prediction:
 		args.walk_path += "eval_lp/"
-		if args.add_non_edges:
-			args.walk_path += "add_non_edges/"
-		else:
-			args.walk_path += "no_non_edges/"
+		args.samples_path += "eval_lp/"
+
+		# if args.add_non_edges:
+		# 	args.walk_path += "add_non_edges/"
+		# 	args.samples_path += "add_non_edges/"
+
+		# else:
+		# 	args.walk_path += "no_non_edges/"
+		# 	args.samples_path += "no_non_edges/"
+
 	else:
 		args.walk_path += "no_lp/"
+		args.samples_path += "no_lp/"
+
 	# assert os.path.exists(args.walk_path)
 	if not os.path.exists(args.walk_path):
 		os.makedirs(args.walk_path)
 		print ("making {}".format(args.walk_path))
 	print ("saving walks to {}".format(args.walk_path))
+
+	if not os.path.exists(args.samples_path):
+		os.makedirs(args.samples_path)
+		print ("making {}".format(args.samples_path))
+	print ("saving samples to {}".format(args.samples_path))
+
+	## walk filename
+	if args.alpha > 0:
+		walk_filename = os.path.join(args.walk_path, "add_attributes_alpha={}".format(args.alpha))
+	elif args.multiply_attributes:
+		walk_filename = os.path.join(args.walk_path, "multiply_attributes")
+	elif args.jump_prob > 0:
+		walk_filename = os.path.join(args.walk_path, "jump_prob={}".format(args.jump_prob))
+	else:
+		walk_filename = os.path.join(args.walk_path, "no_attributes")
+	walk_filename += "_num_walks={}-walk_len={}-p={}-q={}.walk".format(args.num_walks, 
+				args.walk_length, args.p, args.q)
+	args.walk_filename = walk_filename
 
 	# args.test_results_path = os.path.join(args.test_results_path, dataset)
 	# if not os.path.exists(args.test_results_path):
@@ -530,7 +564,7 @@ def main():
 	args = parse_args()
 	args.num_positive_samples = 1
 	args.softmax = True
-	args.verbose = True
+	# args.verbose = True
 	# args.seed = 0
 
 	assert not sum([args.multiply_attributes, args.alpha>0, args.jump_prob>0]) > 1
@@ -573,11 +607,11 @@ def main():
 	print ("Configured paths")
 
 	train = True
-	if args.no_load:
-		plots = os.listdir(args.plot_path)
-		if len(plots) > 0 and any(["test.png" in plot for plot in plots]):
-			print ("Training already completed and no-load flag is raised -- evaluating")
-			train = False
+	# if args.no_load:
+	# 	plots = os.listdir(args.plot_path)
+	# 	if len(plots) > 0 and any(["test.png" in plot for plot in plots]):
+	# 		print ("Training already completed and no-load flag is raised -- evaluating")
+	# 		train = False
 
 	if args.directed:
 		directed_edges = list(set(graph.edges()) - {edge[::-1] for edge in graph.edges()})
@@ -596,50 +630,25 @@ def main():
 
 	print ("Determined reconstruction edges and non-edges")
 
-	if features is not None:
-		feature_sim = cosine_similarity(features)
-		# # feature_sim [feature_sim  < args.rho] = 0 # remove negative cosine similarity
-		# feature_sim = features.dot(features.T)
-		np.fill_diagonal(feature_sim, 0) # remove diagonal
 
-		# k = 10
-
-		# N = len(feature_sim)
-		# J = feature_sim.argsort(-1)[:,:N-k].flatten()
-		# I = np.concatenate([[i] * (N-k) for i in range(N)])
-		# feature_sim[I, J] = 0
-
-		# feature_sim = feature_sim ** 2
-		# feature_sim -= np.max(feature_sim, axis=-1, keepdims=True)
-		# feature_sim = np.exp(feature_sim / 1.)
-		# np.fill_diagonal(feature_sim, 0)
-		feature_sim[feature_sim < 1e-15] = 0
-		feature_sim /= np.maximum(feature_sim.sum(axis=-1, keepdims=True), 1e-15) # row normalize
-		# print (feature_sim[feature_sim > 0][:10])
-		# print (feature_sim.max(-1)[:100])
-		# print (N*5, (feature_sim > 0).sum(), len(graph.edges()), len(graph), len(graph)**2)
-		# print (feature_sim[feature_sim>0][:100])
-		# raise SystemExit
-	else:
-		feature_sim = None
-
+	# renove edges for link prediction
 	if args.evaluate_link_prediction:
 		train_edges, (val_edges, val_non_edges), (test_edges, test_non_edges) = split_edges(reconstruction_edges, non_edges, args)
-		n1, e1 = len(graph), len(graph.edges())
-		print ("number of validation edges: {}".format(len(val_edges)))
-		print ("number of test edges: {}".format(len(test_edges)))
-		print ("removing {} edges from training set".format(len(val_edges) + len(test_edges)))
+		# n1, e1 = len(graph), len(graph.edges())
+		# print ("number of validation edges: {}".format(len(val_edges)))
+		# print ("number of test edges: {}".format(len(test_edges)))
+		# print ("removing {} edges from training set".format(len(val_edges) + len(test_edges)))
 		graph.remove_edges_from(val_edges + test_edges)
-		n2, e2 = len(graph), len(graph.edges())
-		if args.add_non_edges:
-			print ("adding {} non edges as edges to training set".format(len(val_non_edges) + len(test_non_edges)))
-			graph.add_edges_from(val_non_edges + test_non_edges)
-			nx.set_edge_attributes(graph, "weight", 1)
-		n3, e3 = len(graph), len(graph.edges())
-		assert n1 == n2 == n3
-		assert e1 > e2 
-		assert len(val_edges) == len(val_non_edges)
-		assert len(test_edges) == len(test_non_edges)
+		# n2, e2 = len(graph), len(graph.edges())
+		# if args.add_non_edges:
+		# 	print ("adding {} non edges as edges to training set".format(len(val_non_edges) + len(test_non_edges)))
+		# 	graph.add_edges_from(val_non_edges + test_non_edges)
+		# 	nx.set_edge_attributes(graph, "weight", 1)
+		# n3, e3 = len(graph), len(graph.edges())
+		# assert n1 == n2 == n3
+		# assert e1 > e2 
+		# assert len(val_edges) == len(val_non_edges)
+		# assert len(test_edges) == len(test_non_edges)
 
 	else:
 		train_edges = reconstruction_edges
@@ -648,59 +657,42 @@ def main():
 		val_non_edges = None
 		test_non_edges = None
 
-	if args.alpha > 0:
-		assert features is not None
-		walk_file = os.path.join(args.walk_path, "add_attributes_alpha={}".format(args.alpha))
-		A = nx.adjacency_matrix(graph).A
-		np.fill_diagonal(A, 1)
-		A /= np.maximum(A.sum(axis=-1, keepdims=True), 1e-15)
-		# assert ((A.sum(-1) - 1)<1e-7).all(), A
-		# assert ((feature_sim.sum(-1) - 1) < 1e-7).all()
-		adj = (1. - args.alpha) * A + args.alpha * feature_sim
-		# assert ((adj.sum(axis=-1) - 1) < 1e-7).all()
-		g = nx.from_numpy_matrix(adj)
-	elif args.multiply_attributes:
-		assert features is not None
-		walk_file = os.path.join(args.walk_path, "multiply_attributes")
-		A = nx.adjacency_matrix(graph).A
-		g = nx.from_numpy_matrix(A * feature_sim)
-	elif args.jump_prob > 0:
-		assert features is not None
-		walk_file = os.path.join(args.walk_path, "jump_prob={}".format(args.jump_prob))
-		g = graph
-	else:
-		walk_file = os.path.join(args.walk_path, "no_attributes")
-		g = graph
-	walk_file += "_num_walks={}-walk_len={}-p={}-q={}.walk".format(args.num_walks, 
-				args.walk_length, args.p, args.q)
-
-	walks = load_walks(g, walk_file, feature_sim, args)
-
-	if args.just_walks:
-		return
-		
-	positive_samples, negative_samples, probs, alias_dict =\
-		determine_positive_and_negative_samples(nodes=graph.nodes(), 
-		walks=walks, context_size=args.context_size, directed=args.directed)
-
-	random.shuffle(positive_samples)
-
+	# build model
 	num_nodes = len(graph)
-	num_steps = int((len(positive_samples) + args.batch_size - 1) / args.batch_size)
 	model, initial_epoch = build_model(num_nodes, args)
 
 	if initial_epoch == args.num_epochs:
 		train = False 
 
+
+	if args.evaluate_link_prediction:
+		monitor = "val_loss"
+		mode = "min"
+	elif args.evaluate_class_prediction:
+		monitor = "val_loss"
+		mode = "min"
+	else:
+		monitor = "map_reconstruction"
+		mode = "max"
+
+	logger = PeriodicStdoutLogger(reconstruction_edges, 
+			non_edges, 
+			val_edges, 
+			val_non_edges, 
+			labels, 
+			# alpha,
+			directed_edges, 
+			directed_non_edges,
+			plot_freq=args.plot_freq, 
+			epoch=initial_epoch, 
+			args=args) 
+
 	if train:
 
-			
 		optimizer = ("adam" if args.euclidean else
 			ExponentialMappingOptimizer(learning_rate=args.lr)
 		)
 		# optimizer = "adam"
-		# alpha = K.variable(np.log(2 + initial_epoch) / 1, dtype=K.floatx())
-		# print ("set alpha to {}".format(K.get_value(alpha)))
 		loss = (
 			hyperbolic_softmax_loss(alpha=0)
 			if args.softmax 
@@ -714,60 +706,83 @@ def main():
 			target_tensors=[tf.placeholder(dtype=np.int64)])
 		model.summary()
 
+			
+		callbacks=[
+			TerminateOnNaN(), 
+			CSVLogger(args.log_path, append=True), 
+			EarlyStopping(monitor=monitor, 
+				mode=mode, 
+				patience=args.patience, 
+				verbose=1),
+			ModelCheckpoint(os.path.join(args.model_path, "best_model.h5"), 
+				monitor=monitor, 
+				mode=mode, 
+				save_best_only=True, 
+				save_weights_only=True),
+			logger
+		]
+
+		# building samples starts here
+		# if not using data generator, then just load samples form disk
+		training_samples_filename = os.path.join(args.samples_path, "training_samples.npy")
+		validation_samples_filename = os.path.join(args.samples_path, "validation_samples.npy")
+
+		if args.evaluate_link_prediction and os.path.exists(validation_samples_filename):
+
+			print ("Loading validation samples from {}".format(validation_samples_filename))
+			val_x = np.load(validation_samples_filename)
+			val_y = np.zeros(len(val_x), dtype=np.int64)
+
+
+		if not args.use_generator and os.path.exists(training_samples_filename):
+
+			print ("Loading training samples from {}".format(training_samples_filename))
+			train_x = np.load(training_samples_filename)
+			train_y = np.zeros(len(train_x), dtype=np.int64)
+
+		else:
+
+			walks = perform_walks(graph, features, args)
+
+			positive_samples, negative_samples, probs, alias_dict =\
+				determine_positive_and_negative_samples(nodes=graph.nodes(), 
+				walks=walks, context_size=args.context_size, directed=args.directed)
+
+			random.shuffle(positive_samples)
+
+			if not args.use_generator:
+				train_x = get_training_sample(np.array(positive_samples), 
+						negative_samples,
+						args.num_negative_samples, 
+						probs, 
+						alias_dict)
+				train_y = np.zeros(len(train_x), dtype=np.int64)
+
+				print ("Saving training samples to {}".format(training_samples_filename))
+				np.save(training_samples_filename, train_x)
+
+			if args.evaluate_link_prediction:
+				val_x = get_training_sample(np.array(val_edges), 
+							negative_samples,
+							args.num_negative_samples, 
+							probs, 
+							alias_dict)
+				val_y = np.zeros(len(val_x), dtype=np.int64)
+
+				print ("Saving validation samples to {}".format(training_samples_filename))
+				np.save(validation_samples_filename, val_x)
+		
 		if args.evaluate_link_prediction:
-			val_data = make_validation_data(val_edges, 
-				val_non_edges, negative_samples, alias_dict, args)
-			# val_data = None
+			val_data = (val_x, val_y)
 		else:
 			val_data = None
 
 		print ("Determined validation data")
 
-		if args.evaluate_link_prediction:
-			# monitor = "mean_roc_reconstruction"
-			# monitor = "map_lp"
-			# mode = "max"
-			monitor = "val_loss"
-			# monitor = "loss"
-			mode = "min"
-		elif args.evaluate_class_prediction:
-			# monitor = "micro_sum"
-			# mode = "max"
-			monitor = "val_loss"
-			mode = "min"
-		else:
-			monitor = "map_reconstruction"
-			mode = "max"
-			
-		early_stopping = EarlyStopping(monitor=monitor, 
-			mode=mode, 
-			patience=args.patience, 
-			verbose=1)
-		logger = PeriodicStdoutLogger(reconstruction_edges, 
-			non_edges, 
-			val_edges, 
-			val_non_edges, 
-			labels, 
-			# alpha,
-			directed_edges, 
-			directed_non_edges,
-			plot_freq=args.plot_freq, 
-			epoch=initial_epoch, 
-			args=args) 
-
-		callbacks=[
-			TerminateOnNaN(), 
-			logger,
-			CSVLogger(args.log_path, append=True), 
-			early_stopping,
-			ModelCheckpoint(os.path.join(args.model_path, "best_model.h5"), monitor=monitor, mode=mode, 
-				save_best_only=True, save_weights_only=True)
-		]
-
 		if args.use_generator:
 			print ("Training with data generator with {} worker threads".format(args.workers))
 			training_generator = TrainingSequence(positive_samples,  
-				negative_samples, probs, alias_dict, args)
+					negative_samples, probs, alias_dict, args)
 
 			model.fit_generator(training_generator, 
 				workers=args.workers,
@@ -782,22 +797,8 @@ def main():
 
 		else:
 			print ("Training without data generator")
-			print ("Building training samples")
-			x = get_training_sample(np.array(positive_samples), 
-				negative_samples,
-				args.num_negative_samples, 
-				probs, 
-				alias_dict)
-			
-			# y = np.zeros((len(x), args.num_positive_samples + args.num_negative_samples, 1))
-			# y[:,0] = 1.
 
-			y = np.zeros((len(x),), dtype=np.int64)
-
-			# y = None
-			print ("Determined training samples")
-
-			model.fit(x, y, 
+			model.fit(train_x, train_y, 
 				batch_size=args.batch_size, 
 				epochs=args.num_epochs, 
 				initial_epoch=initial_epoch, 
@@ -903,8 +904,9 @@ def main():
 			# "directed_auc_score": directed_auc_score})
 
 	# evaluate greedy routing
-	mean_complete, mean_hop_stretch = evaluate_greedy_routing(graph, dists, args)
-	test_results.update({"mean_complete_gr": mean_complete, "mean_hop_stretch_gr": mean_hop_stretch})
+	if args.num_routing > 0:
+		mean_complete, mean_hop_stretch = evaluate_greedy_routing(graph, dists, args)
+		test_results.update({"mean_complete_gr": mean_complete, "mean_hop_stretch_gr": mean_hop_stretch})
 
 	print ("saving test results to: {}".format(args.test_results_filename))
 	threadsafe_save_test_results(args.test_results_lock_filename, args.test_results_filename, 
