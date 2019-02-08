@@ -692,76 +692,77 @@ def main():
 	if initial_epoch == args.num_epochs:
 		train = False 
 
-	optimizer = ("adam" if args.euclidean else
-		ExponentialMappingOptimizer(learning_rate=args.lr)
-	)
-	# optimizer = "adam"
-	# alpha = K.variable(np.log(2 + initial_epoch) / 1, dtype=K.floatx())
-	# print ("set alpha to {}".format(K.get_value(alpha)))
-	loss = (
-		hyperbolic_softmax_loss(alpha=0)
-		if args.softmax 
-		else hyperbolic_sigmoid_loss
-		if args.sigmoid 
-		else euclidean_negative_sampling_loss
-		if args.euclidean
-		else hyperbolic_negative_sampling_loss(r=args.r, t=args.t)
-	)
-	model.compile(optimizer=optimizer, loss=loss, 
-		target_tensors=[tf.placeholder(dtype=np.int64)])
-	model.summary()
-
-	if args.evaluate_link_prediction:
-		val_data = make_validation_data(val_edges, 
-			val_non_edges, negative_samples, alias_dict, args)
-		# val_data = None
-	else:
-		val_data = None
-
-	print ("Determined validation data")
-
-	if args.evaluate_link_prediction:
-		# monitor = "mean_roc_reconstruction"
-		# monitor = "map_lp"
-		# mode = "max"
-		monitor = "val_loss"
-		# monitor = "loss"
-		mode = "min"
-	elif args.evaluate_class_prediction:
-		# monitor = "micro_sum"
-		# mode = "max"
-		monitor = "val_loss"
-		mode = "min"
-	else:
-		monitor = "map_reconstruction"
-		mode = "max"
-		
-	early_stopping = EarlyStopping(monitor=monitor, 
-		mode=mode, 
-		patience=args.patience, 
-		verbose=1)
-	logger = PeriodicStdoutLogger(reconstruction_edges, 
-		non_edges, 
-		val_edges, 
-		val_non_edges, 
-		labels, 
-		# alpha,
-		directed_edges, 
-		directed_non_edges,
-		plot_freq=args.plot_freq, 
-		epoch=initial_epoch, 
-		args=args) 
-
-	callbacks=[
-		TerminateOnNaN(), 
-		logger,
-		CSVLogger(args.log_path, append=True), 
-		early_stopping,
-		ModelCheckpoint(os.path.join(args.model_path, "best_model.h5"), monitor=monitor, mode=mode, 
-			save_best_only=True, save_weights_only=True)
-	]
-
 	if train:
+
+			
+		optimizer = ("adam" if args.euclidean else
+			ExponentialMappingOptimizer(learning_rate=args.lr)
+		)
+		# optimizer = "adam"
+		# alpha = K.variable(np.log(2 + initial_epoch) / 1, dtype=K.floatx())
+		# print ("set alpha to {}".format(K.get_value(alpha)))
+		loss = (
+			hyperbolic_softmax_loss(alpha=0)
+			if args.softmax 
+			else hyperbolic_sigmoid_loss
+			if args.sigmoid 
+			else euclidean_negative_sampling_loss
+			if args.euclidean
+			else hyperbolic_negative_sampling_loss(r=args.r, t=args.t)
+		)
+		model.compile(optimizer=optimizer, loss=loss, 
+			target_tensors=[tf.placeholder(dtype=np.int64)])
+		model.summary()
+
+		if args.evaluate_link_prediction:
+			val_data = make_validation_data(val_edges, 
+				val_non_edges, negative_samples, alias_dict, args)
+			# val_data = None
+		else:
+			val_data = None
+
+		print ("Determined validation data")
+
+		if args.evaluate_link_prediction:
+			# monitor = "mean_roc_reconstruction"
+			# monitor = "map_lp"
+			# mode = "max"
+			monitor = "val_loss"
+			# monitor = "loss"
+			mode = "min"
+		elif args.evaluate_class_prediction:
+			# monitor = "micro_sum"
+			# mode = "max"
+			monitor = "val_loss"
+			mode = "min"
+		else:
+			monitor = "map_reconstruction"
+			mode = "max"
+			
+		early_stopping = EarlyStopping(monitor=monitor, 
+			mode=mode, 
+			patience=args.patience, 
+			verbose=1)
+		logger = PeriodicStdoutLogger(reconstruction_edges, 
+			non_edges, 
+			val_edges, 
+			val_non_edges, 
+			labels, 
+			# alpha,
+			directed_edges, 
+			directed_non_edges,
+			plot_freq=args.plot_freq, 
+			epoch=initial_epoch, 
+			args=args) 
+
+		callbacks=[
+			TerminateOnNaN(), 
+			logger,
+			CSVLogger(args.log_path, append=True), 
+			early_stopping,
+			ModelCheckpoint(os.path.join(args.model_path, "best_model.h5"), monitor=monitor, mode=mode, 
+				save_best_only=True, save_weights_only=True)
+		]
 
 		if args.use_generator:
 			print ("Training with data generator with {} worker threads".format(args.workers))
