@@ -521,18 +521,34 @@ def configure_paths(args):
 		print ("making {}".format(args.samples_path))
 	print ("saving samples to {}".format(args.samples_path))
 
-	## walk filename
+	## walk and sample filename
 	if args.alpha > 0:
 		walk_filename = os.path.join(args.walk_path, "add_attributes_alpha={}".format(args.alpha))
+		sample_filename = os.path.join(args.samples_path, "add_attributes_alpha={}".format(args.alpha))
+
 	elif args.multiply_attributes:
 		walk_filename = os.path.join(args.walk_path, "multiply_attributes")
+		sample_filename = os.path.join(args.samples_path, "multiply_attributes")
+
 	elif args.jump_prob > 0:
 		walk_filename = os.path.join(args.walk_path, "jump_prob={}".format(args.jump_prob))
+		sample_filename = os.path.join(args.samples_path, "jump_prob={}".format(args.jump_prob))
+
 	else:
 		walk_filename = os.path.join(args.walk_path, "no_attributes")
+		sample_filename = os.path.join(args.samples_path, "no_attributes")
+
 	walk_filename += "_num_walks={}-walk_len={}-p={}-q={}.walk".format(args.num_walks, 
 				args.walk_length, args.p, args.q)
+	
 	args.walk_filename = walk_filename
+
+
+	sample_filename += "_num_walks={}-walk_len={}-p={}-q={}".format(args.num_walks, 
+				args.walk_length, args.p, args.q)
+
+	args.training_samples_filename = sample_filename + "_training_samples.npy"
+	args.validation_samples_filename = sample_filename + "_validation_samples.npy"
 
 	# args.test_results_path = os.path.join(args.test_results_path, dataset)
 	# if not os.path.exists(args.test_results_path):
@@ -723,9 +739,9 @@ def main():
 		]
 
 		# building samples starts here
-		# if not using data generator, then just load samples form disk
-		training_samples_filename = os.path.join(args.samples_path, "training_samples.npy")
-		validation_samples_filename = os.path.join(args.samples_path, "validation_samples.npy")
+		# if not using data generator, then just load samples from disk
+		training_samples_filename = args.training_samples_filename
+		validation_samples_filename = args.validation_samples_filename
 
 		if args.evaluate_link_prediction and os.path.exists(validation_samples_filename):
 
