@@ -187,8 +187,8 @@ def determine_positive_and_negative_samples(nodes, walks, context_size, directed
 				if i+j+1 >= len(walk):
 					break
 				v = walk[i+j+1]
-				# if u == v:
-				# 	continue
+				if u == v:
+					continue
 				n = 1
 				# n = context_size - j
 				if j < context_size: 
