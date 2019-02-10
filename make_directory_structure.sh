@@ -9,10 +9,10 @@
 
 # set -e
 
-datasets=(cora_ml citeseer pubmed cora)
-dims=(002 003 005 010 025 050 100)
+datasets=(cora_ml citeseer pubmed)
+dims=(002 003 005 010 025 050)
 seeds=({000..5})
-atts=(no_attributes multiply_attributes jump_prob={0.05,0.1,0.2,0.5,0.8,1.0})
+atts=(no_attributes jump_prob={0.05,0.1,0.2,0.5,0.8,1.0})
 
 rm -r {models,plots,test_results,samples,walks,logs}
 
