@@ -743,18 +743,18 @@ def main():
 		training_samples_filename = args.training_samples_filename
 		validation_samples_filename = args.validation_samples_filename
 
-		# if args.evaluate_link_prediction and os.path.exists(validation_samples_filename):
+		if False and args.evaluate_link_prediction and os.path.exists(validation_samples_filename):
 
-		# 	print ("Loading validation samples from {}".format(validation_samples_filename))
-		# 	val_x = np.load(validation_samples_filename)
-		# 	val_y = np.zeros(len(val_x), dtype=np.int64)
+			print ("Loading validation samples from {}".format(validation_samples_filename))
+			val_x = np.load(validation_samples_filename)
+			val_y = np.zeros(len(val_x), dtype=np.int64)
 
 
-		# if not args.use_generator and os.path.exists(training_samples_filename):
+		if False and not args.use_generator and os.path.exists(training_samples_filename):
 
-		# 	print ("Loading training samples from {}".format(training_samples_filename))
-		# 	train_x = np.load(training_samples_filename)
-		# 	train_y = np.zeros(len(train_x), dtype=np.int64)
+			print ("Loading training samples from {}".format(training_samples_filename))
+			train_x = np.load(training_samples_filename)
+			train_y = np.zeros(len(train_x), dtype=np.int64)
 
 		else:
 
