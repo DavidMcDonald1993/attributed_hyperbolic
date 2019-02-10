@@ -242,7 +242,7 @@ class ExponentialMappingOptimizer(optimizer.Optimizer):
 		z = x / K.maximum(norm_x, K.epsilon()) # unit norm 
 		exp_map = tf.cosh(clipped_norm_x) * p + tf.sinh(clipped_norm_x) * z
 		#####################################################
-		# exp_map = adjust_to_hyperboloid(exp_map)
+		exp_map = adjust_to_hyperboloid(exp_map)
 
 		return exp_map
 
@@ -743,18 +743,18 @@ def main():
 		training_samples_filename = args.training_samples_filename
 		validation_samples_filename = args.validation_samples_filename
 
-		if args.evaluate_link_prediction and os.path.exists(validation_samples_filename):
+		# if args.evaluate_link_prediction and os.path.exists(validation_samples_filename):
 
-			print ("Loading validation samples from {}".format(validation_samples_filename))
-			val_x = np.load(validation_samples_filename)
-			val_y = np.zeros(len(val_x), dtype=np.int64)
+		# 	print ("Loading validation samples from {}".format(validation_samples_filename))
+		# 	val_x = np.load(validation_samples_filename)
+		# 	val_y = np.zeros(len(val_x), dtype=np.int64)
 
 
-		if not args.use_generator and os.path.exists(training_samples_filename):
+		# if not args.use_generator and os.path.exists(training_samples_filename):
 
-			print ("Loading training samples from {}".format(training_samples_filename))
-			train_x = np.load(training_samples_filename)
-			train_y = np.zeros(len(train_x), dtype=np.int64)
+		# 	print ("Loading training samples from {}".format(training_samples_filename))
+		# 	train_x = np.load(training_samples_filename)
+		# 	train_y = np.zeros(len(train_x), dtype=np.int64)
 
 		else:
 
@@ -774,8 +774,8 @@ def main():
 						alias_dict)
 				train_y = np.zeros(len(train_x), dtype=np.int64)
 
-				print ("Saving training samples to {}".format(training_samples_filename))
-				np.save(training_samples_filename, train_x)
+				# print ("Saving training samples to {}".format(training_samples_filename))
+				# np.save(training_samples_filename, train_x)
 
 			if args.evaluate_link_prediction:
 				val_x = get_training_sample(np.array(val_edges), 
@@ -785,8 +785,8 @@ def main():
 							alias_dict)
 				val_y = np.zeros(len(val_x), dtype=np.int64)
 
-				print ("Saving validation samples to {}".format(training_samples_filename))
-				np.save(validation_samples_filename, val_x)
+				# print ("Saving validation samples to {}".format(training_samples_filename))
+				# np.save(validation_samples_filename, val_x)
 		
 		if args.evaluate_link_prediction:
 			val_data = (val_x, val_y)
