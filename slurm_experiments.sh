@@ -7,7 +7,7 @@
 #SBATCH --time=3:00:00
 #SBATCH --ntasks=1
 #SBATCH --mem=10G
-#SBATCH --mail-type ALL
+# SBATCH --mail-type ALL
 
 DATA_DIR="/rds/homes/d/dxm237/data"
 
