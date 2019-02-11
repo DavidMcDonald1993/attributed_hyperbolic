@@ -3,16 +3,18 @@
 #SBATCH --job-name=noGPUexp
 #SBATCH --output=noGPUexp_%A_%a.out
 #SBATCH --error=noGPUexp_%A_%a.err
-#SBATCH --array=0-3359
+#SBATCH --array=0-1679
 #SBATCH --time=1-00:00:00
 #SBATCH --ntasks=1
-#SBATCH --mem=10G
+#SBATCH --mem=32G
 # SBATCH --mail-type ALL
 
 DATA_DIR="/rds/homes/d/dxm237/data"
 
 # ARR=(--dataset={cora_ml,citeseer,pubmed}" "--seed={0..29}" "--softmax" "--dim={5,10,25,50}" --evaluate-"{link,class}"-prediction "--{no-attributes,jump-prob={.05,.1,.2}})
-ARR=(--dataset={cora_ml,citeseer}" "--seed={0..29}" "--softmax" "--dim={5,10,25,50}" --evaluate-"{link,class}"-prediction "--{no-attributes,jump-prob={.05,.1,.2,.5,.8,1.}})
+# ARR=(--dataset={cora_ml,citeseer}" "--seed={0..29}" "--softmax" "--dim={5,10,25,50}" --evaluate-"{link,class}"-prediction "--{no-attributes,jump-prob={.05,.1,.2,.5,.8,1.}})
+ARR=(--dataset=pubmed" "--seed={0..29}" "--softmax" "--dim={5,10,25,50}" --evaluate-"{link,class}"-prediction "--{no-attributes,jump-prob={.05,.1,.2,.5,.8,1.}})
+
 
 module purge; module load bluebear
 # module load apps/cuda/8.0.44
