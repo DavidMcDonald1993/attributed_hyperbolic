@@ -215,7 +215,7 @@ def load_tf_interaction(args, scale=True):
 
 
 def load_ppi(args, scale=True,):
-	prefix = os.path.join(args.data_directory, "/ppi/ppi")
+	prefix = os.path.join(args.data_directory, "ppi/ppi")
 	G_data = json.load(open(prefix + "-G.json"))
 	graph = json_graph.node_link_graph(G_data)
 	if isinstance(graph.nodes()[0], int):
@@ -263,6 +263,14 @@ def load_ppi(args, scale=True,):
 							  for n in  graph.nodes() 
 							  if not graph.node[n]['val'] 
 							  and not graph.node[n]['test']])
+		val_ids = np.array([id_map[n] 
+							  for n in  graph.nodes() 
+							  if graph.node[n]['val'] 
+							  and not graph.node[n]['test']])
+		test_ids = np.array([id_map[n] 
+							  for n in  graph.nodes() 
+							  if not graph.node[n]['val'] 
+							  and graph.node[n]['test']])
 		train_feats = features[train_ids]
 		scaler = StandardScaler()
 		scaler.fit(train_feats)
@@ -270,14 +278,24 @@ def load_ppi(args, scale=True,):
 		
 	labels = np.array([class_map[n] for n in graph.nodes()])
 	nx.set_edge_attributes(G=graph, name="weight", values=1.)
+
+	# print (len(train_ids), len(val_ids), len(test_ids))
+
+	# print(len(graph), labels.shape)
+	# raise SystemExit
 	
-	assert args.only_lcc
+	# assert args.only_lcc # only for my machine
 	if args.only_lcc:
 		graph = max(nx.connected_component_subgraphs(graph), key=len)
 		features = features[graph.nodes()]
 		labels = labels[graph.nodes()]
 		graph = nx.convert_node_labels_to_integers(graph, label_attribute="original_name")
 		nx.set_edge_attributes(G=graph, name="weight", values=1.)
+
+		# print(len(graph), labels[0,:100])
+		# raise SystemExit
+
+
 
 	return graph, features, labels
 

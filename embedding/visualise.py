@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Circle, Wedge, Polygon
 from matplotlib.collections import PatchCollection
 from matplotlib import patches
+import collections
 
 '''
 Code obtained from github
@@ -113,9 +114,7 @@ def draw_geodesic(a, b, c, ax, c1=None, c2=None, verbose=False, width=.1):
                              theta1=theta1_, theta2=theta2_, linewidth=width, fill=False, zorder=0)
         ax.add_patch(e)
 
-def draw_graph(edges, embedding, labels, 
-    mean_rank_reconstruction, map_reconstruction, mean_roc_reconstruction,
-    mean_rank_lp, map_lp, mean_roc_lp, path, ):
+def draw_graph(edges, embedding, labels, path, ):
     assert embedding.shape[1] == 2 
 
     if not isinstance(edges, np.ndarray):
@@ -124,11 +123,12 @@ def draw_graph(edges, embedding, labels,
     print ("saving two-dimensional poincare plot to {}".format(path))
 
     fig = plt.figure()
-    title = "Mean_rank_recon={}, AP_recon={}, AUROC_recon={}".format(mean_rank_reconstruction, 
-        map_reconstruction, mean_roc_reconstruction)
-    if mean_rank_lp is not None:
-        title += "\nMean_rank_lp={}, AP_lp={}, AUROC_lp={}".format(mean_rank_lp,
-            map_lp, mean_roc_lp)
+    title = "Dimensional poincare plot"
+    # title = "Mean_rank_recon={}, AP_recon={}, AUROC_recon={}".format(mean_rank_reconstruction, 
+    #     map_reconstruction, mean_roc_reconstruction)
+    # if mean_rank_lp is not None:
+    #     title += "\nMean_rank_lp={}, AP_lp={}, AUROC_lp={}".format(mean_rank_lp,
+    #         map_lp, mean_roc_lp)
     plt.suptitle(title)
     
     ax = fig.add_subplot(111)
@@ -144,3 +144,17 @@ def draw_graph(edges, embedding, labels,
 
     plt.savefig(path)
     plt.close()
+
+def plot_degree_dist(title, graph, ax):
+    degrees = sorted(graph.degree().values())
+    deg, counts = zip(*collections.Counter(degrees).items())
+    deg = np.array(deg)
+    counts = np.array(counts)
+
+    m, c = np.polyfit(np.log(deg), np.log(counts), 1)
+    y_fit = np.exp(m*np.log(deg) + c)
+
+    ax.scatter(deg, counts, marker="x")
+    ax.plot(deg, y_fit, ':', c="r")
+    ax.set(title=title, xscale="log", yscale="log", xlabel="Connections", ylabel="Frequency",)
+    ax.set_ylim(bottom=.9)

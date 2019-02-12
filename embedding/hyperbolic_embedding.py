@@ -26,7 +26,7 @@ from data_utils import load_karate, load_labelled_attributed_network, load_ppi, 
 from data_utils import load_contact
 from utils import perform_walks, determine_positive_and_negative_samples, convert_edgelist_to_dict
 from utils import split_edges, get_training_sample, threadsafe_save_test_results
-from callbacks import PeriodicStdoutLogger, hyperboloid_to_klein, hyperboloid_to_poincare_ball, hyperbolic_distance_hyperboloid_pairwise
+from callbacks import ValidationLogger, hyperboloid_to_klein, hyperboloid_to_poincare_ball, hyperbolic_distance_hyperboloid_pairwise
 from losses import hyperbolic_negative_sampling_loss, hyperbolic_sigmoid_loss, hyperbolic_softmax_loss, euclidean_negative_sampling_loss
 from metrics import evaluate_rank_and_MAP, evaluate_rank_and_MAP_fb, evaluate_classification, evaluate_direction
 from callbacks import plot_disk_embeddings, plot_euclidean_embedding, plot_roc, plot_classification, plot_precisions_recalls
@@ -651,9 +651,9 @@ def main():
 	if args.evaluate_link_prediction:
 		train_edges, (val_edges, val_non_edges), (test_edges, test_non_edges) = split_edges(reconstruction_edges, non_edges, args)
 		# n1, e1 = len(graph), len(graph.edges())
-		# print ("number of validation edges: {}".format(len(val_edges)))
-		# print ("number of test edges: {}".format(len(test_edges)))
-		# print ("removing {} edges from training set".format(len(val_edges) + len(test_edges)))
+		print ("number of validation edges: {}".format(len(val_edges)))
+		print ("number of test edges: {}".format(len(test_edges)))
+		print ("removing {} edges from training set".format(len(val_edges) + len(test_edges)))
 		graph.remove_edges_from(val_edges + test_edges)
 		# n2, e2 = len(graph), len(graph.edges())
 		# if args.add_non_edges:
@@ -691,7 +691,7 @@ def main():
 		monitor = "map_reconstruction"
 		mode = "max"
 
-	logger = PeriodicStdoutLogger(reconstruction_edges, 
+	logger = ValidationLogger(reconstruction_edges, 
 			non_edges, 
 			val_edges, 
 			val_non_edges, 
@@ -701,6 +701,7 @@ def main():
 			directed_non_edges,
 			plot_freq=args.plot_freq, 
 			epoch=initial_epoch, 
+			validate=False,
 			args=args) 
 
 	if train:

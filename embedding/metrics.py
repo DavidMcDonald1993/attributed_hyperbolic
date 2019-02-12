@@ -7,7 +7,8 @@ from scipy.stats import spearmanr
 from sklearn.metrics import average_precision_score, roc_auc_score, f1_score, roc_curve, precision_recall_curve
 from sklearn.linear_model import LogisticRegressionCV
 from sklearn.multiclass import OneVsRestClassifier
-from sklearn.model_selection import StratifiedShuffleSplit
+from sklearn.model_selection import ShuffleSplit, StratifiedShuffleSplit
+# from skmultilearn.model_selection import iterative_train_test_split
 
 def evaluate_direction(embedding, directed_edges, ):
 
@@ -116,31 +117,52 @@ def evaluate_rank_and_MAP_fb(dists, edge_dict, non_edge_dict):
 		"MEAN ROC AUC =", np.mean(roc_auc_scores))
 	return np.mean(ranks), np.mean(ap_scores), np.mean(roc_auc_scores)
 
+def evaluate_multi_label_classification(klein_embedding, labels,
+	train_idx, test_idx, n_repeats=10):
+	pass
+
+
 def evaluate_classification(klein_embedding, labels,
 	label_percentages=np.arange(0.02, 0.11, 0.01), n_repeats=10):
 
-	print ("evaluating node classification")
+	print ("Evaluating node classification")
 
-	assert len(labels.shape) == 1
+	# assert len(labels.shape) == 1
 
 	num_nodes, dim = klein_embedding.shape
 
 	f1_micros = np.zeros((n_repeats, len(label_percentages)))
 	f1_macros = np.zeros((n_repeats, len(label_percentages)))
-
 	
 	model = LogisticRegressionCV()
+	split = StratifiedShuffleSplit
+
+	if len(labels.shape) > 1: # multilabel classification
+		model = OneVsRestClassifier(model)
+		split = ShuffleSplit
+
+	n = len(klein_embedding)
 
 	for seed in range(n_repeats):
 	
 		for i, label_percentage in enumerate(label_percentages):
 
-			sss = StratifiedShuffleSplit(n_splits=1, test_size=1-label_percentage, random_state=seed)
-			split_train, split_test = next(sss.split(klein_embedding, labels))
-			# num_labels = int(max(num_nodes * label_percentage, len(classes)))
-			# idx = np.random.permutation(num_nodes)
 			# if len(labels.shape) > 1:
-			# 	model =  OneVsRestClassifier(LogisticRegression(random_state=0))
+
+			# 	num_train = int(n * label_percentage)
+			# 	idx = np.random.permutation(n)
+			# 	split_train = idx[:num_train]
+			# 	split_test = idx[num_train:]
+
+			# 	# X_train, y_train, X_test, y_test = iterative_train_test_split(klein_embedding, labels, test_size=1-label_percentage)
+			# 	# model.fit(klein_embedding[klein_embedding[train_idx]], labels[train_idx])
+			# 	# predictions = model.predict(klein_embedding[test_idx])
+			# 	# f1_micro = f1_score(labels[test_idx], predictions, average="micro")
+			# 	# f1_macro = f1_score(labels[test_idx], predictions, average="macro")
+
+			# else:
+			sss = split(n_splits=1, test_size=1-label_percentage, random_state=seed)
+			split_train, split_test = next(sss.split(klein_embedding, labels))
 			model.fit(klein_embedding[split_train], labels[split_train])
 			predictions = model.predict(klein_embedding[split_test])
 			f1_micro = f1_score(labels[split_test], predictions, average="micro")
