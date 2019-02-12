@@ -1,11 +1,11 @@
 #!/bin/bash
 
 #SBATCH --job-name=degreeDist
-#SBATCH --output=noGPUexp.out
-#SBATCH --error=noGPUexp_%A_%a.err
+#SBATCH --output=degreeDist.out
+#SBATCH --error=degreeDist.err
 #SBATCH --time=1-00:00:00
 #SBATCH --ntasks=1
-#SBATCH --mem=64G
+#SBATCH --mem=100G
 # SBATCH --mail-type ALL
 
 DATA_DIR="/rds/homes/d/dxm237/data"
