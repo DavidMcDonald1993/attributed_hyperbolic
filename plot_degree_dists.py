@@ -5,6 +5,8 @@ import numpy as np
 from embedding.data_utils import load_g2g_datasets, load_ppi
 from embedding.visualise import plot_degree_dist
 
+import matplotlib
+matplotlib.use('agg')
 import matplotlib.pyplot as plt
 
 def parse_args():
