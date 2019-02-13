@@ -17,15 +17,8 @@ ARR=(--dataset=pubmed" "--seed={0..9}" "--softmax" "--dim={5,10,25,50}" --evalua
 # ARR=(--dataset=ppi" "--seed={0..29}" "--softmax" "--dim=5" --evaluate-"{link,class}"-prediction "--{no-attributes,jump-prob={.05,.1,.2,.5,.8,1.}})
 
 module purge; module load bluebear
-# module load apps/cuda/8.0.44
-# module load apps/cudnn/6.0
-# -I${CUDNN_ROOT}/include/cudnn.h -L${CUDNN_ROOT}/lib64/libcudnn.so
 module load apps/python3/3.5.2
-# module load apps/tensorflow/1.3.1-python-3.5.2
 module load apps/keras/2.0.8-python-3.5.2
-# module load Keras/2.2.0-foss-2018a-Python-3.6.3
-# module load matplotlib/3.0.0-iomkl-2018a-Python-3.6.3
-# pip install --user networkx
 
 echo "starting "${ARR[${SLURM_ARRAY_TASK_ID}]}
 python embedding/hyperbolic_embedding.py \
