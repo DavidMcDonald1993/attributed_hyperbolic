@@ -303,37 +303,32 @@ class ValidationLogger(Callback):
 	def on_epoch_end(self, batch, logs={}):
 	
 		self.epoch += 1
-		# K.set_value(self.alpha, np.log(2. + self.epoch) / 1)
-		# print ("Set temp to {}".format(K.get_value(self.alpha)))
-
-		# # s = "Completed epoch {}, loss={}".format(self.epoch, logs["loss"])
-		# # if "val_loss" in logs.keys():
-		# # 	s += ", val_loss={}".format(logs["val_loss"])
-		# # print (s)
-
-		hyperboloid_embedding = self.model.layers[-1].get_weights()[-1]
-		print (hyperboloid_embedding)
-
-		if self.args.euclidean:
-			poincare_embedding = hyperboloid_embedding
-			klein_embedding = hyperboloid_embedding
-		else:
-			poincare_embedding = hyperboloid_to_poincare_ball(hyperboloid_embedding)
-			klein_embedding = hyperboloid_to_klein(hyperboloid_embedding)
-
-			ranks = np.sqrt(np.sum(np.square(poincare_embedding), axis=-1, keepdims=False), )
-			assert (ranks < 1).all()
-
-		if self.args.euclidean:
-			dists = euclidean_distances(hyperboloid_embedding)
-		else:
-			dists = hyperbolic_distance_hyperboloid_pairwise(hyperboloid_embedding, hyperboloid_embedding)
-		
-		print (dists)
-		print (dists.mean(), dists.max())
-		print (minkowski_dot_np(hyperboloid_embedding, hyperboloid_embedding))
 
 		if self.validate:
+
+			hyperboloid_embedding = self.model.layers[-1].get_weights()[-1]
+			print (hyperboloid_embedding)
+
+			if self.args.euclidean:
+				poincare_embedding = hyperboloid_embedding
+				klein_embedding = hyperboloid_embedding
+			else:
+				poincare_embedding = hyperboloid_to_poincare_ball(hyperboloid_embedding)
+				klein_embedding = hyperboloid_to_klein(hyperboloid_embedding)
+
+				ranks = np.sqrt(np.sum(np.square(poincare_embedding), axis=-1, keepdims=False), )
+				assert (ranks < 1).all()
+
+			if self.args.euclidean:
+				dists = euclidean_distances(hyperboloid_embedding)
+			else:
+				dists = hyperbolic_distance_hyperboloid_pairwise(hyperboloid_embedding, hyperboloid_embedding)
+			
+			print (dists)
+			print (dists.mean(), dists.max())
+			print (minkowski_dot_np(hyperboloid_embedding, hyperboloid_embedding))
+
+
 			print ("reconstruction")
 			(mean_rank_reconstruction, map_reconstruction, 
 				mean_roc_reconstruction) = evaluate_rank_and_MAP(dists, 
@@ -379,21 +374,6 @@ class ValidationLogger(Callback):
 				plot_path = os.path.join(self.args.plot_path, "epoch_{:05d}_plot.png".format(self.epoch) )
 				if not self.args.euclidean:
 					draw_graph(self.reconstruction_edges, poincare_embedding, self.labels, plot_path)
-				# if self.args.euclidean:
-				# 	plot_euclidean_embedding(self.epoch, self.reconstruction_edges, 
-				# 		poincare_embedding,
-				# 		self.labels, self.label_info,
-				# 		mean_rank_reconstruction, map_reconstruction, mean_roc_reconstruction,
-				# 		mean_rank_lp, map_lp, mean_roc_lp,
-				# 		plot_path)
-
-				# else:
-				# 	plot_disk_embeddings(self.epoch, self.reconstruction_edges, 
-				# 		poincare_embedding,
-				# 		self.labels, self.label_info,
-				# 		mean_rank_reconstruction, map_reconstruction, mean_roc_reconstruction,
-				# 		mean_rank_lp, map_lp, mean_roc_lp,
-				# 		plot_path)
 
 			roc_path = os.path.join(self.args.plot_path, "epoch_{:05d}_roc_curve.png".format(self.epoch) )
 			plot_roc(dists, self.reconstruction_edges, self.non_edges, 
