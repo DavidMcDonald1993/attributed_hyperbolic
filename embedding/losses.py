@@ -169,9 +169,6 @@ def hyperbolic_softmax_loss(alpha=0):
 
     def loss(y_true, y_pred, alpha=alpha):
 
-        # print (y_true.shape, y_true.dtype)
-        # raise SystemExit
-
         u_emb = y_pred[:,0]
         samples_emb = y_pred[:,1:]
         
@@ -182,7 +179,7 @@ def hyperbolic_softmax_loss(alpha=0):
         d_uv = tf.acosh(1. + inner_uv) 
 
         # sigma = alpha
-        sigma = K.cast(1.0, dtype=K.floatx())
+        sigma = K.cast(3.0, dtype=K.floatx())
         sigma_sq = K.stop_gradient(sigma ** 2)
         minus_d_uv_sq = - 0.5 * K.square(d_uv) / sigma_sq
         # minus_d_uv_sq = - 0.5 * d_uv / sigma_sq

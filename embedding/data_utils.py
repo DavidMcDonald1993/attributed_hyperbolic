@@ -206,15 +206,10 @@ def load_tf_interaction(args, scale=True):
 	labels = None
 	label_info = None
 
-	# print (len(graph))
-	# print (features)
-
-	# raise SystemExit
-
 	return graph, features, labels, label_info
 
 
-def load_ppi(args, scale=True,):
+def load_ppi(dataset, args, scale=True,):
 	prefix = os.path.join(args.data_directory, "ppi/ppi")
 	G_data = json.load(open(prefix + "-G.json"))
 	graph = json_graph.node_link_graph(G_data)
@@ -263,14 +258,14 @@ def load_ppi(args, scale=True,):
 							  for n in  graph.nodes() 
 							  if not graph.node[n]['val'] 
 							  and not graph.node[n]['test']])
-		val_ids = np.array([id_map[n] 
-							  for n in  graph.nodes() 
-							  if graph.node[n]['val'] 
-							  and not graph.node[n]['test']])
-		test_ids = np.array([id_map[n] 
-							  for n in  graph.nodes() 
-							  if not graph.node[n]['val'] 
-							  and graph.node[n]['test']])
+		# val_ids = np.array([id_map[n] 
+		# 					  for n in  graph.nodes() 
+		# 					  if graph.node[n]['val'] 
+		# 					  and not graph.node[n]['test']])
+		# test_ids = np.array([id_map[n] 
+		# 					  for n in  graph.nodes() 
+		# 					  if not graph.node[n]['val'] 
+		# 					  and graph.node[n]['test']])
 		train_feats = features[train_ids]
 		scaler = StandardScaler()
 		scaler.fit(train_feats)
@@ -279,12 +274,7 @@ def load_ppi(args, scale=True,):
 	labels = np.array([class_map[n] for n in graph.nodes()])
 	nx.set_edge_attributes(G=graph, name="weight", values=1.)
 
-	# print (len(train_ids), len(val_ids), len(test_ids))
-
-	# print(len(graph), labels.shape)
-	# raise SystemExit
-	
-	# assert args.only_lcc # only for my machine
+	assert args.only_lcc
 	if args.only_lcc:
 		graph = max(nx.connected_component_subgraphs(graph), key=len)
 		features = features[graph.nodes()]
@@ -292,10 +282,8 @@ def load_ppi(args, scale=True,):
 		graph = nx.convert_node_labels_to_integers(graph, label_attribute="original_name")
 		nx.set_edge_attributes(G=graph, name="weight", values=1.)
 
-		# print(len(graph), labels[0,:100])
-		# raise SystemExit
-
-
+	print (len(graph), len(graph.edges()), features.shape[1], labels.shape[1])
+	raise SystemExit
 
 	return graph, features, labels
 

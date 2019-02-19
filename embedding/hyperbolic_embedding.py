@@ -293,7 +293,7 @@ def parse_args():
 		help="The directory containing data files (default is '/data/').")
 
 	parser.add_argument("--dataset", dest="dataset", type=str, default="cora_ml",
-		help="The dataset to load. Must be one of [wordnet, cora, citeseer, pubmed,\
+		help="The dataset to load. Must be one of [wordnet, cora, citeseer, ppi, pubmed,\
 		AstroPh, CondMat, GrQc, HepPh, karate]. (Default is cora_ml)")
 
 	parser.add_argument("--seed", dest="seed", type=int, default=0,
@@ -391,20 +391,13 @@ def parse_args():
 	parser.add_argument('--evaluate-class-prediction', action="store_true", help='flag to evaluate class prediction')
 	parser.add_argument('--evaluate-link-prediction', action="store_true", help='flag to evaluate link prediction')
 
-	# parser.add_argument('--just-walks', action="store_true", help='flag to generate walks with given parameters')
-
-	# parser.add_argument('--no-load', action="store_true", help='flag to terminate program if trained model exists')
 
 	parser.add_argument('--directed', action="store_true", help='flag to train on directed graph')
 
-
 	parser.add_argument('--use-generator', action="store_true", help='flag to train using a generator')
 
-	# parser.add_argument('--no-non-edges', action="store_true", help='flag to not add non edges to training graph')
-	# parser.add_argument('--add-non-edges', action="store_true", help='flag to add non edges to training graph')
-
-	parser.add_argument('--num-routing', dest="num_routing", type=int, default=1000, 
-		help="Number of source-target pairs to evaluate (default is 1000).")
+	parser.add_argument('--num-routing', dest="num_routing", type=int, default=0, 
+		help="Number of source-target pairs to evaluate (default is 0).")
 
 	args = parser.parse_args()
 	return args
@@ -593,24 +586,26 @@ def main():
 	# if not args.evaluate_link_prediction and dataset in ["cora", "cora_ml", "pubmed", "citeseer"]:
 	# 	args.directed = True
 
-	if dataset == "karate":
-		graph, features, labels = load_karate(args)
-	elif dataset == "contact":
-		graph, features, labels = load_contact(args)
+	# if dataset == "karate":
+	# 	graph, features, labels = load_karate(args)
+	# elif dataset == "contact":
+	# 	graph, features, labels = load_contact(args)
 	# elif dataset in ["cora", "pubmed", "citeseer"]:
 	# 	graph, features, labels = load_labelled_attributed_network(dataset, args)
-	elif dataset in ["cora", "cora_ml", "pubmed", "citeseer"]:
-		graph, features, labels = load_g2g_datasets(dataset, args)
+	if dataset in ["cora", "cora_ml", "pubmed", "citeseer"]:
+		load = load_g2g_datasets
 	elif dataset in ["AstroPh", "CondMat", "GrQc", "HepPh"]:
-		graph, features, labels = load_collaboration_network(args)
+		load = load_collaboration_network
 	elif dataset == "ppi":
-		graph, features, labels = load_ppi(args)
-	elif dataset == "tf_interaction":
-		graph, features, labels = load_tf_interaction(args)
+		load = load_ppi
+	# elif dataset == "tf_interaction":
+	# 	graph, features, labels = load_tf_interaction(args)
 	elif dataset == "wordnet":
-		graph, features, labels = load_wordnet(args)
+		load = load_wordnet
 	else:
 		raise Exception
+
+	graph, features, labels = load(dataset, args)
 
 	print ("Loaded dataset")
 
@@ -673,13 +668,32 @@ def main():
 		val_non_edges = None
 		test_non_edges = None
 
+	# A = nx.adjacency_matrix(graph).A
+	# second_order_sim = cosine_similarity(A)
+	# second_order_sim[second_order_sim < 1e-7] = 0
+	# second_order_sim /= np.maximum(second_order_sim.sum(axis=-1, keepdims=True), 1e-15) # row normalize
+
+	# a = 0.3
+	# if features is not None:
+	# 	feature_sim = cosine_similarity(features)
+	# 	np.fill_diagonal(feature_sim, 0) # remove diagonal
+	# 	feature_sim[feature_sim < 1e-1] = 0
+	# 	feature_sim /= np.maximum(feature_sim.sum(axis=-1, keepdims=True), 1e-15) # row normalize
+	# else:
+	# 	feature_sim = None
+	# b = 0.2
+	# A /= np.maximum(A.sum(axis=-1, keepdims=True), 1e-15) # row normalize
+
+	# graph = nx.from_numpy_matrix((1-a-b) * A + a * second_order_sim + b * feature_sim)
+	# print (graph.edges(data=True)[:10])
+	# raise SystemExit
+
 	# build model
 	num_nodes = len(graph)
 	model, initial_epoch = build_model(num_nodes, args)
 
 	if initial_epoch == args.num_epochs:
 		train = False 
-
 
 	if args.evaluate_link_prediction:
 		monitor = "val_loss"
@@ -696,7 +710,6 @@ def main():
 			val_edges, 
 			val_non_edges, 
 			labels, 
-			# alpha,
 			directed_edges, 
 			directed_non_edges,
 			plot_freq=args.plot_freq, 
@@ -863,7 +876,9 @@ def main():
 
 	if args.evaluate_link_prediction:
 		(mean_rank_lp, map_lp, 
-		mean_roc_lp) = evaluate_rank_and_MAP(dists, test_edges, test_non_edges)
+		mean_roc_lp) = evaluate_rank_and_MAP(dists, 
+		val_edges + test_edges, 
+		val_non_edges + test_non_edges)
 
 		test_results.update({"mean_rank_lp": mean_rank_lp, 
 				"map_lp": map_lp,
@@ -905,8 +920,8 @@ def main():
 			label_percentages, f1_micros, f1_macros = evaluate_classification(klein_embedding, labels, )
 
 		for label_percentage, f1_micro, f1_macro in zip(label_percentages, f1_micros, f1_macros):
-				test_results.update({"{:.2f}_micro".format(label_percentage): f1_micro})
-				test_results.update({"{:.2f}_macro".format(label_percentage): f1_macro})
+			test_results.update({"{:.2f}_micro".format(label_percentage): f1_micro})
+			test_results.update({"{:.2f}_macro".format(label_percentage): f1_macro})
 
 		f1_path = os.path.join(args.plot_path, "epoch_{:05d}_class_prediction_f1_test.png".format(epoch))
 		plot_classification(label_percentages, f1_micros, f1_macros, f1_path)
