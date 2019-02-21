@@ -368,24 +368,24 @@ class ValidationLogger(Callback):
 					# "directed_auc_score": directed_auc_score})
 
 
-		if self.epoch % self.plot_freq == 0:
+			if self.epoch % self.plot_freq == 0:
 
-			if self.args.embedding_dim == 2:
-				plot_path = os.path.join(self.args.plot_path, "epoch_{:05d}_plot.png".format(self.epoch) )
-				if not self.args.euclidean:
-					draw_graph(self.reconstruction_edges, poincare_embedding, self.labels, plot_path)
+				if self.args.embedding_dim == 2:
+					plot_path = os.path.join(self.args.plot_path, "epoch_{:05d}_plot.png".format(self.epoch) )
+					if not self.args.euclidean:
+						draw_graph(self.reconstruction_edges, poincare_embedding, self.labels, plot_path)
 
-			roc_path = os.path.join(self.args.plot_path, "epoch_{:05d}_roc_curve.png".format(self.epoch) )
-			plot_roc(dists, self.reconstruction_edges, self.non_edges, 
-				self.val_edges, self.val_non_edges, roc_path)
+				roc_path = os.path.join(self.args.plot_path, "epoch_{:05d}_roc_curve.png".format(self.epoch) )
+				plot_roc(dists, self.reconstruction_edges, self.non_edges, 
+					self.val_edges, self.val_non_edges, roc_path)
 
-			precision_recall_path = os.path.join(self.args.plot_path, "epoch_{:05d}_precision_recall_curve.png".format(self.epoch) )
-			plot_precisions_recalls(dists, self.reconstruction_edges, self.non_edges, 
-				self.val_edges, self.val_non_edges, precision_recall_path)
+				precision_recall_path = os.path.join(self.args.plot_path, "epoch_{:05d}_precision_recall_curve.png".format(self.epoch) )
+				plot_precisions_recalls(dists, self.reconstruction_edges, self.non_edges, 
+					self.val_edges, self.val_non_edges, precision_recall_path)
 
-			if self.args.evaluate_class_prediction:
-				f1_path = os.path.join(self.args.plot_path, "epoch_{:05d}_class_prediction_f1.png".format(self.epoch))
-				plot_classification(label_percentages, f1_micros, f1_macros, f1_path)
+				if self.args.evaluate_class_prediction:
+					f1_path = os.path.join(self.args.plot_path, "epoch_{:05d}_class_prediction_f1.png".format(self.epoch))
+					plot_classification(label_percentages, f1_micros, f1_macros, f1_path)
 
 		self.remove_old_models()
 		self.save_model()
